@@ -1,0 +1,5 @@
+account_id,outcome,observed_at
+northwind.example,meeting,2026-10-22
+contoso.example,reply_positive,2026-10-20
+fabrikam.example,no_response,2026-10-10
+tailspin.example,no_response,2026-10-05

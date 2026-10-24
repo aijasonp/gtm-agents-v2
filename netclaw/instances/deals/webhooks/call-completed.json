@@ -1,0 +1,13 @@
+{
+  "prompt": "A sales call recording finished processing. Spawn the call-intel subagent with the full event payload (call id, deal, attendees) as the task context. When it finishes, send_channel_message to the deals channel with the deal name and that the follow-up is waiting for the AE's approval.",
+  "verification": {
+    "kind": "Hmac",
+    "secret": "${WEBHOOK_SECRET_CALL_COMPLETED}"
+  },
+  "audience": "Team",
+  "notificationTarget": {
+    "kind": "Slack",
+    "channelId": "${SLACK_CHANNEL_ID}"
+  },
+  "deliveryRequired": true
+}

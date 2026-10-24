@@ -1,0 +1,14 @@
+{
+  "id": "win-loss-weekly",
+  "title": "Weekly win/loss (Fri 15:00 CT)",
+  "instructions": "Spawn win-loss-learning: summarize deals closed this week, record outcomes, and post patterns here.",
+  "schedule": {
+    "type": "Cron",
+    "cronExpression": "0 20 * * FRI"
+  },
+  "delivery": {
+    "kind": "Channel",
+    "transport": "slack",
+    "address": "#gtm-forecast"
+  }
+}

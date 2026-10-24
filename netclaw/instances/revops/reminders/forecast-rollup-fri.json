@@ -1,0 +1,14 @@
+{
+  "id": "forecast-rollup-fri",
+  "title": "Forecast roll-up (Fri 8:00 CT)",
+  "instructions": "Spawn forecast-hygiene: build the Friday roll-up and DM it to each recipient in the forecast config, scoped to what each is allowed to see.",
+  "schedule": {
+    "type": "Cron",
+    "cronExpression": "0 13 * * FRI"
+  },
+  "delivery": {
+    "kind": "Channel",
+    "transport": "slack",
+    "address": "#gtm-forecast"
+  }
+}

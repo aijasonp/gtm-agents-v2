@@ -1,0 +1,14 @@
+{
+  "id": "next-day-meeting-prep",
+  "title": "Next-day meeting briefs (17:00 CT, Sun-Thu)",
+  "instructions": "For every external meeting on each AE's calendar tomorrow, spawn meeting-prep to build the pre-call brief and DM the AE the link. Post a count here.",
+  "schedule": {
+    "type": "Cron",
+    "cronExpression": "0 22 * * SUN-THU"
+  },
+  "delivery": {
+    "kind": "Channel",
+    "transport": "slack",
+    "address": "#gtm-deals"
+  }
+}

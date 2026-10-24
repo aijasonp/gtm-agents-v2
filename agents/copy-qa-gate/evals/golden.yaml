@@ -1,0 +1,25 @@
+cases:
+  - name: clean signal-led email passes
+    expect_pass: true
+    text: |
+      Hi Dana,
+
+      Saw you joined Northwind as VP of Sales Development last month. Most new SDR leaders spend their first quarter rebuilding the account list by hand.
+
+      We rank every account in your CRM each morning on fit plus fresh buying signals, so reps start on the right twenty.
+
+      Worth 15 minutes next week to see your list?
+
+      Sam
+  - name: slop email fails
+    expect_pass: false
+    text: |
+      Hi there! I hope this email finds you well — I wanted to reach out because our cutting-edge, best-in-class platform helps teams leverage AI to seamlessly streamline their workflows and unlock 10x growth! Would you be open to a quick call? Do you have time this week? Who else should I talk to?
+  - name: em dash alone does not sink an otherwise clean email
+    expect_pass: true
+    text: |
+      Hi Lee, congrats on the raise — big quarter for Contoso. Teams that grow the SDR floor after a round usually hit list quality limits first. We fix that with a ranked daily account list. Open to a look next Tuesday?
+  - name: three questions and a long sentence fail
+    expect_pass: false
+    text: |
+      Hi Ari, I noticed that your company has been expanding into several new regions over the last couple of quarters and I was curious whether your team has found a reliable way to keep account prioritization consistent across all of those new territories and reps. Is that a priority? Who owns it? Can we talk Thursday? Also are you the right person?

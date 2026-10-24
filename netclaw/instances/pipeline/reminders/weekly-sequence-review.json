@@ -1,0 +1,14 @@
+{
+  "id": "weekly-sequence-review",
+  "title": "Weekly sequence performance review (Mon 9:00 CT)",
+  "instructions": "Pull last week's sequence results from the sequencer (sent, replies, positive replies, meetings, bounces) per AE and per sequence. Classify new replies with scoring-engine/classify_reply. Flag sequences under 1% positive reply rate and ask prospecting-writer for a rewrite, gated by copy-qa-gate.",
+  "schedule": {
+    "type": "Cron",
+    "cronExpression": "0 14 * * MON"
+  },
+  "delivery": {
+    "kind": "Channel",
+    "transport": "slack",
+    "address": "#gtm-pipeline"
+  }
+}

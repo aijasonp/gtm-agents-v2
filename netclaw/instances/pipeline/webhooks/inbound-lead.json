@@ -1,0 +1,13 @@
+{
+  "prompt": "A new inbound lead was posted by the CRM or form tool. Spawn the inbound-router subagent with the full event payload as the task context. When it finishes, send_channel_message to the pipeline channel with the lead, assigned AE and routing.",
+  "verification": {
+    "kind": "Hmac",
+    "secret": "${WEBHOOK_SECRET_INBOUND_LEAD}"
+  },
+  "audience": "Team",
+  "notificationTarget": {
+    "kind": "Slack",
+    "channelId": "${SLACK_CHANNEL_ID}"
+  },
+  "deliveryRequired": true
+}

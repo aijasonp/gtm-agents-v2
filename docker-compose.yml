@@ -1,0 +1,32 @@
+# One-command install on the customer's VM: `docker compose up -d`
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: gtm
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: gtm
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gtm"]
+      interval: 5s
+      retries: 20
+    restart: unless-stopped
+
+  agents:
+    build: .
+    image: gtm-agents:${GTM_VERSION:-0.1.0}
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://gtm:${POSTGRES_PASSWORD}@db:5432/gtm
+    volumes:
+      - ./data:/data
+      - ./license.json:/app/license.json:ro
+      - ./agents/signal-scout/skill/references/icp.yaml:/app/agents/signal-scout/skill/references/icp.yaml:ro
+    depends_on:
+      db: {condition: service_healthy}
+    command: ["schedule"]
+    restart: unless-stopped
+
+volumes:
+  pgdata:

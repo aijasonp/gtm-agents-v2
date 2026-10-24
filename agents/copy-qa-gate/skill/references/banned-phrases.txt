@@ -1,0 +1,9 @@
+# Buyer-specific additions to the built-in list. One phrase per line, lowercase.
+# The built-in list lives in gtm_core/copy_gate.py and is applied as well.
+hope you're doing well
+i'd love to
+would love to connect
+excited to share
+transformative
+paradigm
+journey

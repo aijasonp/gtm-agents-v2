@@ -1,0 +1,38 @@
+id: signal-scout
+name: Signal Scout
+version: 0.1.0
+tier: A
+description: >
+  Watches buying signals across 8 categories, stacks and decays them, scores every account on
+  ICP fit plus signal heat, and delivers a ranked daily list to Slack and the CRM.
+editions: [dropin, persistent]
+skill: skill/SKILL.md
+references:
+  - skill/references/signal-taxonomy.yaml
+  - skill/references/icp.yaml
+  - skill/references/scoring-method.md
+  - skill/references/brief-format.md
+tools:
+  - score_account
+  - list_priority_accounts
+  - explain_score
+  - add_signal
+  - record_outcome
+  - push_to_crm
+connectors_required: []
+connectors_optional: [crm, slack, enrichment]
+jobs:
+  - {name: sync_accounts, cron: "30 5 * * 1-5", model_class: none}
+  - {name: daily_sweep, cron: "0 6 * * 1-5", model_class: none}
+  - {name: weekly_reweight, cron: "0 3 * * 0", model_class: none}
+budgets: {daily_tokens: 2000000, monthly_usd: 150}
+evals: evals/golden.yaml
+config:
+  taxonomy: skill/references/signal-taxonomy.yaml
+  icp: skill/references/icp.yaml
+  icp_weight: 0.4
+  icp_floor: 30
+  lookback_days: 120
+  brief_size: 20
+  crm_fields: {score: gtm_signal_score, tier: gtm_signal_tier, reasons: gtm_signal_reasons}
+  signal_inbox: data/signals/inbox

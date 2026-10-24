@@ -1,0 +1,14 @@
+{
+  "id": "icp-refresh-monthly",
+  "title": "Monthly ICP refresh (1st of month, 9:00 CT)",
+  "instructions": "Spawn win-loss-learning: run the monthly ICP analysis and open a PR with proposed product profile changes and the data behind each.",
+  "schedule": {
+    "type": "Cron",
+    "cronExpression": "0 14 1 * *"
+  },
+  "delivery": {
+    "kind": "Channel",
+    "transport": "slack",
+    "address": "#gtm-forecast"
+  }
+}

@@ -1,0 +1,49 @@
+# Golden cases. `now` is fixed so decay is reproducible. Run: gtm eval signal-scout
+now: "2026-10-23T12:00:00+00:00"
+
+accounts:
+  - {id: northwind.example, name: Northwind Logistics, industry: Logistics, employees: 600, country: US, revenue: 120000000, tech: [salesforce, outreach]}
+  - {id: contoso.example, name: Contoso Health, industry: Healthcare Technology, employees: 900, country: US, revenue: 200000000, tech: [hubspot]}
+  - {id: fabrikam.example, name: Fabrikam Insurance, industry: Insurance, employees: 1200, country: CA, revenue: 300000000}
+  - {id: tailspin.example, name: Tailspin Software, industry: Software, employees: 300, country: US, revenue: 40000000, tech: [hubspot, gong]}
+  - {id: wingtip.example, name: Wingtip Public Schools, industry: Education, employees: 800, country: US}
+  - {id: litware.example, name: Litware Manufacturing, industry: Manufacturing, employees: 40000, country: DE}
+  - {id: adatum.example, name: Adatum Fintech, industry: Fintech, employees: 450, country: GB, revenue: 60000000}
+
+signals:
+  # Northwind: leadership change + intent (best stacking rule)
+  - {account_id: northwind.example, signal_type: new_exec_in_buyer_function, observed_at: "2026-10-14", url: "https://example.com/n1"}
+  - {account_id: northwind.example, signal_type: pricing_page_visit, observed_at: "2026-10-21", url: "https://example.com/n2"}
+  - {account_id: northwind.example, signal_type: hiring_buyer_team, observed_at: "2026-10-18", url: "https://example.com/n3"}
+  # Contoso: money + hiring
+  - {account_id: contoso.example, signal_type: funding_round, observed_at: "2026-10-01", url: "https://example.com/c1"}
+  - {account_id: contoso.example, signal_type: hiring_buyer_team, observed_at: "2026-10-15", url: "https://example.com/c2"}
+  # Fabrikam: one slow compliance signal
+  - {account_id: fabrikam.example, signal_type: new_regulation_applies, observed_at: "2026-09-01", url: "https://example.com/f1"}
+  # Tailspin: strong fit, stale signals only
+  - {account_id: tailspin.example, signal_type: pricing_page_visit, observed_at: "2026-07-01", url: "https://example.com/t1"}
+  - {account_id: tailspin.example, signal_type: content_download, observed_at: "2026-06-15", url: "https://example.com/t2"}
+  # Wingtip: hot signals but excluded industry
+  - {account_id: wingtip.example, signal_type: funding_round, observed_at: "2026-10-20", url: "https://example.com/w1"}
+  - {account_id: wingtip.example, signal_type: new_exec_in_buyer_function, observed_at: "2026-10-20", url: "https://example.com/w2"}
+  - {account_id: wingtip.example, signal_type: pricing_page_visit, observed_at: "2026-10-22", url: "https://example.com/w3"}
+  # Duplicate of a Northwind signal on the same day: must be ignored
+  - {account_id: northwind.example, signal_type: pricing_page_visit, observed_at: "2026-10-21", url: "https://www.example.com/n2/"}
+
+expect:
+  tiers:
+    northwind.example: A
+    wingtip.example: X
+  min_tier:            # at least this good
+    contoso.example: B
+  max_tier:            # no better than this
+    tailspin.example: C
+    litware.example: D
+  order:               # left ranks above right
+    - [northwind.example, contoso.example]
+    - [contoso.example, fabrikam.example]
+    - [fabrikam.example, tailspin.example]
+  stack_rule:
+    northwind.example: change_plus_intent
+    contoso.example: money_plus_hiring
+  duplicates_ignored: 1

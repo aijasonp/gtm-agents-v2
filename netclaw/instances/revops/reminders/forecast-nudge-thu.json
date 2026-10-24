@@ -1,0 +1,14 @@
+{
+  "id": "forecast-nudge-thu",
+  "title": "Forecast nudge (Thu 16:00 CT)",
+  "instructions": "Spawn forecast-hygiene: send one nudge to each AE with no forecast submission this week. Nobody else.",
+  "schedule": {
+    "type": "Cron",
+    "cronExpression": "0 21 * * THU"
+  },
+  "delivery": {
+    "kind": "Channel",
+    "transport": "slack",
+    "address": "#gtm-forecast"
+  }
+}

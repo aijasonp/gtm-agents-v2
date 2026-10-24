@@ -1,0 +1,14 @@
+{
+  "id": "forecast-report-mon",
+  "title": "Weekly forecast report (Mon 8:00 CT)",
+  "instructions": "Spawn forecast-hygiene: generate the weekly forecast report (sales-forecast-report skill), save it to the reports folder, and post the summary and link here.",
+  "schedule": {
+    "type": "Cron",
+    "cronExpression": "0 13 * * MON"
+  },
+  "delivery": {
+    "kind": "Channel",
+    "transport": "slack",
+    "address": "#gtm-forecast"
+  }
+}

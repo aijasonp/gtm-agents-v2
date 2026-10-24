@@ -1,0 +1,24 @@
+.env
+.env.*
+!.env.example
+!.env.netclaw.example
+*.db
+*.db-*
+license.json
+license_priv.pem
+*_priv.pem
+__pycache__/
+*.pyc
+.pytest_cache/
+dist/
+build/*.egg-info
+*.egg-info/
+.venv/
+data/*
+!data/sample/
+data/signals/
+.DS_Store
+
+# Deployment config (customer product profile, forecast routing)
+config/
+library/outbound-engine/forecast_alerts.config.json

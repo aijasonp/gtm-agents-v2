@@ -1,0 +1,8 @@
+# ICP profile. Edit for the buyer during install. Industry terms match as case-insensitive substrings.
+industries: [software, saas, fintech, financial services, insurance, healthcare technology, logistics, manufacturing]
+exclude_industries: [government, education, non-profit]
+employees: [150, 1500]
+revenue: [20000000, 500000000]
+countries: [US, CA, GB]
+tech_any: [salesforce, hubspot, outreach, salesloft, gong, clay]
+weights: {industry: 0.35, employees: 0.30, country: 0.10, revenue: 0.10, tech: 0.15}

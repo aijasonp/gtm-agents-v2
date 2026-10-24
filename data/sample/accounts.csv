@@ -1,0 +1,8 @@
+id,name,domain,crm_id,industry,employees,revenue,country,tech
+northwind.example,Northwind Logistics,northwind.example,1001,Logistics,600,120000000,US,salesforce;outreach
+contoso.example,Contoso Health,contoso.example,1002,Healthcare Technology,900,200000000,US,hubspot
+fabrikam.example,Fabrikam Insurance,fabrikam.example,1003,Insurance,1200,300000000,CA,
+tailspin.example,Tailspin Software,tailspin.example,1004,Software,300,40000000,US,hubspot;gong
+wingtip.example,Wingtip Public Schools,wingtip.example,1005,Education,800,,US,
+litware.example,Litware Manufacturing,litware.example,1006,Manufacturing,40000,,DE,
+adatum.example,Adatum Fintech,adatum.example,1007,Fintech,450,60000000,GB,

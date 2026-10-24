@@ -1,0 +1,189 @@
+# GTM fleet definition: the single source of truth for the NetClaw build.
+#
+# 3 NetClaw instances, 10 subagents, lead in to closed deal out, AE-only team (no BDRs).
+# Skills are listed by path (relative to the repo root) because a few names exist
+# twice in the library. `python3 netclaw/build.py` validates every skill and
+# assembles build/netclaw/<instance>/ ready to mount into each container.
+#
+# Rules every agent follows (see shared/operating-rules.md):
+#   - AEs approve every external send and every CRM write.
+#   - Deterministic work (scoring, routing, copy checks, forecast math) is a tool call.
+#   - Product facts come from the product profile, never from memory.
+
+shared_skills:          # loaded into every instance
+  - netclaw/shared/gtm-playbooks          # outbound rules, voice system, sayability matrix, brief template
+  - library/skills/hubspot
+  - library/skills/sales-skills/skills/sales-hubspot
+  - library/skills/sales-skills/skills/sales-salesforce
+  - library/skills/gws-shared
+  - library/skills/gws-gmail
+  - library/skills/gws-calendar
+
+mcp_servers:            # name -> where it runs (see docker-compose.netclaw.yml)
+  signal-scout:   {transport: http, url: "http://gtm-signal-scout:8000/mcp", source: "gtm serve-mcp signal-scout"}
+  copy-qa-gate:   {transport: http, url: "http://gtm-copy-qa:8001/mcp",      source: "gtm serve-mcp copy-qa-gate"}
+  scoring-engine: {transport: http, url: "http://gtm-scoring:8010/mcp",      source: "library/outbound-engine/scoring_mcp.py"}
+  crm:            {transport: http, url: "${CRM_MCP_URL}",        source: "HubSpot or Salesforce MCP server (customer provided)"}
+  workspace:      {transport: http, url: "${WORKSPACE_MCP_URL}",  source: "Google Workspace or M365 MCP server (customer provided)"}
+  enrichment:     {transport: http, url: "${ENRICHMENT_MCP_URL}", source: "Clay / Apollo / ZoomInfo MCP (customer provided)"}
+  sequencer:      {transport: http, url: "${SEQUENCER_MCP_URL}",  source: "Smartlead / Outreach / Salesloft MCP (customer provided)"}
+  call-recorder:  {transport: http, url: "${CALLS_MCP_URL}",      source: "Gong / Fathom / Fireflies MCP (customer provided)"}
+
+instances:
+
+  pipeline:
+    purpose: "Lead in and prospecting: route inbound, rank accounts, write sequences, gate copy."
+    slack_channel: gtm-pipeline
+    mcp: [signal-scout, copy-qa-gate, scoring-engine, crm, workspace, enrichment, sequencer]
+    agents:
+      inbound-router:
+        stage: Lead in
+        job: "Enrich, dedupe, score and route every inbound lead to the right AE within minutes; draft the first reply and propose meeting times."
+        tools: [scoring-engine/score_account, crm, enrichment, workspace]
+        skills:
+          - library/skills/sales-skills/skills/sales-lead-routing
+          - library/skills/sales-skills/skills/sales-lead-score
+          - library/skills/sales-skills/skills/sales-enrich
+          - library/skills/sales-skills/skills/sales-data-hygiene
+          - library/skills/sales-skills/skills/sales-meeting-scheduler
+          - library/skills/sales-skills/skills/sales-calendly
+          - library/skills/clay-gtm-outbound
+          - library/skills/sales-skills/skills/sales-clay
+          - library/skills/sales-skills/skills/sales-apollo
+          - library/skills/sales-skills/skills/sales-zoominfo
+          - library/skills/marketingagentskills/skills/icp-persona
+      signal-scout:
+        stage: Prospecting
+        job: "Rank each AE's target accounts daily on ICP fit plus decayed, stacked buying signals; explain every score."
+        tools: [signal-scout, scoring-engine/score_signal, scoring-engine/analyze_account, enrichment]
+        skills:
+          - agents/signal-scout/skill
+          - library/skills/sales-skills/skills/sales-intent
+          - library/skills/sales-skills/skills/sales-account-map
+          - library/skills/sales-skills/skills/sales-prospect-list
+          - library/skills/sales-skills/skills/sales-6sense
+          - library/skills/sales-skills/skills/sales-trigify
+          - library/skills/sales-skills/skills/sales-rb2b
+          - library/skills/sales-skills/skills/sales-social-listening
+          - library/skills/research-processes
+          - library/skills/deep-research
+          - library/skills/floqer-rules
+      prospecting-writer:
+        stage: Prospecting
+        job: "Write multi-threaded email and LinkedIn sequences for the top-ranked accounts, in the AE's voice, queued for the AE's approval."
+        tools: [copy-qa-gate, sequencer, crm]
+        skills:
+          - library/skills/cold-email
+          - library/skills/email-sequence
+          - library/skills/scqa-framework
+          - library/skills/copywriting
+          - library/skills/made-to-stick
+          - library/skills/influence-psychology
+          - library/skills/bdr-humanizer
+          - library/skills/sales-skills/skills/sales-apollo-sequences
+          - library/skills/sales-skills/skills/sales-smartlead
+          - library/skills/sales-skills/skills/sales-lemlist
+          - library/skills/sales-skills/skills/sales-cadence
+          - library/skills/sales-skills/skills/sales-multichannel-selling
+          - library/skills/sales-skills/skills/sales-deliverability
+      copy-qa-gate:
+        stage: Every outbound piece
+        job: "Score every draft 0 to 40 (32 passes) and list exactly what to fix before an AE sees it."
+        tools: [copy-qa-gate]
+        skills:
+          - agents/copy-qa-gate/skill
+          - library/skills/avoid-ai-writing
+          - library/skills/humanizer-blader
+          - library/skills/no-slop
+          - library/skills/no-ai-slop-rossmann/skills/no-ai-slop
+          - library/skills/unslop
+          - library/skills/copy-editing
+
+  deals:
+    purpose: "Discovery through close: prep every meeting, capture every call, manage every deal, build every proposal."
+    slack_channel: gtm-deals
+    mcp: [scoring-engine, copy-qa-gate, crm, workspace, call-recorder]
+    agents:
+      meeting-prep:
+        stage: Discovery, demo
+        job: "Two-page pre-call brief for every external meeting: account research, attendees, pain, competitive angle, questions, likely objections, recommended play."
+        tools: [crm, workspace, scoring-engine/analyze_account]
+        skills:
+          - library/skills/deep-research-synthesizer
+          - library/skills/competitive-intelligence
+          - library/skills/competitor-profiling
+          - library/skills/competitor-intel-hyperfx
+          - library/skills/sales-skills/skills/sales-compete
+          - library/skills/sales-skills/skills/sales-demodesk
+          - library/skills/sales-coach
+          - library/skills/doc-designer
+          - library/skills/gws-docs
+      call-intel:
+        stage: After every call
+        job: "Pull the transcript, extract MEDDPICC, queue CRM updates for approval, draft the follow-up email, update the mutual action plan."
+        tools: [call-recorder, crm, workspace, copy-qa-gate]
+        skills:
+          - library/skills/sales-skills/skills/sales-call-review
+          - library/skills/sales-skills/skills/sales-gong
+          - library/skills/sales-skills/skills/sales-fathom
+          - library/skills/sales-skills/skills/sales-fireflies
+          - library/skills/sales-skills/skills/sales-meeting-ai
+          - library/skills/sales-skills/skills/sales-note-taker
+          - library/skills/sales-skills/skills/sales-coaching
+      deal-manager:
+        stage: Mid-funnel
+        job: "Weekly and on-demand deal inspection: stuck stages, single-threaded deals, missing champion or economic buyer, slipping close dates; draft next steps and top-of-mind emails."
+        tools: [crm, workspace, copy-qa-gate]
+        skills:
+          - library/skills/sales-skills/skills/sales-deal-inspect
+          - library/skills/sales-skills/skills/sales-deal-room
+          - library/skills/sales-skills/skills/sales-mutualgro
+          - library/skills/sales-skills/skills/sales-data-hygiene
+          - library/skills/top-of-mind-email
+          - library/skills/scqa-framework
+      proposal-close:
+        stage: Negotiate, close
+        job: "Business case, ROI, proposal, pricing page and objection handling; tracks proposal engagement through signature."
+        tools: [crm, workspace]
+        skills:
+          - library/skills/sales-skills/skills/sales-proposal-template
+          - library/skills/sales-skills/skills/sales-proposal-page
+          - library/skills/sales-skills/skills/sales-proposal-analytics
+          - library/skills/sales-skills/skills/sales-getaccept
+          - library/skills/pricing-strategy
+          - library/skills/hundred-million-offers
+          - library/skills/competitor-alternatives
+          - library/skills/docx
+          - library/skills/pptx
+          - library/skills/pdf
+          - library/skills/xlsx
+          - library/skills/gws-sheets
+          - library/skills/gws-slides
+
+  revops:
+    purpose: "Forecast, hygiene and learning: collect forecast calls, report the pipeline, learn from every closed deal."
+    slack_channel: gtm-forecast
+    mcp: [signal-scout, scoring-engine, crm, workspace]
+    agents:
+      forecast-hygiene:
+        stage: Whole pipeline
+        job: "Collect weekly AE forecast calls, build the Friday roll-up and Monday forecast report, flag CRM hygiene problems."
+        tools: [crm, workspace]
+        skills:
+          - library/skills/forecast-call
+          - library/skills/sales-forecast-report
+          - library/skills/sales-skills/skills/sales-forecast
+          - library/skills/sales-skills/skills/sales-data-hygiene
+          - library/skills/gws-sheets
+          - library/skills/gws-drive
+          - library/skills/xlsx
+      win-loss-learning:
+        stage: Closed won or lost
+        job: "Analyze every closed deal, reweight ICP and signal scoring, turn rep feedback into reviewed PRs, and feed lessons back to Signal Scout and the Prospecting Writer."
+        tools: [crm, signal-scout/record_outcome, scoring-engine/classify_reply, workspace]
+        skills:
+          - library/skills/icp-learner
+          - library/skills/sales-skills/skills/sales-winn
+          - library/skills/sales-skills/skills/sales-call-review
+          - library/skills/sales-skills/skills/sales-customer-feedback
+          - library/skills/gws-docs

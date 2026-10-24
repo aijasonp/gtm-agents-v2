@@ -1,0 +1,9 @@
+account_id,signal_type,observed_at,url,title,source
+northwind.example,new_exec_in_buyer_function,2026-10-14,https://example.com/n1,New VP of Sales Development,linkedin
+northwind.example,pricing_page_visit,2026-10-21,https://example.com/n2,Pricing page x3,web
+northwind.example,hiring_buyer_team,2026-10-18,https://example.com/n3,4 SDR roles posted,jobs
+contoso.example,funding_round,2026-10-01,https://example.com/c1,Series C,news
+contoso.example,hiring_buyer_team,2026-10-15,https://example.com/c2,SDR manager role,jobs
+fabrikam.example,new_regulation_applies,2026-09-01,https://example.com/f1,New disclosure rule,news
+adatum.example,event_attended,2026-10-22,https://example.com/a1,Booth scan at Pipeline Conference,event
+adatum.example,exec_post_about_problem,2026-10-20,https://example.com/a2,CRO post on list quality,linkedin
