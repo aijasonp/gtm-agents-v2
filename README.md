@@ -14,20 +14,20 @@ Every agent ships in two editions from one source:
 | # | Agent | Tier | Job | Main schedule |
 | --- | --- | --- | --- | --- |
 | 1 | **Lead Triage** | A | Qualifies inbound and event leads in minutes: account and open-deal match, ICP, persona and intent score, owner and SLA, first follow-up drafted | every 15 min |
-| 2 | **ICP Outbound** | A | Short ranked target list from ICP fit and fresh signals, conflicts removed (open deals, inbound in progress, recent touches), buyers picked, 3-step signal-led sequence drafted | weekly list, daily drafts |
+| 2 | **ICP Outbound** | A | Short ranked target list from ICP fit and fresh signals, conflicts removed (open deals, inbound in progress, recent touches), buyers picked, 3-step signal-led sequence drafted; the pain it leads with is picked from the judged ICP and learned open and reply rates | weekly list, daily drafts, weekly engagement report |
 | 3 | **Seller Follow-Up** | A | One short daily list per rep (overdue tasks, missed next steps, quiet deals, late leads, calls with no recap); recap email, CRM note and tasks drafted after every call | daily, every 30 min |
 | 4 | **Deal Inspection** | A | Every open deal checked for stage age, activity, slips, next step, MEDDPICC gaps by stage, coverage and fit; risk score with progress / fix / disqualify and the fixes | weekly, hourly evidence |
-| 5 | **Meeting Intelligence** | A | Reads call transcripts: summary, pain, next steps, objections, competitors, pricing talk, MEDDPICC evidence, coaching flags; hands work to Follow-Up and Deal Inspection | every 30 min |
+| 5 | **Meeting Intelligence** | A | Reads call transcripts: summary, pain, next steps, objections, competitors, pricing talk, MEDDPICC evidence, coaching flags; hands work to Follow-Up and Deal Inspection; pulls transcripts from Gong, Fireflies or Fathom | every 30 min |
 | 6 | **Sales Execution** | B | Pre-call brief for every upcoming meeting, MEDDPICC questions, objection help, proposal outline, next-steps summary | daily 7am |
 | 7 | **Product Marketing** | B | Competitor trends, win/loss by competitor and segment, objection library with gaps, evidence-backed battlecards, messaging and launch briefs | weekly, monthly |
-| 8 | **Revenue Pulse** | B | Weekly leadership summary computed from the CRM: pipeline, coverage, created / won / lost, slips, stage moves, stale deals, forecast rollup, owner scorecards, top risks | Monday 8am |
+| 8 | **Revenue Pulse** | B | Weekly leadership summary computed from the CRM: pipeline, coverage, created / won / lost, slips, stage moves, stale deals, forecast rollup, owner scorecards, top risks; plus a daily whole-funnel GTM report | Monday 8am, weekdays 7:30am |
 | 9 | **Rep Brief** | A | One daily brief per AE: top accounts, top people, new signals, pipeline gaps, replies, what to do next; plus the push-button AE workflow (research, gated first touch, sequence and call task in one approval) | weekdays 7:30am |
 | 10 | **Social Signals** | A | Engagement with company and influencer LinkedIn and YouTube content resolved to contacts and accounts, scored, and routed to the owner as signals | every 30 min |
 | 11 | **Reply Desk** | A | Every reply sorted (bounce, opt-out, out of office, referral, not now, objection, interested, question) and handled: stops, opt-outs, tasks, drafted answers | every 10 min |
-| 12 | **Enrichment** | B | Provider-agnostic email and phone waterfall with caching, spend caps and provenance; hit rate and cost per hit decide which data vendor stays | hourly |
-| 13 | **Forecast Prep** | B | Forecast call prep at AE, manager and exec level: commit vs suggested commit, changes since last week, questions to ask, change alerts | weekly, daily alerts |
+| 12 | **Enrichment** | B | Provider-agnostic email and phone waterfall with caching, spend caps and provenance; hit rate and cost per hit decide which data vendor stays; Clay table push and import | hourly |
+| 13 | **Forecast Prep** | B | Forecast call prep at AE, manager and exec level: commit vs suggested commit, changes since last week, questions to ask, change alerts; stores every rep's forecast call, tracks call accuracy and builds the board forecast range | weekly, daily alerts, Friday board |
 | 14 | **Stack Audit** | B | Tool inventory, utilization, overlap, renewal calendar with notice dates, savings scenarios, side-by-side against agent signals, tool-cut memo | weekly, monthly |
-| 15 | Signal Scout | A | Scores every account on ICP fit plus decayed, stacked buying signals; feeds Outbound, Triage, Rep Brief and Sales Execution | daily |
+| 15 | **Signal Scout** | A | Scores every account on ICP fit (rules plus judged, evidence-checked typed questions that learn from email opens and replies) and decayed, stacked buying signals; feeds Outbound, Triage, Rep Brief and Sales Execution | daily |
 | 16 | Copy QA Gate | C | Scores any outbound copy 0 to 40 (32 passes); every agent's drafts go through it | on call |
 | 17 | Ops Monitor | C | Watches the runtime: missed jobs, failures, stuck approvals, failed handoffs, budget pauses, spend | every 15 min |
 

@@ -2,7 +2,7 @@
 name: forecast-call
 description: Collect each AE's weekly forecast call (Commit, Best case, Pipeline) in a Slack DM, confirm it, and hand it to Forecast Prep for the weekly roll-up. Use when the forecast reminder fires, when an AE types "forecast", or when a leader asks who has not submitted.
 metadata:
-  version: 1.1.0
+  version: 1.2.0
 ---
 
 # Forecast call
@@ -24,8 +24,8 @@ Then one optional note.
 - Show the three numbers, total open (Best case + Pipeline), and change from last week. Write only after the AE confirms.
 
 ## After the call
-- Record it through the forecast log the deployment uses (sheet or table). If the write fails, say so; never claim success.
+- Record it with `forecast-prep/submit_forecast_call` (owner, commit, best_case, pipeline, notes). It saves the call next to the suggested commit at that moment. If the tool returns an error, say so and re-ask; never claim success.
 - Then call `forecast-prep/ae_prep` for that AE and share the suggested commit next to the AE's own, with the questions Forecast Prep raises. The AE's number stands; the comparison is for the manager.
 
 ## Privacy
-An AE sees only their own calls. Managers see their team. Leaders see the roll-up (`forecast-prep/manager_prep`, `forecast-prep/exec_prep`).
+An AE sees only their own calls. Managers see their team. Leaders see the roll-up (`forecast-prep/manager_prep`, `forecast-prep/exec_prep`, `forecast-prep/board_forecast`). Call history and accuracy: `forecast-prep/forecast_call_history`.

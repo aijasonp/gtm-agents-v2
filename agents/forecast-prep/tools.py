@@ -39,12 +39,12 @@ def call_agenda(ctx, level: str = "manager", owner: str = "") -> dict:
     return _eng(ctx).agenda(ctx, level, owner)
 
 
-def submit_forecast_call(ctx, owner: str, commit: float, best_case: float | None = None, notes: str = "",
-                         deal_ids: list[str] | None = None) -> dict:
-    """Record what a rep called this quarter (commit, optional best case, notes, the deals in it), saved next to
-    the system's suggested commit at that moment. Local record; nothing goes to the CRM."""
+def submit_forecast_call(ctx, owner: str, commit: float, best_case: float | None = None, pipeline: float | None = None,
+                         notes: str = "", deal_ids: list[str] | None = None) -> dict:
+    """Record what a rep called this quarter (commit, optional best case and pipeline, notes, the deals in it), saved
+    next to the system's suggested commit at that moment. Local record; nothing goes to the CRM."""
     try:
-        return _eng(ctx).submit_call(ctx, owner, commit, best_case, notes, deal_ids)
+        return _eng(ctx).submit_call(ctx, owner, commit, best_case, notes, deal_ids, pipeline_call=pipeline)
     except ValueError as e:
         return {"error": str(e)}
 

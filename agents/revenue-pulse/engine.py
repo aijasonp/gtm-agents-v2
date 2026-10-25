@@ -360,8 +360,12 @@ def daily(ctx, now: datetime | None = None, days: int = 1) -> dict:
     meetings = _count(ctx, "SELECT COUNT(*) AS n FROM meetings WHERE started_at>=? AND started_at<?", (s, e))
     deals = ctx.store.select("deals")
     created = [d for d in deals if pipeline.in_period(d.get("created_at"), start, now)]
-    won = [d for d in deals if pipeline.is_won(d) and pipeline.in_period(d.get("close_date"), start, now)]
-    lost = [d for d in deals if pipeline.is_lost(d) and pipeline.in_period(d.get("close_date"), start, now)]
+    def closed_in(v) -> bool:  # close dates are usually date-only: compare by calendar day
+        cd = pipeline.parse_dt(v)
+        return cd is not None and start.date() <= cd.date() < now.date() if len(str(v or "")) <= 10 else \
+            pipeline.in_period(v, start, now)
+    won = [d for d in deals if pipeline.is_won(d) and closed_in(d.get("close_date"))]
+    lost = [d for d in deals if pipeline.is_lost(d) and closed_in(d.get("close_date"))]
     moves = []
     for d in deals:
         if pipeline.is_open(d):

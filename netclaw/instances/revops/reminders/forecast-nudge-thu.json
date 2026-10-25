@@ -1,7 +1,7 @@
 {
   "id": "forecast-nudge-thu",
   "title": "Forecast nudge (Thu 16:00 CT)",
-  "instructions": "Spawn forecast-hygiene: one nudge to each AE with no forecast call this week. Nobody else.",
+  "instructions": "Spawn forecast-hygiene: check forecast-prep/forecast_call_history for this quarter and send one nudge to each AE with no call this week. Nobody else.",
   "schedule": {
     "type": "Cron",
     "cronExpression": "0 21 * * THU"

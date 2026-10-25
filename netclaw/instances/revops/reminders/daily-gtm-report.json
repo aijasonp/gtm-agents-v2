@@ -1,0 +1,14 @@
+{
+  "id": "daily-gtm-report",
+  "title": "Daily GTM report (7:30 CT, weekdays)",
+  "instructions": "Spawn forecast-hygiene: run revenue-pulse/daily_report and post its text as is. Add one line only if something needs a human today (approvals waiting, a won or lost deal, bounces over 5%).",
+  "schedule": {
+    "type": "Cron",
+    "cronExpression": "30 12 * * MON-FRI"
+  },
+  "delivery": {
+    "kind": "Channel",
+    "transport": "slack",
+    "address": "#gtm-forecast"
+  }
+}

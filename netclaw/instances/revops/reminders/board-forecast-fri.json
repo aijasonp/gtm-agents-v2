@@ -1,0 +1,14 @@
+{
+  "id": "board-forecast-fri",
+  "title": "Board forecast (Fri 11:00 CT)",
+  "instructions": "Spawn forecast-hygiene: run forecast-prep/board_forecast. Post the low, call and high range with the method line, and name reps with no call this quarter.",
+  "schedule": {
+    "type": "Cron",
+    "cronExpression": "0 16 * * FRI"
+  },
+  "delivery": {
+    "kind": "Channel",
+    "transport": "slack",
+    "address": "#gtm-forecast"
+  }
+}

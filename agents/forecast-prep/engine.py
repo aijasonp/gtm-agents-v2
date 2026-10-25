@@ -562,7 +562,7 @@ def agenda(ctx, level: str = "manager", owner: str = "", now: datetime | None = 
 
 # ---------- forecast calls (what each rep actually called) ----------
 def submit_call(ctx, owner: str, commit: float, best_case: float | None = None, notes: str = "",
-                deal_ids: list[str] | None = None, now: datetime | None = None) -> dict:
+                deal_ids: list[str] | None = None, now: datetime | None = None, pipeline_call: float | None = None) -> dict:
     """Record a rep's call for the current quarter, next to the system numbers at that moment.
     Local record only; nothing is written to the CRM."""
     now = _now(now)
@@ -573,11 +573,12 @@ def submit_call(ctx, owner: str, commit: float, best_case: float | None = None, 
     p = ae_prep(ctx, owner, now)
     q = p["quarter_totals"]
     sys_snap = {"won": q["won"], "rep_commit_in_crm": q["commit"], "suggested_commit": p["suggested_commit"],
-                "best_case_in_crm": q["best_case"], "deal_ids": deal_ids or []}
+                "best_case_in_crm": q["best_case"], "pipeline_in_crm": q["pipeline"], "deal_ids": deal_ids or []}
     cid = ctx.store.insert(
         "INSERT INTO forecast_calls (period, owner, commit_amount, best_case, pipeline, closed, notes, deals, submitted_at) "
         "VALUES (?,?,?,?,?,?,?,?,?)",
-        (quarter_label(now), owner, float(commit), None if best_case is None else float(best_case), q["pipeline"],
+        (quarter_label(now), owner, float(commit), None if best_case is None else float(best_case),
+         None if pipeline_call is None else float(pipeline_call),
          q["won"], (notes or "")[:2000], json.dumps(sys_snap), now.replace(microsecond=0).isoformat()))
     gap = round(float(commit) - p["suggested_commit"], 2)
     return {"call_id": cid, "period": quarter_label(now), "owner": owner, "commit": float(commit),
