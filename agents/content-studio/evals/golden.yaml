@@ -31,7 +31,7 @@ frames:
     - {t: 0, end: 2.5, text: "Sound familiar?", x: 140, y: 600, w: 800, h: 120}
     - {t: 2.5, end: 6, text: "Lists built by hand\ncost reps hours", x: 140, y: 700, w: 800, h: 220}
   bad:
-    - {t: 0, text: "We leverage signals — daily", x: 20, y: 1700, w: 900, h: 120}
+    - {t: 0, text: "We leverage signals \u2014 daily", x: 20, y: 1700, w: 900, h: 120}
     - {t: 0.5, end: 1.0, text: "This line is far too long to read on a phone screen", x: 140, y: 600, w: 800, h: 120}
   bad_issues: ["side safe zone", "bottom safe zone", "banned words: leverage", "dash", "over 32 characters", "needs"]
 

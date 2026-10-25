@@ -14,6 +14,13 @@ sequence_enroll   contact{email,name,company}, steps[{subject,body}], campaign, 
 sequence_stop     email, reason                        stop every active sequence for this person
 contact_update    crm_id, fields                       contact fields (enriched email/phone, opt-out)
 dialer_enqueue    contact{name,phone,email,company}, owner, script
+
+Agent-owned executors (registered in that agent's jobs.register_executors):
+crm_merge         CRM Hygiene: survivor and losers; Slack instruction plus local merged_into marks
+discount_approval Proposal Builder: quote id and approved discount level
+proposal_send     Proposal Builder: marks the quote and draft sent, CRM note; the rep sends the file
+github_pr         Rep Feedback: branch, commit and pull request for an approved rule change
+social_post       Content Studio: approved post handed to the publishing tool
 """
 from __future__ import annotations
 

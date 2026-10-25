@@ -27,7 +27,8 @@ def test_tools_bind_and_return_text(ctx_for):
     ctx = ctx_for("forecast-prep")
     _seed(ctx)
     tools = bind_tools(ctx)
-    assert set(tools) == {"ae_prep", "manager_prep", "exec_prep", "forecast_changes", "call_agenda"}
+    assert set(tools) == {"ae_prep", "manager_prep", "exec_prep", "forecast_changes", "call_agenda",
+                          "submit_forecast_call", "forecast_call_history", "board_forecast"}
     assert "Forecast prep: Sam Rivera" in tools["ae_prep"](owner="Sam Rivera")["text"]
     assert "Forecast rollup" in tools["manager_prep"]()["text"]
     assert tools["call_agenda"](level="ae")["error"]

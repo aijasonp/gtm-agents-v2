@@ -62,7 +62,7 @@ Agents share one database and pass work through `handoffs` (deduplicated, consum
 
 | Action | Queued by | Executes |
 | --- | --- | --- |
-| `sequence_enroll` | Lead Triage, ICP Outbound | Pushes contact plus approved copy to the sequencer (webhook or Smartlead) |
+| `sequence_enroll` | Lead Triage, ICP Outbound, Event Campaigns | Pushes contact plus approved copy to the sequencer (webhook, Smartlead or Lemlist) |
 | `crm_task` | Lead Triage, Seller Follow-Up | Task on the deal or account for the owner |
 | `crm_contact` | Lead Triage | Creates the contact on the account |
 | `crm_update` | Signal Scout | Score, tier and reasons on the account |
@@ -71,6 +71,11 @@ Agents share one database and pass work through `handoffs` (deduplicated, consum
 | `sequence_stop` | Reply Desk | Stops every sequence for a person; runs at once (`auto:safety`). Webhook sequencer; Smartlead flags a manual stop |
 | `contact_update` | Reply Desk, Enrichment | Opt-out flag, enriched email or phone |
 | `dialer_enqueue` | Rep Brief (push-button), Enrichment (opt-in) | Call task with a short script to the dialer webhook |
+| `crm_merge` | CRM Hygiene | Posts the merge instruction (no connector merges records) and marks losers `merged_into` locally |
+| `discount_approval` | Proposal Builder | Records the approved discount level on the quote |
+| `proposal_send` | Proposal Builder | Marks the quote and draft sent and adds a CRM note; the rep sends the document |
+| `github_pr` | Rep Feedback | Opens a pull request with the approved rule change; never touches `library/` |
+| `social_post` | Content Studio | Hands an approved post to the publishing tool |
 
 ## Per agent
 

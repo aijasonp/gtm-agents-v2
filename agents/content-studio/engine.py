@@ -12,7 +12,7 @@ from datetime import datetime, timedelta, timezone
 
 from gtm_core import copy_gate, profile, writer
 
-DASHES = ("—", "–", " -- ")
+DASHES = ("\u2014", "\u2013", " -- ")
 
 
 def cfg(ctx, key, default=None):
