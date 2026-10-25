@@ -76,4 +76,13 @@ def owner_scorecard(ctx, owner: str) -> dict:
             "slipped_deals": p["slipped"]["deals"], "stale_deals": p["stale"]["deals"], "top_risks": p["top_risks"]}
 
 
-TOOLS = {f.__name__: f for f in [pipeline_summary, forecast_rollup, slipped_deals, stale_deals, top_risks, owner_scorecard]}
+def daily_report(ctx, days: int = 1) -> dict:
+    """Whole-funnel report for the last N days: leads by source, signals, new tier A accounts, outbound drafted and
+    sent, human opens and replies (machine opens counted apart), meetings, deals created, moved, won and lost,
+    and approvals waiting."""
+    r = _eng(ctx).daily(ctx, days=int(days))
+    return {**r, "text": _eng(ctx).format_daily(r)}
+
+
+TOOLS = {f.__name__: f for f in [pipeline_summary, forecast_rollup, slipped_deals, stale_deals, top_risks, owner_scorecard,
+                                 daily_report]}

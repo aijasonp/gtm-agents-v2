@@ -16,3 +16,11 @@ def weekly_pulse(ctx, now: datetime | None = None) -> dict:
     return {"as_of": p["as_of"], "open_pipeline": p["open_pipeline"], "weighted_pipeline": p["weighted_pipeline"],
             "coverage": p["quarter"]["coverage"], "slipped": p["slipped"]["count"], "stale": p["stale"]["count"],
             "top_risks": [r["name"] for r in p["top_risks"]], "summary_source": source, "wow": p["wow"]}
+
+
+def daily_gtm_report(ctx, now: datetime | None = None) -> dict:
+    """Weekday morning funnel report to Slack. Read only."""
+    eng = load_module(ctx.manifest, "engine")
+    r = eng.daily(ctx, now)
+    ctx.slack.post(eng.format_daily(r))
+    return r

@@ -318,3 +318,88 @@ def format_pulse(p: dict, summary_text: str = "") -> str:
     if summary_text:
         lines += ["Summary:", summary_text]
     return "\n".join(lines)
+
+
+# ---------- daily GTM report: the whole funnel, yesterday ----------
+def _count(ctx, sql: str, params=()) -> int:
+    r = ctx.store.one(sql, params)
+    return int(r["n"] or 0) if r else 0
+
+
+def daily(ctx, now: datetime | None = None, days: int = 1) -> dict:
+    """Top to bottom for the last `days` (default yesterday's 24 hours): leads, signals, new tier A accounts,
+    outbound drafted and sent, email engagement (human opens), meetings held, deals created, moved, won, lost,
+    and what is waiting on a human. Every number comes from the store."""
+    from gtm_core import engagement
+    now = _now(now)
+    start = now - timedelta(days=days)
+    s, e = start.isoformat(), now.isoformat()
+    leads = ctx.store.select("leads", "received_at>=? AND received_at<?", (s, e))
+    by_src: dict[str, int] = {}
+    for l in leads:
+        by_src[l.get("source") or "unknown"] = by_src.get(l.get("source") or "unknown", 0) + 1
+    signals = _count(ctx, "SELECT COUNT(*) AS n FROM signals WHERE created_at>=? AND created_at<?", (s, e))
+    # Tier A now that were not tier A in the previous sweep
+    runs = ctx.store.query("SELECT DISTINCT run_id, MAX(created_at) AS at FROM scores GROUP BY run_id ORDER BY at DESC LIMIT 2")
+    new_a = []
+    if runs:
+        cur = {r["account_id"]: r["tier"] for r in ctx.store.query("SELECT account_id, tier FROM scores WHERE run_id=?", (runs[0]["run_id"],))}
+        prev = {r["account_id"]: r["tier"] for r in ctx.store.query("SELECT account_id, tier FROM scores WHERE run_id=?", (runs[1]["run_id"],))} if len(runs) > 1 else {}
+        if runs[0]["at"] >= s:
+            new_a = sorted(a for a, t in cur.items() if t == "A" and prev.get(a) != "A")
+    drafted = _count(ctx, "SELECT COUNT(*) AS n FROM drafts WHERE kind='first_touch' AND created_at>=? AND created_at<?", (s, e))
+    ev = ctx.store.query("SELECT event, machine, COUNT(*) AS n FROM email_events WHERE occurred_at>=? AND occurred_at<? "
+                         "GROUP BY event, machine", (s, e))
+    evc: dict[str, int] = {}
+    for r in ev:
+        if r["event"] == "open" and r["machine"]:
+            evc["machine_open"] = evc.get("machine_open", 0) + r["n"]
+        else:
+            evc[r["event"]] = evc.get(r["event"], 0) + r["n"]
+    week = engagement.rates(engagement.threads(ctx.store, (now - timedelta(days=7)).isoformat()))
+    meetings = _count(ctx, "SELECT COUNT(*) AS n FROM meetings WHERE started_at>=? AND started_at<?", (s, e))
+    deals = ctx.store.select("deals")
+    created = [d for d in deals if pipeline.in_period(d.get("created_at"), start, now)]
+    won = [d for d in deals if pipeline.is_won(d) and pipeline.in_period(d.get("close_date"), start, now)]
+    lost = [d for d in deals if pipeline.is_lost(d) and pipeline.in_period(d.get("close_date"), start, now)]
+    moves = []
+    for d in deals:
+        if pipeline.is_open(d):
+            moves += [{"name": d.get("name"), **m} for m in stage_moves(ctx, ctx.store.deal_history(d["id"]), start)]
+    pending = ctx.store.query("SELECT agent, COUNT(*) AS n FROM approvals WHERE status='pending' GROUP BY agent")
+    return {"from": s, "to": e,
+            "leads": {"count": len(leads), "by_source": by_src},
+            "signals_added": signals, "new_tier_a": new_a,
+            "outbound": {"sequences_drafted": drafted, "sent": evc.get("sent", 0), "human_opens": evc.get("open", 0),
+                         "machine_opens": evc.get("machine_open", 0), "clicks": evc.get("click", 0),
+                         "replies": evc.get("reply", 0) + evc.get("reply_positive", 0) + evc.get("reply_negative", 0),
+                         "positive_replies": evc.get("reply_positive", 0), "bounces": evc.get("bounce", 0),
+                         "unsubscribes": evc.get("unsubscribe", 0)},
+            "email_7d": week,
+            "meetings_held": meetings,
+            "deals": {"created": {"count": len(created), "amount": _sum(created)},
+                      "won": {"count": len(won), "amount": _sum(won), "deals": [d.get("name") for d in won]},
+                      "lost": {"count": len(lost), "amount": _sum(lost), "deals": [d.get("name") for d in lost]},
+                      "stage_moves": {"forward": sum(1 for m in moves if m["direction"] == "forward"),
+                                      "back": sum(1 for m in moves if m["direction"] == "back")}},
+            "approvals_pending": {r["agent"]: r["n"] for r in pending}}
+
+
+def format_daily(r: dict) -> str:
+    o, d, w = r["outbound"], r["deals"], r["email_7d"]
+    day = r["to"][:10]
+    rate = (f" | 7-day: {w['open_rate']:.0%} open, {w['reply_rate']:.0%} reply over {w['sends']} sends"
+            if w["sends"] else "")
+    lines = [f"*Daily GTM report* | {day}",
+             f"Leads: {r['leads']['count']}" + (" (" + ", ".join(f"{k} {v}" for k, v in sorted(r['leads']['by_source'].items())) + ")"
+                                                 if r['leads']['by_source'] else ""),
+             f"Signals: {r['signals_added']} | New tier A: {', '.join(r['new_tier_a']) or 'none'}",
+             f"Outbound: {o['sequences_drafted']} drafted, {o['sent']} sent, {o['human_opens']} opens, {o['replies']} replies "
+             f"({o['positive_replies']} positive), {o['bounces']} bounces{rate}",
+             f"Meetings held: {r['meetings_held']}",
+             f"Deals: {d['created']['count']} created ({money(d['created']['amount'])}), {d['won']['count']} won "
+             f"({money(d['won']['amount'])}), {d['lost']['count']} lost, {d['stage_moves']['forward']} moved forward, "
+             f"{d['stage_moves']['back']} moved back"]
+    if r["approvals_pending"]:
+        lines.append("Waiting on approval: " + ", ".join(f"{a} {n}" for a, n in sorted(r["approvals_pending"].items())))
+    return "\n".join(lines)

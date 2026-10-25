@@ -1,6 +1,7 @@
 """Forecast Prep engine: every total, variance and pace number is computed here. The model only writes summary bullets."""
 from __future__ import annotations
 
+import json
 import math
 import re
 from datetime import datetime, timedelta, timezone
@@ -557,3 +558,133 @@ def agenda(ctx, level: str = "manager", owner: str = "", now: datetime | None = 
             [(f"Inspect: {f['name']}", 4) for f in p["top_deals"]] + [("Slipped deals: keep or move", 4)]
     return {"level": "manager", "items": [{"topic": t, "minutes": m} for t, m in items],
             "total_minutes": sum(m for _, m in items), "prep": format_manager(p)}
+
+
+# ---------- forecast calls (what each rep actually called) ----------
+def submit_call(ctx, owner: str, commit: float, best_case: float | None = None, notes: str = "",
+                deal_ids: list[str] | None = None, now: datetime | None = None) -> dict:
+    """Record a rep's call for the current quarter, next to the system numbers at that moment.
+    Local record only; nothing is written to the CRM."""
+    now = _now(now)
+    if commit is None or float(commit) < 0:
+        raise ValueError("commit must be zero or more")
+    if best_case is not None and float(best_case) < float(commit):
+        raise ValueError("best case cannot be below commit")
+    p = ae_prep(ctx, owner, now)
+    q = p["quarter_totals"]
+    sys_snap = {"won": q["won"], "rep_commit_in_crm": q["commit"], "suggested_commit": p["suggested_commit"],
+                "best_case_in_crm": q["best_case"], "deal_ids": deal_ids or []}
+    cid = ctx.store.insert(
+        "INSERT INTO forecast_calls (period, owner, commit_amount, best_case, pipeline, closed, notes, deals, submitted_at) "
+        "VALUES (?,?,?,?,?,?,?,?,?)",
+        (quarter_label(now), owner, float(commit), None if best_case is None else float(best_case), q["pipeline"],
+         q["won"], (notes or "")[:2000], json.dumps(sys_snap), now.replace(microsecond=0).isoformat()))
+    gap = round(float(commit) - p["suggested_commit"], 2)
+    return {"call_id": cid, "period": quarter_label(now), "owner": owner, "commit": float(commit),
+            "best_case": best_case, "suggested_commit": p["suggested_commit"], "gap_to_suggested": gap,
+            "flag": variance_flag(ctx, float(commit), p["suggested_commit"])}
+
+
+def calls(ctx, period: str = "", owner: str = "") -> list[dict]:
+    sql, params = "SELECT * FROM forecast_calls WHERE 1=1", []
+    if period:
+        sql += " AND period=?"; params.append(period)
+    if owner:
+        sql += " AND owner=?"; params.append(owner)
+    rows = ctx.store.query(sql + " ORDER BY submitted_at, id", params)
+    for r in rows:
+        r["deals"] = json.loads(r.get("deals") or "{}")
+    return rows
+
+
+def latest_calls(ctx, period: str) -> dict[str, dict]:
+    out = {}
+    for r in calls(ctx, period):
+        out[r["owner"]] = r
+    return out
+
+
+def _period_bounds(label: str) -> tuple[datetime, datetime]:
+    q, y = label.split()  # "Q4 2026"
+    q = q.lstrip("Q")
+    start = datetime(int(y), 3 * (int(q) - 1) + 1, 1, tzinfo=timezone.utc)
+    return quarter_bounds(start)
+
+
+def accuracy(ctx, owner: str = "", now: datetime | None = None) -> dict:
+    """Closed quarters only: final commit call vs actual won. ratio = won / final call (1.0 is perfect)."""
+    now = _now(now)
+    cur = quarter_label(now)
+    periods = sorted({r["period"] for r in calls(ctx, owner=owner)} - {cur})
+    out = []
+    for per in periods:
+        qs, qe = _period_bounds(per)
+        for o, call in latest_calls(ctx, per).items():
+            if owner and o != owner:
+                continue
+            won = round(sum(amt(d) for d in ctx.store.select("deals") if d.get("owner") == o and pipeline.is_won(d)
+                            and pipeline.in_period(d.get("close_date"), qs, qe)), 2)
+            c = float(call["commit_amount"] or 0)
+            out.append({"period": per, "owner": o, "final_call": c, "won": won,
+                        "ratio": round(won / c, 3) if c else None,
+                        "miss_pct": round(100 * (won - c) / c, 1) if c else None})
+    by_owner: dict[str, list] = {}
+    for r in out:
+        if r["ratio"] is not None:
+            by_owner.setdefault(r["owner"], []).append(r["ratio"])
+    return {"periods": out, "ratio_by_owner": {o: round(sum(v) / len(v), 3) for o, v in by_owner.items()}}
+
+
+def board_forecast(ctx, now: datetime | None = None) -> dict:
+    """Board view: won to date plus three ranges built from evidence, not opinion.
+      low  = won + system suggested commit
+      call = won + each rep's latest commit call, scaled by that rep's historical call accuracy (capped 0.5x to 1.2x)
+      high = won + CRM best case (commit plus best case)
+    Reps with no call this quarter fall back to their CRM commit and are listed."""
+    now = _now(now)
+    m = manager_prep(ctx, now)
+    per = quarter_label(now)
+    latest = latest_calls(ctx, per)
+    acc = accuracy(ctx, now=now)["ratio_by_owner"]
+    t = m["team"]
+    reps, missing, call_sum = [], [], 0.0
+    for r in m["reps"]:
+        o = r["owner"]
+        call = latest.get(o)
+        raw = float(call["commit_amount"]) if call else r["rep_commit"]
+        if not call:
+            missing.append(o)
+        ratio = acc.get(o)
+        scale = min(1.2, max(0.5, ratio)) if ratio is not None else 1.0
+        adj = round(raw * scale, 2)
+        call_sum += adj
+        reps.append({"owner": o, "call": raw, "called": bool(call), "history_ratio": ratio, "adjusted": adj,
+                     "suggested": r["suggested_commit"], "won": r["quarter_totals"]["won"]})
+    quota = m["team_quota"]
+    low = round(t["won"] + m["suggested_commit"], 2)
+    mid = round(t["won"] + call_sum, 2)
+    high = round(t["won"] + t["best_case"], 2)
+    pct = (lambda v: round(100 * v / quota, 1) if quota else None)
+    qs, qe = quarter_bounds(now)
+    nqs, nqe = quarter_bounds(qe + timedelta(days=1))
+    next_pipe = round(sum(amt(d) for d in ctx.store.select("deals") if pipeline.is_open(d)
+                          and pipeline.in_period(d.get("close_date"), nqs, nqe)), 2)
+    return {"as_of": now.replace(microsecond=0).isoformat(), "quarter": per, "quota": quota, "won": t["won"],
+            "range": {"low": low, "call": mid, "high": high},
+            "attainment_pct": {"low": pct(low), "call": pct(mid), "high": pct(high)},
+            "reps": reps, "no_call_this_quarter": missing,
+            "next_quarter_pipeline": next_pipe,
+            "method": "low = won + suggested commit; call = won + rep calls x historical accuracy; high = won + best case"}
+
+
+def format_board(b: dict) -> str:
+    r, a = b["range"], b["attainment_pct"]
+    q = f" of {money(b['quota'])}" if b["quota"] else ""
+    lines = [f"*Board forecast* | {b['quarter']}",
+             f"Won {money(b['won'])}{q}",
+             f"Range: low {money(r['low'])} | call {money(r['call'])} | high {money(r['high'])}"
+             + (f" ({a['low']}% / {a['call']}% / {a['high']}% of quota)" if b["quota"] else ""),
+             f"Next quarter pipeline: {money(b['next_quarter_pipeline'])}"]
+    if b["no_call_this_quarter"]:
+        lines.append("_No call submitted, CRM commit used:_ " + ", ".join(b["no_call_this_quarter"]))
+    return "\n".join(lines)
