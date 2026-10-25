@@ -68,6 +68,19 @@ def eval_signal_scout(m: Manifest, spec: dict) -> list[dict]:
         add(f"{aid} stack rule {rule}", got == rule, f"got {got}")
     if "duplicates_ignored" in ex:
         add("duplicate signals ignored", dupes == ex["duplicates_ignored"], f"{dupes} ignored")
+    for aid, pain in ex.get("judged_pain", {}).items():
+        got = (ranked[aid].judged or {}).get("primary_pain")
+        add(f"{aid} judged pain {pain}", got == pain, f"got {got}")
+    for aid, lo in ex.get("judged_min", {}).items():
+        got = (ranked[aid].judged or {}).get("score")
+        add(f"{aid} judged fit >= {lo}", got is not None and got >= lo, f"got {got}")
+    for aid in ex.get("judged_cannot_rescue", []):
+        add(f"{aid} excluded industry stays out despite judgment", ranked[aid].tier == "X" and ranked[aid].icp == 0,
+            f"tier {ranked[aid].tier}, icp {ranked[aid].icp}")
+    if ex.get("judged_cached"):
+        again = eng.score_one(ctx, ctx.store.account(ex["judged_cached"]), now=now)
+        n = ctx.store.one("SELECT COUNT(*) AS n FROM decisions WHERE subject=? AND model='icp_fit'", (ex["judged_cached"],))["n"]
+        add("unchanged state reuses the cached verdict", n == 1 and again.score == ranked[ex["judged_cached"]].score, f"{n} rows")
     return results
 
 

@@ -244,6 +244,49 @@ CREATE TABLE IF NOT EXISTS handoffs (
   consumed_at TEXT
 );
 CREATE INDEX IF NOT EXISTS ix_handoffs_to ON handoffs(to_agent, status);
+CREATE TABLE IF NOT EXISTS decisions (
+  id {AUTOID},
+  model TEXT NOT NULL,
+  subject TEXT NOT NULL,
+  state_hash TEXT,
+  fingerprint TEXT,
+  backend TEXT,
+  answers TEXT,
+  score REAL,
+  coverage REAL,
+  shadow TEXT,
+  created_at TEXT
+);
+CREATE INDEX IF NOT EXISTS ix_decisions_subject ON decisions(model, subject, created_at);
+CREATE TABLE IF NOT EXISTS email_events (
+  id {AUTOID},
+  email TEXT NOT NULL,
+  contact_id TEXT,
+  account_id TEXT,
+  draft_id INTEGER,
+  step TEXT,
+  angle TEXT,
+  value_prop TEXT,
+  event TEXT NOT NULL,
+  machine INTEGER,
+  occurred_at TEXT,
+  source TEXT,
+  created_at TEXT
+);
+CREATE INDEX IF NOT EXISTS ix_email_events ON email_events(email, event, occurred_at);
+CREATE TABLE IF NOT EXISTS forecast_calls (
+  id {AUTOID},
+  period TEXT NOT NULL,
+  owner TEXT NOT NULL,
+  commit_amount REAL,
+  best_case REAL,
+  pipeline REAL,
+  closed REAL,
+  notes TEXT,
+  deals TEXT,
+  submitted_at TEXT
+);
+CREATE INDEX IF NOT EXISTS ix_forecast_calls ON forecast_calls(period, owner, submitted_at);
 """
 
 # Record tables with a JSON `attrs` column for anything that is not a named column.

@@ -24,6 +24,13 @@ Use the Signal Scout tools. Never compute scores yourself when a tool can.
 | "We just saw a signal at X" | `add_signal` (pick the closest `signal_type` from the taxonomy) |
 | "X booked a meeting / went dark" | `record_outcome` |
 | "Update the CRM for X" | `push_to_crm` (queues for human approval; say so) |
+| "What did the judgment say about X?" | `judge_account` (each typed question, answer, quoted evidence, backend) |
+
+## Judged ICP
+
+ICP fit has two parts. The rule part scores firmographics. The judged part answers typed questions from `config/icp.yaml` (`judgment` section): yes or no, one of a fixed set of options, or 1 to 5. Every answer must quote evidence from the account's own facts, or it is dropped as unknown. The judged score blends in by how much of the question weight got answered, so thin evidence moves little. An excluded industry stays out whatever the judgment says.
+
+The judged `primary_pain` tells ICP Outbound which pain to lead with. Weekly learning moves each question's weight toward what earned human opens and replies. When explaining a score, name the rule fit, the judged fit and the two or three answers that drove it.
 
 ## When no tools are available (drop-in edition)
 

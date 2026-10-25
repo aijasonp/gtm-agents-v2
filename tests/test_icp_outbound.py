@@ -121,3 +121,23 @@ def test_draft_sequence_guards(ctx_for):
     assert other["skipped"] and any("another account" in r for r in other["reasons"])
     stranger = eng.draft_sequence(ctx, acct, {"email": "x@elsewhere.example", "name": "X"})
     assert stranger["skipped"] and any("domain" in r for r in stranger["reasons"])
+
+
+def test_sent_sequence_events_feed_angle_performance(ctx):
+    t = bind_tools(ctx)
+    out = t["draft_sequence"](account="proseware.example")
+    assert out["value_prop"]["id"] == "prioritization"  # VP of Sales, no data yet: persona default
+    [appr] = ctx.approvals.list()
+    meta = appr["payload"]["meta"]
+    assert meta["angle_key"] == "signal:funding_round" and meta["value_prop"] == "prioritization"
+    register_core_executors(ctx)
+    ctx.approvals.decide(appr["id"], True)
+    ctx.approvals.execute_approved()
+    first = out["steps"][0]["draft_id"]
+    assert t["record_email_event"](email="omar@proseware.example", event="sent", occurred_at="2026-10-23T13:00:00Z",
+                                   draft_id=first)["matched_draft"] == first
+    r = t["record_email_event"](email="omar@proseware.example", event="opened", occurred_at="2026-10-23T15:00:00Z")
+    assert r["matched_draft"] == first and not r["machine"]
+    perf = t["angle_performance"](days=3650)
+    assert perf["by_value_prop"]["prioritization"]["open_rate"] == 1.0
+    assert perf["by_angle"]["signal:funding_round"]["sends"] == 1

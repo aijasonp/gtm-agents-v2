@@ -10,7 +10,7 @@ from functools import lru_cache
 
 import yaml
 
-from gtm_core import personas, pipeline, profile, suppression, writer
+from gtm_core import decision, engagement, personas, pipeline, profile, suppression, writer
 from gtm_core.scoring import IcpProfile, icp_fit, load_taxonomy
 from gtm_core.scoring.signals import decay
 from gtm_core.store import now_iso
@@ -221,10 +221,47 @@ def angle(ctx, acct: dict, now: datetime | None = None, title: str = "", name: s
             "summary": f"{best['signal']} ({best['observed_at']})" if best else "no mentionable signal; lead with value"}
 
 
+FUNCTION_DEFAULT = {"revops": "deal_hygiene", "sales": "prioritization", "executive": "deal_hygiene"}
+
+
 def value_prop_for(ctx, function: str) -> dict:
     vps = profile.company(ctx).get("value_props", [])
-    pref = {"revops": "deal_hygiene", "sales": "prioritization", "executive": "deal_hygiene"}.get(function)
+    pref = FUNCTION_DEFAULT.get(function)
     return next((v for v in vps if v.get("id") == pref), vps[0] if vps else {})
+
+
+def choose_value_prop(ctx, acct: dict, function: str, now: datetime | None = None) -> dict:
+    """Pick the pain to lead with. Order of evidence:
+    1. the judged primary pain for this account (Signal Scout's icp_fit decision), as a prior
+    2. the persona default for the contact's function, as a smaller prior
+    3. what has earned opens and replies here (engagement by value prop over the learning window)
+    Deterministic: same data, same pick. Returns {value_prop, why, scores}."""
+    vps = profile.company(ctx).get("value_props", [])
+    ids = [v["id"] for v in vps if v.get("id")]
+    if not ids:
+        return {"value_prop": {}, "why": "no value props in company.yaml", "scores": {}}
+    d = decision.latest(ctx.store, "icp_fit", acct["id"])
+    judged = ((d or {}).get("answers", {}).get("primary_pain") or {}).get("value")
+    default = FUNCTION_DEFAULT.get(function)
+    order = [x for x in [judged, default] if x in ids] + [x for x in ids if x not in (judged, default)]
+    lc = cfg(ctx, "angle_learning", {}) or {}
+    prior = {}
+    if judged in ids:
+        prior[judged] = float(lc.get("judged_prior", 0.08))
+    if default in ids:
+        prior[default] = prior.get(default, 0.0) + float(lc.get("persona_prior", 0.03))
+    stats = engagement.breakdown(ctx.store, "value_prop", engagement.since_days(int(lc.get("window_days", 120)), now))
+    best, scores = engagement.pick(order, stats, prior, float(lc.get("explore", 0.15)), lc.get("weights"))
+    why = []
+    if best == judged:
+        why.append("judged primary pain for this account")
+    if best == default:
+        why.append(f"default for {function}")
+    s = stats.get(best) or {}
+    if s.get("sends"):
+        why.append(f"{s['open_rate']:.0%} open, {s['reply_rate']:.0%} reply over {s['sends']} sends")
+    return {"value_prop": next(v for v in vps if v.get("id") == best), "why": "; ".join(why) or "first value prop",
+            "scores": scores, "judged_pain": judged}
 
 
 # ---------- drafting ----------
@@ -233,9 +270,9 @@ def _lc(s: str) -> str:
     return s[:1].lower() + s[1:]
 
 
-def templates(ctx, acct: dict, contact: dict, ang: dict) -> dict[str, str]:
+def templates(ctx, acct: dict, contact: dict, ang: dict, vp: dict | None = None) -> dict[str, str]:
     snd = profile.sender(ctx)
-    vp = value_prop_for(ctx, contact.get("function", "sales"))
+    vp = vp or value_prop_for(ctx, contact.get("function", "sales"))
     first = (contact.get("name") or "there").split(" ")[0]
     sig = ang.get("signal")
     label = {"revops": "RevOps", "customer_success": "customer success", "executive": "executive"}.get(
@@ -283,11 +320,15 @@ def draft_sequence(ctx, acct: dict, contact: dict, now: datetime | None = None, 
         return {"skipped": True, "reasons": why}
     ang = angle(ctx, acct, now, contact.get("title", ""), contact.get("name", ""))
     comp = profile.company(ctx)
-    tpl = templates(ctx, acct, contact, ang)
+    pick = choose_value_prop(ctx, acct, contact.get("function", "sales"), now)
+    vp = pick["value_prop"]
+    angle_key = f"signal:{ang['signal']['signal_type']}" if ang.get("signal") else "value_led"
+    track = {"angle": ang["summary"], "angle_key": angle_key, "value_prop": vp.get("id"), "account_id": acct["id"]}
+    tpl = templates(ctx, acct, contact, ang, vp)
     facts = {"account": {"name": acct["name"], "industry": acct.get("industry")},
              "contact": {k: contact.get(k) for k in ("name", "title", "function")},
              "reason_now": ang["signal"]["say_it"] if ang.get("signal") else None,
-             "value_prop": value_prop_for(ctx, contact.get("function", "sales")),
+             "value_prop": vp,
              "proof_points": comp.get("proof_points", []), "sender": profile.sender(ctx), "our_company": comp.get("company")}
     instructions = {
         "first_touch": "Step 1 of 3: first touch. Open with reason_now if given, then one outcome, then one ask.",
@@ -301,12 +342,13 @@ def draft_sequence(ctx, acct: dict, contact: dict, now: datetime | None = None, 
         did = ctx.store.add_draft(ctx.manifest.id, step, d.body, subject=d.subject, gate_score=d.score,
                                   gate_passed=d.passed, source=d.source, account_id=acct["id"],
                                   contact_id=contact.get("contact_id"),
-                                  meta={"angle": ang["summary"], "step": step})
+                                  meta={**track, "step": step})
         steps.append({"step": step, "draft_id": did, **d.as_dict()})
         if d.passed:
             passing.append({"subject": d.subject, "body": d.body})
             ids.append(did)
-    out = {"account": acct["name"], "contact": contact.get("name"), "angle": ang, "steps": steps, "approval": None}
+    out = {"account": acct["name"], "contact": contact.get("name"), "angle": ang, "steps": steps, "approval": None,
+           "value_prop": {"id": vp.get("id"), "why": pick["why"]}}
     if not steps[0]["gate_passed"]:  # never open a sequence with a bump or breakup
         out["needs_rewrite"] = steps[0]["fix"]
         passing = []
@@ -314,7 +356,7 @@ def draft_sequence(ctx, acct: dict, contact: dict, now: datetime | None = None, 
         rid = ctx.request_approval("sequence_enroll", {
             "contact": {"email": contact["email"], "name": contact.get("name"), "company": acct["name"]},
             "steps": passing, "campaign": None, "draft_ids": ids,
-            "meta": {"agent": ctx.manifest.id, "angle": ang["summary"]}},
+            "meta": {"agent": ctx.manifest.id, **track}},
             summary=f"outbound to {contact.get('name')} ({acct['name']}): {len(passing)} steps, why now: {ang['summary']}")
         for did in ids:
             ctx.store.execute("UPDATE drafts SET status=?, approval_id=? WHERE id=?", ("queued", rid, did))

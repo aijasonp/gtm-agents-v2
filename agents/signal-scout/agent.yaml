@@ -10,6 +10,7 @@ skill: skill/SKILL.md
 references:
   - skill/references/signal-taxonomy.yaml
   - ../../config/icp.yaml
+  - ../../config/company.yaml
   - skill/references/scoring-method.md
   - skill/references/brief-format.md
 library:  # licensed playbooks bundled into the drop-in package (see THIRD_PARTY_NOTICES.md)
@@ -24,6 +25,7 @@ tools:
   - add_signal
   - record_outcome
   - push_to_crm
+  - judge_account
 connectors_required: []
 connectors_optional: [crm, slack, enrichment]
 jobs:
@@ -35,6 +37,7 @@ evals: evals/golden.yaml
 config:
   taxonomy: skill/references/signal-taxonomy.yaml
   icp: ../../config/icp.yaml
+  company: ../../config/company.yaml
   icp_weight: 0.4
   icp_floor: 30
   lookback_days: 120

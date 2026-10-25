@@ -49,3 +49,17 @@ def daily_drafts(ctx, now: datetime | None = None) -> dict:
         ctx.slack.post(f"*ICP Outbound*: drafted {drafted} sequences, {queued} queued for approval. "
                        f"Review: `gtm approvals icp-outbound list`")
     return {"drafted": drafted, "queued": queued, "skipped": skipped}
+
+
+def weekly_angle_report(ctx, now: datetime | None = None) -> dict:
+    """Post open and reply rates by value prop, angle and judged ICP band. Read only."""
+    perf = load_module(ctx.manifest, "tools").angle_performance(ctx)
+    o = perf["overall"]
+    if not o["sends"]:
+        return {"sends": 0}
+    def fmt(d):
+        return "; ".join(f"{k} {v['open_rate']:.0%}/{v['reply_rate']:.0%} ({v['sends']})" for k, v in d.items() if v["sends"])
+    ctx.slack.post(f"*ICP Outbound engagement* (open/reply, human opens only): overall {o['open_rate']:.0%}/"
+                   f"{o['reply_rate']:.0%} over {o['sends']} sends\nBy value prop: {fmt(perf['by_value_prop'])}\n"
+                   f"By angle: {fmt(perf['by_angle'])}\nBy judged ICP: {fmt(perf['by_judged_icp'])}")
+    return {"sends": o["sends"], **perf}
