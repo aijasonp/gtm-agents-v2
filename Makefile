@@ -13,10 +13,7 @@ compile:
 	$(PY) build/compile.py
 
 demo:
-	rm -f demo.db && DATABASE_URL=sqlite:///demo.db $(PY) -m gtm_core.cli init && \
-	DATABASE_URL=sqlite:///demo.db $(PY) -m gtm_core.cli import signal-scout accounts data/sample/accounts.csv && \
-	DATABASE_URL=sqlite:///demo.db $(PY) -m gtm_core.cli import signal-scout signals data/sample/signals.csv && \
-	DATABASE_URL=sqlite:///demo.db $(PY) -m gtm_core.cli run signal-scout daily_sweep
+	$(PY) scripts/demo_all.py
 
 selftest:
 	$(PY) -m gtm_core.cli selftest
@@ -25,7 +22,7 @@ image:
 	docker build -t gtm-agents:$$(grep '^version' pyproject.toml | cut -d'"' -f2) .
 
 fleet:
-	$(PY) netclaw/build.py $(if $(PROFILE),--profile $(PROFILE),)
+	$(PY) netclaw/build.py --config $(or $(CONFIG),config)
 
 clean-check:
 	$(PY) netclaw/check_clean.py

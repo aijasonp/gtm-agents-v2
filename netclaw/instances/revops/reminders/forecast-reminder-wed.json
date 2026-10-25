@@ -1,7 +1,7 @@
 {
   "id": "forecast-reminder-wed",
   "title": "Forecast call due tomorrow (Wed 9:00 CT)",
-  "instructions": "Spawn forecast-hygiene: send each AE the due-Thursday reminder with their open deal count and total amount this quarter (forecast-call skill).",
+  "instructions": "Spawn forecast-hygiene: remind each AE their forecast call is due Thursday, with their open pipeline from revenue-pulse/owner_scorecard.",
   "schedule": {
     "type": "Cron",
     "cronExpression": "0 14 * * WED"

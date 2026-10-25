@@ -1,0 +1,33 @@
+# Lead Triage golden cases. Runs on the template path (no model key), in-memory DB.
+now: "2026-10-23T09:00:00+00:00"
+accounts:
+  - {id: northwind.example, name: Northwind Logistics, domain: northwind.example, crm_id: "1001", industry: Logistics, employees: 600, country: US, revenue: 120000000, tech: [salesforce]}
+  - {id: adatum.example, name: Adatum Fintech, domain: adatum.example, crm_id: "1007", industry: Fintech, employees: 450, country: GB, revenue: 60000000}
+  - {id: wingtip.example, name: Wingtip Public Schools, domain: wingtip.example, industry: Education, employees: 800, country: US}
+  - {id: litware.example, name: Litware Manufacturing, domain: litware.example, industry: Manufacturing, employees: 40000, country: DE}
+deals:
+  - {id: deal-northwind, crm_id: "5001", account_id: northwind.example, name: Northwind Platform, owner: Sam Rivera, stage: Evaluation, status: open, amount: 96000}
+contacts:
+  - {id: dana@northwind.example, email: dana@northwind.example, name: Dana Cole, title: VP Sales, account_id: northwind.example}
+leads:
+  - {id: l-adatum, email: ari@adatum.example, name: Ari Cohen, title: Director of Sales, company: Adatum Fintech, source: demo_request, message: "Hiring 6 SDRs. How does routing work?", received_at: "2026-10-23T08:00:00+00:00"}
+  - {id: l-northwind, email: marcus@northwind.example, name: Marcus Lee, title: Director of Revenue Operations, company: Northwind Logistics, source: demo_request, received_at: "2026-10-23T08:10:00+00:00"}
+  - {id: l-wingtip, email: pat@wingtip.example, name: Pat Green, title: Teacher, company: Wingtip Public Schools, source: content_download, received_at: "2026-10-22T11:00:00+00:00"}
+  - {id: l-gmail, email: jamie@gmail.com, name: Jamie Fox, title: Founder, source: newsletter, received_at: "2026-10-21T09:30:00+00:00"}
+  - {id: l-webinar, email: nina@adatum.example, name: Nina Berg, title: SDR Manager, company: Adatum Fintech, source: webinar, received_at: "2026-10-22T18:00:00+00:00"}
+  - {id: l-litware, email: tom@litware.example, name: Tom Hale, title: VP Sales, company: Litware, source: demo_request, received_at: "2026-10-23T07:00:00+00:00"}
+expect:
+  tier:
+    l-adatum: hot
+    l-wingtip: disqualify
+    l-gmail: disqualify
+  min_tier: {l-webinar: nurture}
+  owner:
+    l-northwind: Sam Rivera
+    l-adatum: Priya Shah
+  active_pipeline: [l-northwind]
+  no_outreach_draft: [l-northwind, l-wingtip, l-gmail]
+  sla_due: {l-adatum: "2026-10-23T08:15:00+00:00"}
+  owner_in: {l-litware: [Lee Park, Priya Shah]}   # enterprise owners; no one covers DE
+  drafts_pass_gate: [l-adatum]
+  approvals_include: {l-adatum: [crm_contact, crm_task, sequence_enroll], l-northwind: [crm_task]}

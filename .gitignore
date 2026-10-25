@@ -19,6 +19,5 @@ data/*
 data/signals/
 .DS_Store
 
-# Deployment config (customer product profile, forecast routing)
-config/
-library/outbound-engine/forecast_alerts.config.json
+# scratch
+_fork*/

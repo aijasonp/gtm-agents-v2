@@ -11,6 +11,12 @@ references:
   - skill/references/rubric.md
   - skill/references/banned-phrases.txt
   - skill/references/rewrite-patterns.md
+library:  # licensed playbooks bundled into the drop-in package (see THIRD_PARTY_NOTICES.md)
+  - library/avoid-ai-writing/skills/avoid-ai-writing
+  - library/blader-humanizer/skills/humanizer
+  - library/unslop/skills/unslop
+  - library/no-slop/skills/no-slop
+  - library/coreyhaines-marketingskills/skills/copy-editing
 tools:
   - check_copy
   - check_batch

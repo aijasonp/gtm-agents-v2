@@ -1,0 +1,9 @@
+email,name,title,company,industry,employees,country,source,event,message,received_at
+marcus.lee@northwind.example,Marcus Lee,Director of Revenue Operations,Northwind Logistics,,,,demo_request,,We are rebuilding territories for Q1 and want to see the account ranking.,2026-10-23T08:12:00+00:00
+omar.haddad@proseware.example,Omar Haddad,VP of Sales,Proseware,Software,350,US,demo_request,,Hiring 6 SDRs next quarter. How does routing work?,2026-10-23T07:40:00+00:00
+kim.ortiz@tailspin.example,Kim Ortiz,VP Sales,Tailspin Software,,,,event,RevOps Summit 2026,Stopped by the booth. Interested in deal inspection.,2026-10-22T16:05:00+00:00
+lena.kraus@woodgrove.example,Lena Kraus,Director of Sales Operations,Woodgrove Bank,Financial Services,1400,CA,event,RevOps Summit 2026,,2026-10-22T15:30:00+00:00
+pat.green@wingtip.example,Pat Green,Teacher,Wingtip Public Schools,,,,content_download,,,2026-10-22T11:00:00+00:00
+jamie.fox@gmail.com,Jamie Fox,Founder,Fox Ventures,,,,newsletter,,,2026-10-21T09:30:00+00:00
+ivy.chen@lucerne.example,Ivy Chen,SDR Manager,Lucerne Publishing,Media,220,US,webinar,Pipeline Webinar,,2026-10-22T18:00:00+00:00
+marcus.lee@northwind.example,Marcus Lee,Director of Revenue Operations,Northwind Logistics,,,,demo_request,,Duplicate submit.,2026-10-23T08:13:00+00:00

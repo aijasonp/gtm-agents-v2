@@ -1,0 +1,63 @@
+# Product Marketing golden cases. Template path (no model key), in-memory DB, fixed clock.
+# Each check calls an engine function, reads a path from the result and compares it.
+now: "2026-10-23T12:00:00+00:00"
+accounts:
+  - {id: northwind.example, name: Northwind Logistics, industry: Logistics, employees: 600, country: US}
+  - {id: contoso.example, name: Contoso Health, industry: Healthcare Technology, employees: 900, country: US}
+  - {id: fabrikam.example, name: Fabrikam Insurance, industry: Insurance, employees: 1200, country: CA}
+  - {id: litware.example, name: Litware Manufacturing, industry: Manufacturing, employees: 40000, country: DE}
+  - {id: tailspin.example, name: Tailspin Software, industry: Software, employees: 300, country: US}
+contacts:
+  - {id: ravi@fabrikam.example, email: ravi@fabrikam.example, account_id: fabrikam.example, title: Director of Revenue Operations, function: revops}
+  - {id: kim@tailspin.example, email: kim@tailspin.example, account_id: tailspin.example, title: VP Sales, function: sales}
+deals:
+  - {id: d-litware, account_id: litware.example, name: Litware Scout, status: won, stage: Closed Won, amount: 55000, created_at: "2026-05-01", close_date: "2026-09-30", win_reason: "faster setup and CRM write-back", meddpicc: {competition: "confirmed: Acme Intel"}}
+  - {id: d-fabrikam, account_id: fabrikam.example, name: Fabrikam Add-on, status: lost, stage: Closed Lost, amount: 30000, created_at: "2026-06-01", close_date: "2026-10-05", loss_reason: "chose Acme Intel on price", meddpicc: {competition: "confirmed: chose Acme Intel on price"}}
+  - {id: d-tailspin, account_id: tailspin.example, name: Tailspin Expansion, status: won, stage: Closed Won, amount: 72000, created_at: "2026-06-10", close_date: "2026-10-15", meddpicc: {competition: "confirmed: Globex Signals"}}
+  - {id: d-contoso, account_id: contoso.example, name: Contoso Agents, status: lost, stage: Closed Lost, amount: 140000, created_at: "2026-07-15", close_date: "2026-10-20", loss_reason: "no budget this year"}
+  - {id: d-old, account_id: fabrikam.example, name: Fabrikam Pilot 2025, status: lost, stage: Closed Lost, amount: 20000, created_at: "2025-11-01", close_date: "2026-03-01", loss_reason: "chose Acme Intel"}
+  - {id: d-northwind, account_id: northwind.example, name: Northwind Platform, status: open, stage: Evaluation, amount: 96000}
+insights:
+  - {kind: competitor_mention, key: Acme Intel, account_id: northwind.example, deal_id: d-northwind, evidence: "Marcus Lee: We pay for Acme Intel but nobody trusts the scoring.", observed_at: "2026-10-20"}
+  - {kind: competitor_mention, key: Acme Intel, account_id: fabrikam.example, deal_id: d-fabrikam, evidence: "Ravi Mehta: Acme Intel came in 30 percent cheaper.", observed_at: "2026-09-15"}
+  - {kind: competitor_mention, key: acme intel, account_id: contoso.example, evidence: "Lee Wong: the price is too expensive compared to Acme Intel.", observed_at: "2026-10-21"}
+  - {kind: competitor_mention, key: Acme Intel, account_id: fabrikam.example, evidence: "Ravi: we looked at Acme Intel last year.", observed_at: "2026-06-15"}
+  - {kind: competitor_mention, key: Initech, account_id: northwind.example, evidence: "Dana: Initech pitched us too.", observed_at: "2026-10-02"}
+  - {kind: competitor_mention, key: Initech, account_id: contoso.example, evidence: "Jo: Initech has a free tier.", observed_at: "2026-10-09"}
+  - {kind: competitor_mention, key: Initech, account_id: tailspin.example, evidence: "Kim: Initech called last week.", observed_at: "2026-10-12"}
+  - {kind: objection, key: price, account_id: fabrikam.example, deal_id: d-fabrikam, evidence: "Ravi: too expensive for us.", observed_at: "2026-09-15"}
+  - {kind: objection, key: price, account_id: fabrikam.example, deal_id: d-fabrikam, evidence: "Ravi: budget is tight.", observed_at: "2026-09-29"}
+  - {kind: objection, key: price, account_id: contoso.example, deal_id: d-contoso, evidence: "Lee Wong: the price is too expensive.", observed_at: "2026-10-21"}
+  - {kind: objection, key: legal, account_id: northwind.example, deal_id: d-northwind, evidence: "Ana: our MSA terms are strict.", observed_at: "2026-10-01"}
+  - {kind: objection, key: legal, account_id: tailspin.example, deal_id: d-tailspin, evidence: "Kim: legal wants liability caps.", observed_at: "2026-10-05"}
+  - {kind: objection, key: timing, account_id: northwind.example, deal_id: d-northwind, evidence: "Dana: maybe next quarter.", observed_at: "2026-10-22"}
+  - {kind: objection, key: security, account_id: tailspin.example, deal_id: d-tailspin, evidence: "Kim: SOC 2 first.", observed_at: "2026-06-01"}
+
+checks:
+  - {name: Acme mentions in window, call: competitor_intel, args: {competitor: acme intel}, path: mentions, op: eq, value: 3}
+  - {name: Acme mention trend up vs previous window, call: competitor_intel, args: {competitor: Acme Intel}, path: trend, op: eq, value: up}
+  - {name: Acme record excludes deals closed before the window, call: competitor_intel, args: {competitor: Acme Intel}, path: win_rate, op: eq, value: 0.5}
+  - {name: Acme top co-occurring objection is price, call: competitor_intel, args: {competitor: Acme Intel}, path: top_objections.0.category, op: eq, value: price}
+  - {name: Acme quotes capped at five, call: competitor_intel, args: {competitor: Acme Intel}, path: quotes, op: len_lte, value: 5}
+  - {name: Known competitor uses company.yaml positioning, call: competitor_intel, args: {competitor: Acme Intel}, path: positioning, op: contains, value: Data provider}
+  - {name: Unknown competitor positioning is to verify, call: competitor_intel, args: {competitor: Initech}, path: positioning, op: eq, value: to verify}
+  - {name: Unknown competitor flagged for company.yaml, call: competitor_intel, args: {competitor: Initech}, path: to_verify.0, op: contains, value: not in company.yaml}
+  - {name: Win/loss counts in window, call: win_loss, args: {}, path: won, op: eq, value: 2}
+  - {name: Win/loss lost count in window, call: win_loss, args: {}, path: lost, op: eq, value: 2}
+  - {name: Average cycle won (152 and 127 days), call: win_loss, args: {}, path: avg_cycle_days_won, op: eq, value: 139.5}
+  - {name: Average cycle lost (126 and 97 days), call: win_loss, args: {}, path: avg_cycle_days_lost, op: eq, value: 111.5}
+  - {name: Loss with no competitor grouped as none named, call: win_loss, args: {}, path: by_competitor.none named.lost, op: eq, value: 1}
+  - {name: Size band cut, call: win_loss, args: {}, path: by_size.enterprise.won, op: eq, value: 1}
+  - {name: Price is the most frequent objection, call: objection_library, args: {}, path: categories.0.category, op: eq, value: price}
+  - {name: Frequent objection with no prepared response is a gap, call: objection_library, args: {}, path: gaps, op: eq, value: [legal]}
+  - {name: Objections outside the window are excluded, call: objection_library, args: {}, path: categories, op: not_has_category, value: security}
+  - {name: Battlecard where they win comes from the loss reason, call: battlecard, args: {competitor: Acme Intel}, path: where_they_win.0, op: eq, value: "chose Acme Intel on price (1)"}
+  - {name: Battlecard where we win comes from the win reason, call: battlecard, args: {competitor: Acme Intel}, path: where_we_win.0, op: contains, value: faster setup}
+  - {name: Battlecard never claims competitor pricing or features, call: battlecard, args: {competitor: Acme Intel}, path: to_verify, op: any_contains, value: pricing, packaging and feature claims}
+  - {name: Battlecard is saved as a draft, call: battlecard, args: {competitor: Acme Intel}, path: draft_id, op: truthy}
+  - {name: Battlecard text has every section, call: battlecard, args: {competitor: Globex Signals}, path: text, op: contains_all, value: [Where they win, Where we win, Landmines, Objection handling, Proof, Evidence log, To verify]}
+  - {name: Refresh adds competitors seen 3+ times that are not in company.yaml, call: competitors_to_refresh, args: {}, path: "1", op: eq, value: [Initech]}
+  - {name: Field report spots a new objection this week, call: field_report, args: {}, path: new_objections, op: eq, value: [timing]}
+  - {name: Messaging brief for revops leads with deal hygiene, call: messaging_brief, args: {persona_function: revops}, path: lead_message.outcome, op: contains, value: MEDDPICC}
+  - {name: Messaging brief pulls revops-deal objections, call: messaging_brief, args: {persona_function: revops}, path: objections.0.category, op: eq, value: price}
+  - {name: Launch brief leaves unknowns as TODO, call: launch_brief, args: {feature: Deal inspection alerts}, path: todo, op: any_contains, value: product owner}

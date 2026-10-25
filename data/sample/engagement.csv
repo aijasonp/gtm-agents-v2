@@ -1,0 +1,4 @@
+platform,post_url,post_title,author,engager_name,engager_title,engager_company,engager_profile_url,engagement_type,comment_text,engaged_at
+linkedin,https://linkedin.example/post/1,Ranking accounts every morning,Beacon,Kai Moore,Head of Revenue Operations,Fourth Coffee,,comment,How do you handle territories that span regions? We are evaluating options for Q1.,2026-10-22T16:00:00+00:00
+youtube,https://youtube.example/watch?v=2,Pipeline demo,Beacon,Sky Lin,VP Sales Operations,Fourth Coffee,,like,,2026-10-22T17:30:00+00:00
+linkedin,https://linkedin.example/post/1,Ranking accounts every morning,Beacon,Hana Sato,Chief Revenue Officer,Woodgrove Bank,,share,,2026-10-21T12:00:00+00:00

@@ -1,0 +1,5 @@
+domain,employees,industry,revenue,country
+northwind.example,600,Logistics,120000000,US
+fourthcoffee.example,520,Software,80000000,US
+woodgrove.example,1400,Financial Services,400000000,CA
+lucerne.example,220,Media,30000000,US

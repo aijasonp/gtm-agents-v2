@@ -1,0 +1,36 @@
+id: meeting-intelligence
+name: Meeting Intelligence
+version: 0.1.0
+tier: A
+description: >
+  Reads every sales call transcript, pulls out pain, next steps, objections, competitors, pricing talk and
+  MEDDPICC evidence, writes a short summary onto the meeting, coaches the rep, and hands the recap to
+  Seller Follow-Up and the evidence to Deal Inspection. CRM notes wait for approval.
+editions: [dropin, persistent]
+skill: skill/SKILL.md
+references:
+  - skill/references/call-analysis.md
+  - skill/references/summary-format.md
+  - skill/references/coaching-rubric.md
+  - ../../config/company.yaml
+library:  # licensed playbooks bundled into the drop-in package (see THIRD_PARTY_NOTICES.md)
+  - library/sales-skills/skills/sales-call-review
+  - library/sales-skills/skills/sales-coaching
+tools:
+  - analyze_call
+  - meeting_summary
+  - list_meetings
+  - coaching_notes
+  - search_mentions
+connectors_required: []
+connectors_optional: [crm, slack]
+jobs:
+  - {name: ingest_inbox, cron: "*/30 * * * 1-5", model_class: none}
+  - {name: process_meetings, cron: "5,35 * * * 1-5", model_class: cheap}
+budgets: {daily_tokens: 2000000, monthly_usd: 150}
+evals: evals/golden.yaml
+config:
+  company: ../../config/company.yaml
+  icp: ../../config/icp.yaml
+  meeting_inbox: data/meetings/inbox
+  max_per_run: 50

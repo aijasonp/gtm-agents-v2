@@ -1,0 +1,46 @@
+id: forecast-prep
+name: Forecast Prep
+version: 0.1.0
+tier: B
+description: >
+  Prepares the weekly forecast call at three levels. Each rep gets their commit, best case and pipeline
+  for the quarter and month, what changed since last week, the questions their manager will ask on each
+  commit deal, and a suggested commit next to their own. Managers get a team rollup against quota with
+  rep-called vs suggested variance and the deals to inspect. Leaders get pace against a linear quarter,
+  week-over-week movement and the biggest swings. Daily alerts when deals enter or leave commit.
+editions: [dropin, persistent]
+skill: skill/SKILL.md
+references:
+  - skill/references/forecast-categories.yaml
+  - skill/references/call-format.md
+  - skill/references/questions-bank.md
+  - ../../config/company.yaml
+library:  # licensed playbooks bundled into the drop-in package (see THIRD_PARTY_NOTICES.md)
+  - library/sales-skills/skills/sales-forecast
+  - library/sales-skills/skills/sales-deal-inspect
+  - library/coreyhaines-marketingskills/skills/revops
+tools:
+  - ae_prep
+  - manager_prep
+  - exec_prep
+  - forecast_changes
+  - call_agenda
+connectors_required: []
+connectors_optional: [crm, slack]
+jobs:
+  - {name: forecast_prep, cron: "0 15 * * 4", model_class: frontier}
+  - {name: forecast_change_alerts, cron: "0 7 * * 1-5", model_class: none}
+budgets: {daily_tokens: 300000, monthly_usd: 20}
+evals: evals/golden.yaml
+config:
+  company: ../../config/company.yaml
+  categories: skill/references/forecast-categories.yaml
+  questions: skill/references/questions-bank.md
+  commit_risk_max: 50          # commit deals at or above this Deal Inspection risk drop out of the suggested commit
+  upside_risk_max: 25          # best-case deals this safe and late-stage count toward the suggested commit
+  late_stages: [negotiation, commit]
+  variance_flag_pct: 25        # rep commit this far above or below suggested gets flagged
+  variance_flag_min: 25000     # and at least this many dollars apart
+  amount_move_pct: 20          # change alert threshold
+  manager_channel: "#forecast"
+  top_deals: 5

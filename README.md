@@ -1,45 +1,68 @@
 # gtm-agents
 
-Turnkey GTM agents a mid-market sales team installs in its own environment and runs on the model keys it already pays for. Each agent ships in two editions from one source:
+A full-stack GTM agent pack a mid-market sales team installs in its own environment and runs on the model keys it already pays for, frontier or open-weight. Seventeen agents cover the revenue motion from first signal to the forecast call, on one runtime with a chat assistant (terminal and Slack), approvals for every write, and a licensed library of 716 sales and marketing playbooks. No agent host is required: see [docs/RUNNING.md](docs/RUNNING.md).
+
+Every agent ships in two editions from one source:
 
 | Edition | What the buyer gets | Runs where |
 | --- | --- | --- |
-| Drop-in | Skill pack for Claude, ChatGPT, Gemini or Copilot, plus an MCP server for the agent's tools | The buyer's chat workspace |
-| Persistent | Docker runtime: scheduled jobs, Postgres memory, CRM write-back after approval, weekly learning | The buyer's VM, keys and database |
+| Drop-in | Skill pack for Claude, ChatGPT, Gemini or Copilot (instructions, references, bundled playbooks), plus an MCP server for the agent's tools | The buyer's chat workspace |
+| Persistent | Docker runtime: scheduled jobs, Postgres memory, CRM and sequencer write-back after approval, HTTP intake, agent-to-agent handoffs | The buyer's VM, keys and database |
 
-## Agents in this release
+## The agents
 
-| Agent | Tier | Job | Tools | Jobs |
+| # | Agent | Tier | Job | Main schedule |
 | --- | --- | --- | --- | --- |
-| Signal Scout | A | Scores every account on ICP fit plus decayed, stacked buying signals; ranked daily brief to Slack; CRM updates queued for approval | score_account, list_priority_accounts, explain_score, add_signal, record_outcome, push_to_crm | sync_accounts, daily_sweep, weekly_reweight |
-| Copy QA Gate | C | Scores outbound copy 0 to 40 (32 passes) and lists exactly what to fix | check_copy, check_batch | none |
+| 1 | **Lead Triage** | A | Qualifies inbound and event leads in minutes: account and open-deal match, ICP, persona and intent score, owner and SLA, first follow-up drafted | every 15 min |
+| 2 | **ICP Outbound** | A | Short ranked target list from ICP fit and fresh signals, conflicts removed (open deals, inbound in progress, recent touches), buyers picked, 3-step signal-led sequence drafted | weekly list, daily drafts |
+| 3 | **Seller Follow-Up** | A | One short daily list per rep (overdue tasks, missed next steps, quiet deals, late leads, calls with no recap); recap email, CRM note and tasks drafted after every call | daily, every 30 min |
+| 4 | **Deal Inspection** | A | Every open deal checked for stage age, activity, slips, next step, MEDDPICC gaps by stage, coverage and fit; risk score with progress / fix / disqualify and the fixes | weekly, hourly evidence |
+| 5 | **Meeting Intelligence** | A | Reads call transcripts: summary, pain, next steps, objections, competitors, pricing talk, MEDDPICC evidence, coaching flags; hands work to Follow-Up and Deal Inspection | every 30 min |
+| 6 | **Sales Execution** | B | Pre-call brief for every upcoming meeting, MEDDPICC questions, objection help, proposal outline, next-steps summary | daily 7am |
+| 7 | **Product Marketing** | B | Competitor trends, win/loss by competitor and segment, objection library with gaps, evidence-backed battlecards, messaging and launch briefs | weekly, monthly |
+| 8 | **Revenue Pulse** | B | Weekly leadership summary computed from the CRM: pipeline, coverage, created / won / lost, slips, stage moves, stale deals, forecast rollup, owner scorecards, top risks | Monday 8am |
+| 9 | **Rep Brief** | A | One daily brief per AE: top accounts, top people, new signals, pipeline gaps, replies, what to do next; plus the push-button AE workflow (research, gated first touch, sequence and call task in one approval) | weekdays 7:30am |
+| 10 | **Social Signals** | A | Engagement with company and influencer LinkedIn and YouTube content resolved to contacts and accounts, scored, and routed to the owner as signals | every 30 min |
+| 11 | **Reply Desk** | A | Every reply sorted (bounce, opt-out, out of office, referral, not now, objection, interested, question) and handled: stops, opt-outs, tasks, drafted answers | every 10 min |
+| 12 | **Enrichment** | B | Provider-agnostic email and phone waterfall with caching, spend caps and provenance; hit rate and cost per hit decide which data vendor stays | hourly |
+| 13 | **Forecast Prep** | B | Forecast call prep at AE, manager and exec level: commit vs suggested commit, changes since last week, questions to ask, change alerts | weekly, daily alerts |
+| 14 | **Stack Audit** | B | Tool inventory, utilization, overlap, renewal calendar with notice dates, savings scenarios, side-by-side against agent signals, tool-cut memo | weekly, monthly |
+| 15 | Signal Scout | A | Scores every account on ICP fit plus decayed, stacked buying signals; feeds Outbound, Triage, Rep Brief and Sales Execution | daily |
+| 16 | Copy QA Gate | C | Scores any outbound copy 0 to 40 (32 passes); every agent's drafts go through it | on call |
+| 17 | Ops Monitor | C | Watches the runtime: missed jobs, failures, stuck approvals, failed handoffs, budget pauses, spend | every 15 min |
 
-## Full GTM fleet on NetClaw
+How they hand work to each other, what each one reads and writes, and which playbooks each bundles: [docs/AGENTS.md](docs/AGENTS.md).
 
-`netclaw/` runs a full-cycle GTM engine for an AE-only team (lead in to closed deal out) on NetClaw: 3 instances, 10 subagents, each loading only its own skills from `library/`. Signal Scout, Copy QA Gate and the JEV/CLEF scoring engine are served to it over MCP. See [netclaw/README.md](netclaw/README.md).
+## Guarantees built into the runtime
 
-| Folder | What is in it |
-| --- | --- |
-| `library/skills/` | Shared skill library (SKILL.md format) |
-| `library/outbound-engine/` | Scoring engine + product profile, forecast alerts, rep feedback PRs |
-| `library/references/` | Playbooks: copy rules, voice system, sayability matrix, brief template |
-| `netclaw/` | Fleet definition, subagents, schedules, webhooks, build and install |
+- **Opt-outs win everywhere.** One suppression list, checked by every agent and again by the sequence and dialer executors at send time; stops run at once.
+- **Nothing is written or sent without a human.** CRM writes, notes, tasks and sequence enrollments are queued in the approval queue. Approve from the CLI or the HTTP API.
+- **Numbers come from code.** Scores, risk, routing, SLAs, coverage and every pipeline metric are deterministic Python with golden-case evals. Models only draft and summarize, from facts handed to them.
+- **No invented facts.** Drafts use only the facts given plus `config/company.yaml`. Proof points and competitor claims come from that file or field evidence; everything else is marked "to verify".
+- **Works with no model key.** Every agent has template drafts, so it runs in demos, evals and air-gapped installs. With a key, drafts are model-written and must pass the Copy QA Gate (up to two rewrites).
+- **Budgets.** Daily token and monthly spend caps per agent, auto-pause and alert.
+- **One agent never steps on another.** Outbound skips accounts with an open deal or an inbound lead in progress; Triage routes leads on open deals to the deal owner instead of drafting; handoffs are deduplicated.
+
+## Optional: Slack front end on NetClaw
+
+`netclaw/` adds three Slack bots (pipeline, deals, revops) with 10 conversational subagents for an AE-only team. They call these 17 agents' tools over MCP; the runtime still does every calculation and holds every write for approval. See [netclaw/README.md](netclaw/README.md).
 
 ## Quick start (development)
 
 ```bash
 pip install -e ".[mcp,dev]"
-make test        # 18 tests
-make evals       # golden cases for every agent (release gate)
-make demo        # sample accounts and signals -> daily brief in the terminal
+make test        # 140 tests
+make evals       # 354 golden cases across 17 agents (release gate)
+make demo        # every agent runs once on the fictional sample data, in pipeline order
 make compile     # drop-in packages in dist/<agent>/<version>/{claude,chatgpt,gemini,copilot}
 ```
 
 ## Customer install (persistent edition)
 
 ```bash
-cp .env.example .env          # their keys, CRM token, Slack webhook
-docker compose up -d          # Postgres + pgvector + scheduler
+cp .env.example .env          # their model key, CRM token, Slack, sequencer, API token
+# edit config/icp.yaml (who they sell to) and config/company.yaml (what they sell, team, competitors)
+docker compose up -d          # Postgres + pgvector, scheduler, intake/approvals API
 docker compose exec agents gtm selftest
 ```
 
@@ -49,25 +72,29 @@ Full steps: [docs/INSTALL.md](docs/INSTALL.md). How it fits together: [docs/ARCH
 
 | Command | Does |
 | --- | --- |
-| `gtm init` | Create tables |
 | `gtm agents` | List installed agents |
-| `gtm import signal-scout accounts|signals|outcomes <file>` | Load CSV or JSON (zero-integration path) |
+| `gtm sync <agent>` | Read accounts, contacts and deals from the CRM (read-only) |
+| `gtm import <agent> accounts\|contacts\|signals\|leads\|deals\|tasks\|meetings\|outcomes <path>` | Load CSV, JSON or a folder of transcripts (zero-integration path) |
 | `gtm run <agent> <job>` | Run a job now |
-| `gtm schedule` | Run all persistent-edition jobs on their cron |
-| `gtm approvals <agent> list|approve|reject|execute` | Human approval queue for every CRM write |
-| `gtm call <agent> <tool> --args '{...}'` | Call a tool from the shell |
-| `gtm serve-mcp <agent> [--transport streamable-http --host 0.0.0.0 --port 8000]` | MCP server for Claude, ChatGPT, NetClaw or any MCP client |
-| `gtm usage <agent>` / `gtm resume <agent>` | Token and spend budgets; resume after an auto-pause |
-| `gtm selftest` | Shareable diagnostic report, no secrets |
-| `gtm eval <agent>` | Golden-case evals |
-| `gtm license keygen|issue|verify` | Offline Ed25519 license files |
+| `gtm schedule` | Run every agent's jobs on their cron |
+| `gtm approvals <agent> list\|approve\|reject\|execute` | Human approval queue (`--all-agents` for everything) |
+| `gtm drafts [--agent X] [--full]` | Review drafted emails, recaps, battlecards |
+| `gtm handoffs [--all]` | Work passed between agents |
+| `gtm call <agent> <tool> --args '{...}'` | Call any tool from the shell |
+| `gtm serve-mcp <agent>` | MCP server for Claude, ChatGPT or any MCP client |
+| `gtm serve-api` | HTTP intake (leads, meetings, signals, replies, engagement) and approvals |
+| `gtm ask "..."` / `gtm assistant` / `gtm slack-bot` | Chat with every agent's tools from the terminal or Slack |
+| `gtm models` | Check both model tiers (Claude, OpenAI or any open-weight endpoint) |
+| `gtm usage <agent>` / `gtm resume <agent>` | Token and spend budgets |
+| `gtm selftest` / `gtm eval <agent>` | Diagnostics and golden-case evals |
+| `gtm license keygen\|issue\|verify` | Offline Ed25519 license files |
+
+## Skill library
+
+`library/` holds 716 public playbooks from 11 MIT-licensed sources, each with its license and source note. Agents list the ones they use under `library:` in `agent.yaml`; the build bundles them with the license notice. See [library/README.md](library/README.md) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## Rules for this repo
 
-- Clean room: written fresh for this business. Nothing is copied from any employer system.
-- Deterministic code for anything that must be right every time; prompts only for judgment and writing.
-- No send and no live CRM write without an approved request.
-- Every agent passes its evals before release; the Docker build runs them.
-- No customer data in this repo. Sample data uses fictional companies.
+See [CLAUDE.md](CLAUDE.md). In short: clean room, deterministic code for anything that must be right, no write or send without approval, every agent passes its evals, fictional sample data only.
 
-Proprietary. All rights reserved.
+Agent code, runtime and documentation: proprietary, all rights reserved. Files under `library/` keep their original MIT licenses.

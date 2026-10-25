@@ -20,13 +20,67 @@ services:
     environment:
       DATABASE_URL: postgresql://gtm:${POSTGRES_PASSWORD}@db:5432/gtm
     volumes:
-      - ./data:/data
+      - ./data:/app/data
       - ./license.json:/app/license.json:ro
-      - ./agents/signal-scout/skill/references/icp.yaml:/app/agents/signal-scout/skill/references/icp.yaml:ro
+      - ./config:/app/config:ro
     depends_on:
       db: {condition: service_healthy}
     command: ["schedule"]
     restart: unless-stopped
 
+  api:
+    # Intake (leads, meetings, signals) and the approval queue over HTTP. Internal network only.
+    image: gtm-agents:${GTM_VERSION:-0.1.0}
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://gtm:${POSTGRES_PASSWORD}@db:5432/gtm
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config:ro
+    depends_on:
+      db: {condition: service_healthy}
+    command: ["serve-api", "--host", "0.0.0.0", "--port", "8787"]
+    ports: ["127.0.0.1:8787:8787"]
+    restart: unless-stopped
+
+  slack-bot:
+    # Chat with every agent from Slack (Socket Mode: no public URL). Needs SLACK_APP_TOKEN + SLACK_BOT_TOKEN.
+    profiles: ["slack"]
+    image: gtm-agents:${GTM_VERSION:-0.1.0}
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://gtm:${POSTGRES_PASSWORD}@db:5432/gtm
+    volumes:
+      - ./config:/app/config:ro
+    depends_on:
+      db: {condition: service_healthy}
+    command: ["slack-bot"]
+    restart: unless-stopped
+
+  ollama:
+    # Optional open-weight model server on the same VM (CPU works for small models; GPU recommended).
+    # Then set GTM_CHEAP_BASE_URL=http://ollama:11434/v1 and GTM_MODEL_CHEAP=<model you pulled>.
+    profiles: ["local-model"]
+    image: ollama/ollama:latest
+    volumes: [ollama:/root/.ollama]
+    restart: unless-stopped
+
+  vllm:
+    # Optional GPU open-weight server (OpenAI-compatible). Set GTM_*_BASE_URL=http://vllm:8000/v1.
+    profiles: ["gpu-model"]
+    image: vllm/vllm-openai:latest
+    command: ["--model", "${VLLM_MODEL:-Qwen/Qwen2.5-32B-Instruct-AWQ}", "--enable-auto-tool-choice",
+              "--tool-call-parser", "hermes", "--max-model-len", "32768"]
+    environment:
+      HF_TOKEN: ${HF_TOKEN:-}
+    volumes: [hf:/root/.cache/huggingface]
+    deploy:
+      resources:
+        reservations:
+          devices: [{driver: nvidia, count: all, capabilities: [gpu]}]
+    restart: unless-stopped
+
 volumes:
   pgdata:
+  ollama:
+  hf:

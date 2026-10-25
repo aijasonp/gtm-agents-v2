@@ -1,0 +1,60 @@
+# Meeting Intelligence golden cases. Template path (no model key), in-memory DB.
+now: "2026-10-23T12:00:00+00:00"
+accounts:
+  - {id: northwind.example, name: Northwind Logistics, domain: northwind.example, crm_id: "1001", industry: Logistics, employees: 600, country: US}
+  - {id: contoso.example, name: Contoso Health, domain: contoso.example, crm_id: "1002", industry: Healthcare Technology, employees: 900, country: US}
+deals:
+  - {id: deal-northwind, crm_id: "5001", account_id: northwind.example, name: Northwind Platform, owner: Sam Rivera, stage: Evaluation, status: open}
+  - {id: deal-contoso, crm_id: "5002", account_id: contoso.example, name: Contoso Agents, owner: Sam Rivera, stage: Proposal, status: open,
+     meddpicc: {identify_pain: "confirmed: forecast misses"}}
+meetings:
+  - id: m-northwind
+    account_id: northwind.example
+    deal_id: deal-northwind
+    title: Northwind discovery
+    owner: Sam Rivera
+    started_at: "2026-10-20T15:00:00+00:00"
+    transcript: |
+      [00:00:05] Sam Rivera: What prompted you to look at this now?
+      [00:00:20] Dana Cole: Our reps spend about six hours a week building lists by hand. It is a real problem.
+      [00:01:10] Marcus Lee: We pay for Acme Intel but nobody trusts the scoring.
+      [00:02:00] Sam Rivera: How do you decide which accounts each rep works? What would change if lists took an hour?
+      [00:05:30] Dana Cole: About five extra hours of selling per rep. I'll push this internally if the pilot shows that.
+      [00:20:00] Sam Rivera: Who else is involved in the decision?
+      [00:20:30] Dana Cole: Our CFO signs off on anything over fifty thousand. We would run a pilot first.
+      [00:28:00] Sam Rivera: Next step: I'll send over a pilot plan by Friday.
+  - id: m-contoso
+    account_id: contoso.example
+    deal_id: deal-contoso
+    title: Contoso proposal review
+    owner: Sam Rivera
+    started_at: "2026-10-21T17:00:00+00:00"
+    transcript: |
+      WEBVTT
+
+      00:00:02.000 --> 00:00:09.000
+      <v Sam Rivera>Thanks Lee. Here is the proposal and pricing.</v>
+
+      00:00:10.000 --> 00:00:30.000
+      <v Lee Wong>Honestly the price is too expensive compared to Acme Intel. Budget is tight until next quarter.</v>
+
+      00:00:31.000 --> 00:01:30.000
+      <v Sam Rivera>Our platform ranks accounts each morning, drafts follow ups, inspects deals, syncs with your CRM, supports SSO, has an API, a full audit log, approval queues, budgets, onboarding, training, quarterly reviews, a dedicated success manager, custom fields, multiple CRM support and more, so the value adds up over time across every team that touches pipeline and every manager who runs a forecast call.</v>
+
+      00:01:31.000 --> 00:01:50.000
+      <v Lee Wong>I need to run it by my boss. Procurement will want a security review too.</v>
+  - {id: m-upcoming, account_id: northwind.example, deal_id: deal-northwind, title: Pilot scoping, started_at: "2026-10-28T15:00:00+00:00"}
+expect:
+  processed: 2
+  competitor_insight: {m-northwind: Acme Intel, m-contoso: Acme Intel}
+  objection_insight: {m-contoso: [price, timing, authority]}
+  meddpicc_found: {m-northwind: [identify_pain, economic_buyer, champion, decision_process, competition]}
+  no_next_step_flag: [m-contoso]
+  has_next_step: [m-northwind]
+  talk_ratio_flag: [m-contoso]
+  handoff_recap: [m-northwind, m-contoso]
+  handoff_evidence_deals: [deal-northwind, deal-contoso]
+  deal_note_approvals: 2
+  never_confirms: [deal-northwind]
+  idempotent_second_run: 0
+  coaching_missed: {m-contoso: [Economic buyer, Metrics, Champion]}   # paper process was heard (security review)

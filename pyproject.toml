@@ -18,6 +18,7 @@ dependencies = [
 [project.optional-dependencies]
 mcp = ["mcp>=1.2"]
 postgres = ["psycopg[binary]>=3.1"]
+slack = ["slack_sdk>=3.27"]
 dev = ["pytest>=8"]
 
 [project.scripts]

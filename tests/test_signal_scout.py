@@ -16,7 +16,7 @@ def _loaded(ctx):
 def test_daily_sweep_end_to_end(ctx_for):
     ctx = _loaded(ctx_for("signal-scout"))
     res = load_module(ctx.manifest, "jobs").daily_sweep(ctx)
-    assert res["accounts"] == 7
+    assert res["accounts"] == 10
     assert res["tiers"]["X"] == 1
     assert ctx.slack.sent and "Northwind Logistics" in ctx.slack.sent[0]["text"]
     assert "{" not in ctx.slack.sent[0]["text"]

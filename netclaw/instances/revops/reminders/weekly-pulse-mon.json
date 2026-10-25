@@ -1,0 +1,14 @@
+{
+  "id": "weekly-pulse-mon",
+  "title": "Weekly pulse (Mon 8:00 CT)",
+  "instructions": "Spawn forecast-hygiene: post revenue-pulse/pipeline_summary, forecast_rollup and top_risks here.",
+  "schedule": {
+    "type": "Cron",
+    "cronExpression": "0 13 * * MON"
+  },
+  "delivery": {
+    "kind": "Channel",
+    "transport": "slack",
+    "address": "#gtm-forecast"
+  }
+}

@@ -21,24 +21,69 @@ class CRM(ABC):
     def add_note(self, crm_id: str, body: str) -> dict:
         """Attach a note to the account record. Only called by an approved action."""
 
+    # ---- optional: deals, contacts, tasks. Connectors that lack them return [] / raise. ----
+    def list_deals(self, limit: int = 500) -> list[dict]:
+        """Open and recently closed deals: id, crm_id, account_id, name, owner, stage, status, amount,
+        close_date, created_at, last_activity_at, next_step, forecast_category."""
+        return []
+
+    def list_contacts(self, limit: int = 2000) -> list[dict]:
+        """Contacts: id, crm_id, account_id, name, email, title."""
+        return []
+
+    def update_deal(self, crm_id: str, fields: dict) -> dict:
+        raise NotImplementedError(f"{self.name}: update_deal not supported")
+
+    def add_deal_note(self, crm_id: str, body: str) -> dict:
+        raise NotImplementedError(f"{self.name}: add_deal_note not supported")
+
+    def create_task(self, subject: str, body: str = "", due_at: str | None = None, account_crm_id: str | None = None,
+                    deal_crm_id: str | None = None, owner: str | None = None) -> dict:
+        raise NotImplementedError(f"{self.name}: create_task not supported")
+
+    def create_contact(self, fields: dict, account_crm_id: str | None = None) -> dict:
+        raise NotImplementedError(f"{self.name}: create_contact not supported")
+
+    def update_contact(self, crm_id: str, fields: dict) -> dict:
+        raise NotImplementedError(f"{self.name}: update_contact not supported")
+
 
 class NullCRM(CRM):
-    """Used when no CRM is configured (demo, tests, drop-in edition)."""
+    """Used when no CRM is configured (demo, tests, drop-in edition). Records writes in memory."""
     name = "none"
 
     def __init__(self):
         self.writes: list[dict] = []
 
+    def _w(self, kind: str, **kw) -> dict:
+        self.writes.append({"kind": kind, **kw})
+        return {"ok": True, "crm": "none", "id": f"null-{len(self.writes)}"}
+
     def list_accounts(self, limit: int = 500) -> list[dict]:
         return []
 
     def update_account(self, crm_id: str, fields: dict) -> dict:
-        self.writes.append({"crm_id": crm_id, "fields": fields})
-        return {"ok": True, "crm": "none"}
+        return self._w("account_update", crm_id=crm_id, fields=fields)
 
     def add_note(self, crm_id: str, body: str) -> dict:
-        self.writes.append({"crm_id": crm_id, "note": body})
-        return {"ok": True, "crm": "none"}
+        return self._w("account_note", crm_id=crm_id, note=body)
+
+    def update_deal(self, crm_id: str, fields: dict) -> dict:
+        return self._w("deal_update", crm_id=crm_id, fields=fields)
+
+    def add_deal_note(self, crm_id: str, body: str) -> dict:
+        return self._w("deal_note", crm_id=crm_id, note=body)
+
+    def create_task(self, subject: str, body: str = "", due_at: str | None = None, account_crm_id: str | None = None,
+                    deal_crm_id: str | None = None, owner: str | None = None) -> dict:
+        return self._w("task", subject=subject, body=body, due_at=due_at, account=account_crm_id, deal=deal_crm_id,
+                       owner=owner)
+
+    def create_contact(self, fields: dict, account_crm_id: str | None = None) -> dict:
+        return self._w("contact", fields=fields, account=account_crm_id)
+
+    def update_contact(self, crm_id: str, fields: dict) -> dict:
+        return self._w("contact_update", crm_id=crm_id, fields=fields)
 
 
 def get_crm(settings: Settings) -> CRM:

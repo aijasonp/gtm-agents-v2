@@ -1,7 +1,7 @@
 {
   "id": "next-day-meeting-prep",
   "title": "Next-day meeting briefs (17:00 CT, Sun-Thu)",
-  "instructions": "For every external meeting on each AE's calendar tomorrow, spawn meeting-prep to build the pre-call brief and DM the AE the link. Post a count here.",
+  "instructions": "For every upcoming external meeting tomorrow (meeting-intelligence/list_meetings status upcoming), spawn meeting-prep and DM the owning AE the brief. Post a count here.",
   "schedule": {
     "type": "Cron",
     "cronExpression": "0 22 * * SUN-THU"

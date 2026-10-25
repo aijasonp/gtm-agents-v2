@@ -1,0 +1,49 @@
+# Seller Follow-Up golden cases. Template path, in-memory DB, fixed clock (a Friday).
+now: "2026-10-23T12:00:00+00:00"
+accounts:
+  - {id: contoso.example, name: Contoso Health, crm_id: "1002"}
+  - {id: northwind.example, name: Northwind Logistics, crm_id: "1001"}
+  - {id: fabrikam.example, name: Fabrikam Insurance, crm_id: "1003"}
+contacts:
+  - {id: dana@northwind.example, email: dana@northwind.example, name: Dana Cole, title: VP Sales, account_id: northwind.example}
+deals:
+  - {id: d-contoso, crm_id: "5002", account_id: contoso.example, name: Contoso Agents, owner: Sam Rivera, stage: Proposal, status: open, amount: 140000, next_step: Send revised proposal, next_step_date: "2026-10-10", last_activity_at: "2026-09-25"}
+  - {id: d-fabrikam, crm_id: "5003", account_id: fabrikam.example, name: Fabrikam Pilot, owner: Priya Shah, stage: Discovery, status: open, amount: 60000, last_activity_at: "2026-10-20"}
+  - {id: d-northwind, crm_id: "5001", account_id: northwind.example, name: Northwind Platform, owner: Sam Rivera, stage: Evaluation, status: open, amount: 96000, next_step: Pilot scoping, next_step_date: "2026-10-28", last_activity_at: "2026-10-20"}
+  - {id: d-won, account_id: contoso.example, name: Old Won, owner: Sam Rivera, stage: Closed Won, status: won, last_activity_at: "2026-01-01"}
+  - {id: d-a, name: Spam A, owner: Lee Park, stage: Discovery, status: open, next_step: x, next_step_date: "2026-10-01"}
+  - {id: d-b, name: Spam B, owner: Lee Park, stage: Discovery, status: open, next_step: x, next_step_date: "2026-10-02"}
+  - {id: d-c, name: Spam C, owner: Lee Park, stage: Discovery, status: open, next_step: x, next_step_date: "2026-10-03"}
+  - {id: d-d, name: Spam D, owner: Lee Park, stage: Discovery, status: open, next_step: x, next_step_date: "2026-10-04"}
+  - {id: d-e, name: Spam E, owner: Lee Park, stage: Discovery, status: open, next_step: x, next_step_date: "2026-10-05"}
+  - {id: d-f, name: Spam F, owner: Lee Park, stage: Discovery, status: open, next_step: x, next_step_date: "2026-10-06"}
+tasks:
+  - {id: t-late, owner: Sam Rivera, deal_id: d-contoso, title: Send revised proposal to Lee, due_at: "2026-10-10", status: open}
+  - {id: t-future, owner: Sam Rivera, deal_id: d-northwind, title: Share success criteria, due_at: "2026-10-27", status: open}
+  - {id: t-done, owner: Sam Rivera, deal_id: d-northwind, title: Old task, due_at: "2026-10-01", status: done}
+leads:
+  - {id: l-late, email: omar@proseware.example, name: Omar Haddad, company: Proseware, owner: Sam Rivera, status: routed, tier: hot, sla_due: "2026-10-23T08:00:00+00:00"}
+  - {id: l-future, email: ivy@lucerne.example, name: Ivy Chen, company: Lucerne, owner: Sam Rivera, status: routed, tier: warm, sla_due: "2026-10-23T18:00:00+00:00"}
+  - {id: l-sent, email: lena@woodgrove.example, name: Lena Kraus, company: Woodgrove, owner: Priya Shah, status: routed, tier: hot, sla_due: "2026-10-22T08:00:00+00:00"}
+sent_lead_drafts: [l-sent]
+meetings:
+  - {id: m-norecap, account_id: fabrikam.example, deal_id: d-fabrikam, title: Fabrikam discovery, started_at: "2026-10-22T15:00:00+00:00", owner: Priya Shah, transcript: "Priya Shah: hi\nRavi Mehta: we struggle with manual routing"}
+  - {id: m-old, account_id: fabrikam.example, title: Old call, started_at: "2026-10-01T15:00:00+00:00", owner: Priya Shah, transcript: "x: y"}
+  - {id: m-nw, account_id: northwind.example, deal_id: d-northwind, title: Northwind discovery, started_at: "2026-10-20T15:00:00+00:00", owner: Sam Rivera, attendees: [Sam Rivera, Dana Cole]}
+recap_handoff:
+  meeting_id: m-nw
+  deal_id: d-northwind
+  account_id: northwind.example
+  owner: Sam Rivera
+  attendees: [Sam Rivera, Dana Cole]
+  summary: {pain: ["Reps spend six hours a week building lists"], decision_criteria: "Must sync with Salesforce"}
+  next_steps: ["Sam Rivera: Next step: I'll send over a pilot plan by Friday", "Sam Rivera: Set up time with Ana"]
+expect:
+  items_present: ["task:t-late", "next_step:d-contoso", "no_next_step:d-fabrikam", "quiet:d-contoso", "lead:l-late", "recap:m-norecap"]
+  items_absent: ["task:t-future", "task:t-done", "lead:l-future", "lead:l-sent", "recap:m-old", "quiet:d-won", "quiet:d-northwind"]
+  max_per_owner: {Lee Park: 5}
+  one_line_per_deal: d-contoso
+  recap_due: {"I'll send over a pilot plan by Friday": "2026-10-23", "Set up time with Ana": "2026-10-22"}
+  recap_approvals: [crm_task, deal_note, crm_task, crm_task]
+  recap_to: [dana@northwind.example]
+  recap_mentions: ["six hours", "Salesforce", "pilot plan"]

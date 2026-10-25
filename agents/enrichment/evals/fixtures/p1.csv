@@ -1,0 +1,5 @@
+email,name,domain,phone,title,linkedin
+dana@nw.example,Dana Cole,nw.example,,VP Sales,
+bad@nw.example,Bad Row,nw.example,123,Manager,
+gb@adatum.example,Gail Brown,adatum.example,020 7946 0018,Director,
+zed[at]nw.example,Zed Quinn,nw.example,,Analyst,

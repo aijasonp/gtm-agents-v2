@@ -1,0 +1,14 @@
+{
+  "id": "weekly-target-list",
+  "title": "Weekly target list (Mon 9:00 CT)",
+  "instructions": "Spawn prospecting-writer: run icp-outbound/build_target_list for each AE and DM them the list with skipped accounts and reasons. Offer to draft sequences for the top five.",
+  "schedule": {
+    "type": "Cron",
+    "cronExpression": "0 14 * * MON"
+  },
+  "delivery": {
+    "kind": "Channel",
+    "transport": "slack",
+    "address": "#gtm-pipeline"
+  }
+}

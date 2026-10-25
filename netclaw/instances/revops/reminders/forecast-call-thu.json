@@ -1,0 +1,14 @@
+{
+  "id": "forecast-call-thu",
+  "title": "Forecast call (Thu 8:00 CT)",
+  "instructions": "Spawn forecast-hygiene: start the forecast-call conversation with each AE by DM.",
+  "schedule": {
+    "type": "Cron",
+    "cronExpression": "0 13 * * THU"
+  },
+  "delivery": {
+    "kind": "Channel",
+    "transport": "slack",
+    "address": "#gtm-forecast"
+  }
+}

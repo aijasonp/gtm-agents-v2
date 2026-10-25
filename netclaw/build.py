@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build the NetClaw GTM fleet from netclaw/fleet.yaml.
 
-    python3 netclaw/build.py [--profile path/to/product_profile.yaml] [--out dist/netclaw]
+    python3 netclaw/build.py [--config config] [--out dist/netclaw]
 
 For each instance it writes:
     <out>/<instance>/skills/<name>/...        curated skill set (dir name == skill name)
@@ -10,6 +10,9 @@ For each instance it writes:
     <out>/<instance>/config/webhooks/*.json   inbound webhook routes
     <out>/<instance>/reminders/*.json         scheduled reminders (netclaw reminder import)
     <out>/<instance>/MANIFEST.md              what is in this instance
+
+Skill entries: `lib:<name>` resolves through library/index.json, `lib:<name>@<source>`
+picks one source when a name repeats, anything else is a path from the repo root.
 
 It fails (exit 1) on: a missing skill, a SKILL.md without name or description,
 two different skills with the same name in one instance, or any banned
@@ -34,22 +37,20 @@ from check_clean import scan  # noqa: E402
 SKIP_DIRS = {".git", "node_modules", "__pycache__", ".pytest_cache", ".venv"}
 FRONT = re.compile(r"^---\s*\n(.*?)\n---\s*\n", re.S)
 
-# Approval defaults per MCP server. Reads on scoring and QA run on autopilot;
-# anything that can change a customer-facing system waits for an AE's click.
-SERVER_APPROVAL = {
-    "signal-scout": "Auto",
-    "copy-qa-gate": "Auto",
-    "scoring-engine": "Auto",
-    "enrichment": "Auto",
-    "call-recorder": "Auto",
-    "crm": "Approval",
-    "workspace": "Approval",
-    "sequencer": "Approval",
-}
+# Runtime agent tools run on Auto in NetClaw: they compute, draft, or queue a write in
+# the runtime's approval queue (nothing reaches the CRM, sequencer or an inbox until a
+# human approves it there). Tools that queue a customer-facing write also ask in Slack,
+# so the AE sees the request where they are working.
 TOOL_OVERRIDES = {
     "signal-scout/push_to_crm": "Approval",
     "signal-scout/record_outcome": "Approval",
+    "lead-triage/route_lead": "Approval",
+    "reply-desk/handle_reply": "Approval",
+    "reply-desk/opt_out": "Approval",
+    "deal-inspection/update_meddpicc": "Approval",
+    "seller-follow-up/log_next_step": "Approval",
 }
+TOOLS_HOST = "gtm-tools"
 
 
 def fail(msg: str) -> None:
@@ -88,17 +89,27 @@ def first_sentence(desc: str) -> str:
     return s if len(s) <= 220 else s[:217] + "..."
 
 
-def build_playbooks(dest: Path, profile: Path) -> None:
+def build_playbooks(dest: Path, config: Path) -> None:
     copy_skill(HERE / "shared" / "gtm-playbooks", dest)
     refs = dest / "references"
     refs.mkdir(exist_ok=True)
-    for f in sorted((ROOT / "library" / "references").glob("*.md")):
-        shutil.copy2(f, refs / f.name)
-    shutil.copy2(profile, refs / "product-profile.yaml")
-    with open(dest / "SKILL.md", "a", encoding="utf-8") as fh:
-        fh.write("\n## Product profile\n`references/product-profile.yaml` is this deployment's product profile: "
-                 "what we sell, ICP, pain points, differentiators, competitors and the only proof points "
-                 "writers may state as fact.\n")
+    for name in ("company.yaml", "icp.yaml"):
+        src = config / name
+        if not src.is_file():
+            fail(f"missing {src}; the playbooks ship this deployment's {name}")
+        shutil.copy2(src, refs / name)
+
+
+def resolve(entry: str, index: dict) -> Path:
+    if not entry.startswith("lib:"):
+        return ROOT / entry
+    name, _, source = entry[4:].partition("@")
+    hits = [i for i in index.get(name, []) if not source or i["source"] == source]
+    if not hits:
+        fail(f"{entry}: not in library/index.json")
+    if len(hits) > 1:
+        fail(f"{entry}: {len(hits)} sources have this name; pick one with @source")
+    return ROOT / hits[0]["path"]
 
 
 def desk_skill(inst: str, spec: dict, agents: dict, rules: str) -> str:
@@ -132,10 +143,10 @@ def netclaw_json(inst: str, spec: dict, servers: dict) -> dict:
     mcp = {}
     for name in spec["mcp"]:
         s = servers[name]
-        mcp[name] = {"Transport": s["transport"], "Url": s["url"], "Enabled": True}
+        mcp[name] = {"Transport": "http", "Url": f"http://{TOOLS_HOST}:{s['port']}/mcp", "Enabled": True}
     approval = {
         "DefaultMode": "Approval",
-        "McpServerDefaults": {n: SERVER_APPROVAL[n] for n in spec["mcp"]},
+        "McpServerDefaults": {n: "Auto" for n in spec["mcp"]},
         "ToolOverrides": {k: v for k, v in TOOL_OVERRIDES.items() if k.split("/")[0] in spec["mcp"]},
     }
     trusted = {"McpServersMode": "Allowlist", "AllowedMcpServers": list(spec["mcp"]), "ApprovalPolicy": approval}
@@ -166,15 +177,20 @@ def netclaw_json(inst: str, spec: dict, servers: dict) -> dict:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--profile", default=str(ROOT / "library/outbound-engine/product_profile.example.yaml"))
+    ap.add_argument("--config", default=str(ROOT / "config"), help="folder with company.yaml and icp.yaml")
     ap.add_argument("--out", default=str(ROOT / "dist/netclaw"))
     a = ap.parse_args()
 
     fleet = yaml.safe_load((HERE / "fleet.yaml").read_text())
     rules = (HERE / "shared" / "operating-rules.md").read_text().strip()
-    profile = Path(a.profile).resolve()
-    if not profile.is_file():
-        fail(f"product profile not found: {profile}")
+    config = Path(a.config).resolve()
+    index: dict[str, list] = {}
+    for item in json.loads((ROOT / "library" / "index.json").read_text()):
+        index.setdefault(item["name"], []).append(item)
+    agents_dir = ROOT / "agents"
+    for name, s in fleet["mcp_servers"].items():
+        if not (agents_dir / name / "agent.yaml").is_file():
+            fail(f"mcp server {name} has no runtime agent at agents/{name}")
     out = Path(a.out).resolve()
     if out.exists():
         shutil.rmtree(out)
@@ -192,9 +208,17 @@ def main() -> int:
         # Resolve and validate every skill for this instance.
         chosen: dict[str, dict] = {}
         agent_skills: dict[str, list[dict]] = {}
-        shared = [read_skill(ROOT / p) for p in fleet["shared_skills"]]
+        shared = [read_skill(resolve(p, index)) for p in fleet["shared_skills"]]
         for ag, aspec in spec["agents"].items():
-            agent_skills[ag] = [read_skill(ROOT / p) for p in aspec["skills"]]
+            agent_skills[ag] = [read_skill(resolve(p, index)) for p in aspec["skills"]]
+            for tool in aspec["tools"]:
+                server, _, fn = tool.partition("/")
+                if server not in spec["mcp"]:
+                    fail(f"{inst}/{ag}: tool {tool} uses a server not in this instance's mcp list")
+                if fn:
+                    tools = yaml.safe_load((agents_dir / server / "agent.yaml").read_text()).get("tools", [])
+                    if fn not in tools:
+                        fail(f"{inst}/{ag}: {server} has no tool {fn} (has: {', '.join(tools)})")
         for sk in shared + [s for lst in agent_skills.values() for s in lst]:
             prev = chosen.get(sk["name"])
             if prev and prev["path"] != sk["path"]:
@@ -204,7 +228,7 @@ def main() -> int:
 
         for name, sk in chosen.items():
             if name == "gtm-playbooks":
-                build_playbooks(base / "skills" / name, profile)
+                build_playbooks(base / "skills" / name, config)
             else:
                 copy_skill(sk["path"], base / "skills" / name)
         desk = base / "skills" / f"{inst}-desk"
@@ -218,7 +242,7 @@ def main() -> int:
             if not tmpl.is_file():
                 fail(f"{inst}: no subagent template netclaw/agents/{ag}.md")
             lines = ["## Skills to load (skill_load)",
-                     "Always available: `gtm-playbooks` (copy rules, sayability matrix, brief template, product profile)."]
+                     "Always available: `gtm-playbooks` (operating rules, signal sayability, this deployment's company.yaml and icp.yaml)."]
             for sk in agent_skills[ag]:
                 lines.append(f"- `{sk['name']}`: {first_sentence(sk['description'])}")
             lines.append("")

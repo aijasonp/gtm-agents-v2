@@ -1,0 +1,52 @@
+id: product-marketing
+name: Product Marketing
+version: 0.1.0
+tier: B
+description: >
+  Turns field evidence into enablement: competitor mention trends, win/loss by competitor and
+  segment, a ranked objection library with prepared responses, evidence-backed battlecards,
+  messaging briefs and launch brief skeletons. Uses only call evidence, CRM outcomes and
+  company.yaml; anything unproven is marked "to verify".
+editions: [dropin, persistent]
+skill: skill/SKILL.md
+references:
+  - skill/references/battlecard-format.md
+  - skill/references/objection-responses.md
+  - skill/references/messaging-framework.md
+  - skill/references/launch-brief-format.md
+  - ../../config/icp.yaml
+  - ../../config/company.yaml
+library:  # licensed playbooks bundled into the drop-in package (see THIRD_PARTY_NOTICES.md)
+  - library/coreyhaines-marketingskills/skills/competitor-alternatives
+  - library/coreyhaines-marketingskills/skills/competitor-profiling
+  - library/coreyhaines-marketingskills/skills/product-marketing-context
+  - library/coreyhaines-marketingskills/skills/launch-strategy
+  - library/coreyhaines-marketingskills/skills/pricing-strategy
+  - library/marketingagentskills/skills/product-positioning
+  - library/marketingagentskills/skills/product-messaging
+  - library/marketingagentskills/skills/case-study-builder
+  - library/sales-skills/skills/sales-compete
+  - library/wondelai-skills/skills/obviously-awesome
+  - library/wondelai-skills/skills/storybrand-messaging
+  - library/wondelai-skills/skills/made-to-stick
+tools:
+  - competitor_intel
+  - battlecard
+  - win_loss_report
+  - objection_library
+  - messaging_brief
+  - launch_brief
+connectors_required: []
+connectors_optional: [crm, slack]
+jobs:
+  - {name: weekly_field_report, cron: "0 14 * * 5", model_class: none}
+  - {name: battlecard_refresh, cron: "0 7 1 * *", model_class: frontier}
+budgets: {daily_tokens: 800000, monthly_usd: 60}
+evals: evals/golden.yaml
+config:
+  company: ../../config/company.yaml
+  icp: ../../config/icp.yaml
+  objection_responses: skill/references/objection-responses.md
+  default_since_days: 90
+  new_competitor_min_mentions: 3
+  frequent_objection_min: 2

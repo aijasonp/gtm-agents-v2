@@ -1,0 +1,5 @@
+# Top accounts exported from Intent Platform A for the same 30 days
+northwind.example
+contoso.example
+fabrikam.example
+tailspin.example

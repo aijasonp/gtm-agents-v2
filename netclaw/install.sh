@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Install the built GTM fleet into the three running NetClaw containers.
 #
-# Prereqs: .env filled from .env.netclaw.example, `python3 netclaw/build.py` run,
+# Prereqs: .env filled from .env.netclaw.example, `python3 netclaw/build.py --config config` run,
 # and `docker compose -f docker-compose.yml -f docker-compose.netclaw.yml up -d` started.
 #
 # For each instance this script:
@@ -11,6 +11,7 @@
 #   4. validates and imports every reminder
 #   5. restarts the container and prints MCP + skill health
 set -euo pipefail
+shopt -s nullglob
 cd "$(dirname "$0")/.."
 
 [ -f .env ] || { echo "missing .env (copy .env.netclaw.example)"; exit 1; }

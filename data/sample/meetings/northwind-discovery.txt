@@ -1,0 +1,10 @@
+[00:00:05] Sam Rivera: Thanks for the time, Dana and Marcus. What prompted you to look at this now?
+[00:00:20] Dana Cole: We just doubled the SDR team and the reps spend about six hours a week building lists by hand. It is a real problem.
+[00:01:10] Marcus Lee: And the lists are stale. We pay for Acme Intel but nobody trusts the scoring.
+[00:02:00] Sam Rivera: How do you decide which accounts each rep works today?
+[00:02:30] Marcus Lee: Honestly, gut feel plus whatever came in last week. It must sync with Salesforce or it is a non-starter.
+[00:05:00] Sam Rivera: If we got list building down to an hour, what would that free up?
+[00:05:30] Dana Cole: About five extra hours of selling per rep per week. I'll push this internally if the pilot shows that.
+[00:20:00] Sam Rivera: Who else is involved in the decision?
+[00:20:30] Dana Cole: Ana Ruiz, our CFO, signs off on anything over fifty thousand. We would run a two week pilot first.
+[00:28:00] Sam Rivera: Next step: I'll send over a pilot plan by Friday and set up time with Ana next week.

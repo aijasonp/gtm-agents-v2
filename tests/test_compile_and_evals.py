@@ -23,3 +23,9 @@ def test_compile_outputs(tmp_path):
         for t in ("chatgpt", "gemini", "copilot"):
             assert r["targets"][t]["instructions_chars"] <= 8000
             assert (base / t / "instructions.md").exists()
+
+
+def test_every_agent_folder_loads():
+    from gtm_core.agents import discover
+    ms = discover("agents", strict=True)
+    assert len(ms) >= 10, sorted(ms)

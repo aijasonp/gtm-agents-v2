@@ -1,0 +1,42 @@
+id: seller-follow-up
+name: Seller Follow-Up
+version: 0.1.0
+tier: A
+description: >
+  Keeps sellers on top of follow-up without reminder spam: one short daily list per owner of
+  overdue tasks, missed next steps, deals going quiet, unworked leads and calls with no recap,
+  plus recap emails, CRM notes and next-step tasks drafted minutes after every call.
+editions: [dropin, persistent]
+skill: skill/SKILL.md
+references:
+  - skill/references/follow-up-rules.md
+  - skill/references/recap-format.md
+  - skill/references/digest-format.md
+  - ../../config/company.yaml
+library:  # licensed playbooks bundled into the drop-in package (see THIRD_PARTY_NOTICES.md)
+  - library/sales-skills/skills/sales-cadence
+  - library/coreyhaines-marketingskills/skills/email-sequence
+  - library/blader-humanizer/skills/humanizer
+tools:
+  - whats_overdue
+  - draft_follow_up
+  - draft_recap
+  - log_next_step
+  - snooze
+connectors_required: []
+connectors_optional: [crm, slack]
+jobs:
+  - {name: daily_digest, cron: "0 8 * * 1-5", model_class: none}
+  - {name: process_recaps, cron: "*/30 * * * *", model_class: frontier}
+budgets: {daily_tokens: 1500000, monthly_usd: 120}
+evals: evals/golden.yaml
+config:
+  company: ../../config/company.yaml
+  stale_days: {discovery: 21, qualification: 14, evaluation: 10, proposal: 7, negotiation: 5, commit: 5, default: 14}
+  max_items_per_owner: 5
+  cooldown_days: 3
+  recap_window_days: 3
+  default_task_business_days: 2
+  max_words: 120
+  recap_max_words: 170
+  crm_fields: {next_step: hs_next_step, next_step_date: next_step_date}

@@ -1,0 +1,68 @@
+# Deal Inspection rules. Edit during install to match the CRM's stages and the team's process.
+# Every recommendation comes from these rules, so it can be audited.
+
+# CRM stage names (case-insensitive, exact or contained) -> standard stage key.
+stage_aliases:
+  discovery: [discovery, appointment scheduled, appointmentscheduled, prospecting, first meeting]
+  qualification: [qualification, qualified, qualifiedtobuy, needs analysis]
+  evaluation: [evaluation, demo, presentationscheduled, technical validation, pilot, value proposition]
+  proposal: [proposal, proposal sent, quote, id. decision makers]
+  negotiation: [negotiation, contract sent, contractsent, legal, redlines]
+  commit: [commit, verbal, decisionmakerboughtin, closing]
+
+# Longest a healthy deal sits in each stage (days).
+max_days_in_stage: {discovery: 30, qualification: 30, evaluation: 45, proposal: 30, negotiation: 30, commit: 21}
+
+# No logged activity for longer than this is a stall (days).
+max_days_without_activity: 14
+
+# MEDDPICC elements needed by each stage: 1 = at least partial, 2 = confirmed with evidence.
+meddpicc_requirements:
+  discovery: {identify_pain: 1}
+  qualification: {identify_pain: 2, metrics: 1, champion: 1}
+  evaluation: {identify_pain: 2, metrics: 1, champion: 1, decision_criteria: 1, decision_process: 1, economic_buyer: 1, competition: 1}
+  proposal: {identify_pain: 2, metrics: 2, champion: 2, decision_criteria: 2, decision_process: 2, economic_buyer: 1, competition: 1, paper_process: 1}
+  negotiation: {metrics: 2, economic_buyer: 2, decision_criteria: 2, decision_process: 2, paper_process: 2, identify_pain: 2, champion: 2, competition: 2}
+  commit: {metrics: 2, economic_buyer: 2, decision_criteria: 2, decision_process: 2, paper_process: 2, identify_pain: 2, champion: 2, competition: 2}
+
+# Points added to the 0-100 risk score per driver.
+risk_points:
+  stage_overdue: 20
+  no_activity: 20
+  close_date_past: 15
+  per_slip: 10          # capped at 2 slips
+  next_step_missing: 10
+  next_step_overdue: 10
+  per_missing_element: 6
+  per_unconfirmed_element: 3
+  single_threaded: 10
+  no_senior_contact: 5
+  negative_evidence: 15
+  wrong_fit: 25
+
+# Phrases in MEDDPICC evidence or call objections that are a real negative, not missing data.
+negative_phrases: [chose, went with, lost to, no budget, budget is frozen, budget frozen, not a priority, no access, declined, refused, blocked, cancelled, on hold]
+
+# Stages from evaluation onward should have someone at director level or above engaged.
+senior_from_stage: evaluation
+senior_min_seniority: director
+
+# Recommendation rules, checked in order. The first match wins.
+recommendation:
+  disqualify_when:
+    icp_below: 30                    # account is outside the ICP floor
+    no_activity_days_over: 60        # dead deal
+    slips_at_least: 3                # close date moved later three or more times
+    negative_and_idle_days_over: 30  # real negative evidence and no activity for a month
+  fix_when_risk_at_least: 30         # otherwise any stage gap also means fix
+
+# MEDDPICC element -> CRM field written (after approval) when call evidence fills a gap.
+crm_fields:
+  metrics: meddpicc_metrics
+  economic_buyer: meddpicc_economic_buyer
+  decision_criteria: meddpicc_decision_criteria
+  decision_process: meddpicc_decision_process
+  paper_process: meddpicc_paper_process
+  identify_pain: meddpicc_identify_pain
+  champion: meddpicc_champion
+  competition: meddpicc_competition

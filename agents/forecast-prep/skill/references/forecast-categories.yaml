@@ -1,0 +1,15 @@
+# Map CRM forecast category values to the four buckets this agent uses. Case-insensitive, exact or contained.
+# Closed won and closed lost come from deal status, not from this map.
+categories:
+  commit: [commit, closing, committed, forecast]
+  best_case: [best case, bestcase, best_case, upside, probable]
+  pipeline: [pipeline, open]
+  omitted: [omitted, omit, excluded]
+# Stage names that count as late stage (also used by Deal Inspection and Revenue Pulse stage maps).
+stage_aliases:
+  discovery: [discovery, appointment scheduled, appointmentscheduled, prospecting]
+  qualification: [qualification, qualified, qualifiedtobuy]
+  evaluation: [evaluation, demo, presentationscheduled, technical validation, pilot]
+  proposal: [proposal, proposal sent, quote]
+  negotiation: [negotiation, contract sent, contractsent, legal, redlines]
+  commit: [commit, verbal, decisionmakerboughtin, closing]

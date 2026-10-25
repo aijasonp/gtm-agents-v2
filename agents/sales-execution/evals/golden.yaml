@@ -1,0 +1,72 @@
+# Sales Execution golden cases. Template path (no model key), in-memory DB, fixed now.
+now: "2026-10-27T07:00:00+00:00"
+accounts:
+  - {id: northwind.example, name: Northwind Logistics, domain: northwind.example, industry: Logistics, employees: 600, country: US}
+  - {id: tailspin.example, name: Tailspin Software, domain: tailspin.example, industry: Software, employees: 300, country: US}
+contacts:
+  - {id: dana@northwind.example, account_id: northwind.example, name: Dana Cole, title: VP of Sales Development}
+  - {id: ana@northwind.example, account_id: northwind.example, name: Ana Ruiz, title: Chief Financial Officer}
+  - {id: marcus@northwind.example, account_id: northwind.example, name: Marcus Lee, title: Director of Revenue Operations}
+deals:
+  - id: deal-northwind
+    account_id: northwind.example
+    name: Northwind Logistics - Platform
+    owner: Sam Rivera
+    stage: Evaluation
+    status: open
+    amount: 96000
+    close_date: "2026-12-15"
+    stage_entered_at: "2026-10-06"
+    next_step: Pilot scoping call
+    next_step_date: "2026-10-25"
+    meddpicc: {identify_pain: "confirmed: reps spend 6 hours a week building lists", metrics: "cut list building to 1 hour",
+               champion: "Dana Cole", decision_criteria: "must sync with Salesforce", competition: "Acme Intel"}
+  - id: deal-tailspin
+    account_id: tailspin.example
+    name: Tailspin Software - Expansion
+    owner: Lee Park
+    stage: Negotiation
+    status: open
+    amount: 72000
+    close_date: "2026-11-07"
+    next_step: Redlines back from legal
+    meddpicc: {identify_pain: "confirmed: SDR ramp takes 5 months", metrics: "confirmed: ramp to 3 months",
+               champion: "confirmed: Kim Ortiz", economic_buyer: "confirmed: Kim Ortiz owns budget",
+               decision_criteria: "confirmed: Salesforce sync and SOC 2", decision_process: "confirmed: pilot then committee on Nov 3",
+               paper_process: "confirmed: MSA redlines in legal", competition: "confirmed: Globex Signals"}
+tasks:
+  - {id: t1, account_id: northwind.example, deal_id: deal-northwind, title: Share pilot success criteria, due_at: "2026-10-24", status: open, owner: Sam Rivera}
+  - {id: t2, account_id: northwind.example, deal_id: deal-northwind, title: Send security pack, due_at: "2026-11-02", status: open, owner: Sam Rivera}
+meetings:
+  - {id: m-past, account_id: northwind.example, deal_id: deal-northwind, title: Northwind discovery, started_at: "2026-10-20T15:00:00+00:00",
+     transcript: "Sam Rivera: hi", processed_at: "2026-10-20T16:00:00+00:00",
+     summary: {headline: "Pain: reps spend six hours a week building lists.", next_steps: ["I'll send over a pilot plan by Friday."]}}
+  - {id: m-soon, account_id: northwind.example, deal_id: deal-northwind, title: Northwind pilot scoping with CFO, owner: Sam Rivera,
+     started_at: "2026-10-28T15:00:00+00:00", attendees: [Sam Rivera, Dana Cole, Ana Ruiz, Pat Unknown]}
+  - {id: m-later, account_id: tailspin.example, deal_id: deal-tailspin, title: Tailspin committee, started_at: "2026-11-03T15:00:00+00:00"}
+insights:
+  - {kind: competitor_mention, key: Acme Intel, account_id: northwind.example, meeting_id: m-past, evidence: "Marcus Lee: We pay for Acme Intel", observed_at: "2026-10-20T15:00:00+00:00"}
+  - {kind: objection, key: price, account_id: northwind.example, meeting_id: m-past, evidence: "Dana: budget is tight", observed_at: "2026-10-20T15:00:00+00:00"}
+scores:
+  - {account_id: northwind.example, score: 82, tier: A, reasons: ["ICP 88: industry fit", "Signals: New VP of Sales Development"]}
+expect:
+  briefed: [m-soon]
+  second_run: 0
+  gaps_include: [economic_buyer, decision_process]
+  plan_first_question: "Who signs off on a purchase this size?"
+  max_plan_steps: 3
+  overdue_task: Share pilot success criteria
+  not_overdue_task: Send security pack
+  last_call_step: pilot plan
+  competitor: Acme Intel
+  first_person: Ana Ruiz
+  unknown_attendee: Pat Unknown
+  signal_tier: A
+  objections:
+    "This is too expensive for us": price
+    "We already use Acme Intel": competition
+    "security": security
+  competitor_positioning_for: "We already use Acme Intel"
+  proposal_missing_northwind: [Timeline, Paper process]
+  proposal_ready: [deal-tailspin]
+  next_steps_overdue: deal-northwind

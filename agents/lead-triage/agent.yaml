@@ -1,0 +1,41 @@
+id: lead-triage
+name: Lead Triage
+version: 0.1.0
+tier: A
+description: >
+  Qualifies every inbound and event lead in minutes: matches it to the account and any open deal,
+  scores ICP fit, persona and intent, routes it to the right owner with an SLA, and drafts the first
+  follow-up. Active pipeline is surfaced to the deal owner instead of getting new-logo outreach.
+editions: [dropin, persistent]
+skill: skill/SKILL.md
+references:
+  - skill/references/lead-scoring.md
+  - skill/references/routing.yaml
+  - skill/references/follow-up-patterns.md
+  - ../../config/icp.yaml
+  - ../../config/company.yaml
+library:  # licensed playbooks bundled into the drop-in package (see THIRD_PARTY_NOTICES.md)
+  - library/sales-skills/skills/sales-lead-score
+  - library/sales-skills/skills/sales-lead-routing
+  - library/coreyhaines-marketingskills/skills/email-sequence
+  - library/marketingagentskills/skills/icp-persona
+  - library/wondelai-skills/skills/predictable-revenue
+tools:
+  - triage_lead
+  - list_leads
+  - add_lead
+  - route_lead
+  - draft_follow_up
+connectors_required: []
+connectors_optional: [crm, slack, sequencer]
+jobs:
+  - {name: triage_inbox, cron: "*/15 * * * *", model_class: frontier}
+  - {name: sla_check, cron: "0 * * * 1-5", model_class: none}
+budgets: {daily_tokens: 1500000, monthly_usd: 120}
+evals: evals/golden.yaml
+config:
+  company: ../../config/company.yaml
+  icp: ../../config/icp.yaml
+  routing: skill/references/routing.yaml
+  lead_inbox: data/leads/inbox
+  max_words: 110

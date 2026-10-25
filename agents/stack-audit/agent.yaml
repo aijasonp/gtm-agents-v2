@@ -1,0 +1,44 @@
+id: stack-audit
+name: Stack Audit
+version: 0.1.0
+tier: B
+description: >
+  Rationalizes the GTM tool stack and builds the savings case. Reads the tool inventory (seats, active
+  users, logins, cost, renewal and notice dates, capabilities), computes cost per active seat and
+  utilization, finds tools that overlap, maps which capabilities the agent pack already covers, watches
+  notice deadlines before auto-renewal, and recommends cut, downsize, consolidate or keep with the evidence
+  and the condition to meet first. Compares a tool's top-account list against agent signals side by side
+  and drafts the tool-cut memo. Missing costs stay unknown and out of the totals.
+editions: [dropin, persistent]
+skill: skill/SKILL.md
+references:
+  - skill/references/capability-map.yaml
+  - skill/references/audit-method.md
+  - skill/references/memo-format.md
+  - ../../config/company.yaml
+library:  # licensed playbooks bundled into the drop-in package (see THIRD_PARTY_NOTICES.md)
+  - library/coreyhaines-marketingskills/skills/revops
+  - library/wondelai-skills/skills/lean-analytics
+tools:
+  - stack_summary
+  - overlap_matrix
+  - renewal_calendar
+  - savings_scenarios
+  - compare_lists
+  - cut_memo
+connectors_required: []
+connectors_optional: [slack]
+jobs:
+  - {name: renewal_watch, cron: "0 9 * * 1", model_class: none}
+  - {name: monthly_utilization, cron: "0 9 1 * *", model_class: none}
+budgets: {daily_tokens: 200000, monthly_usd: 10}
+evals: evals/golden.yaml
+config:
+  company: ../../config/company.yaml
+  inventory_file: sample/inventory.csv       # point at the customer's inventory export (CSV or JSON)
+  usage_file: ""                             # optional per-user usage CSV: tool,user,last_login
+  capability_map: skill/references/capability-map.yaml
+  alert_bands: [120, 90, 60, 30]             # days before the notice deadline
+  seat_buffer_pct: 10                        # downsize to active seats plus this buffer
+  low_utilization_pct: 50
+  side_by_side_min_overlap: 70               # percent of the tool's converted accounts the agents must also surface

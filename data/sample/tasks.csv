@@ -1,0 +1,5 @@
+id,owner,account_id,deal_id,title,due_at,status
+task-1,Sam Rivera,contoso.example,deal-contoso,Send revised proposal to Lee,2026-10-10,open
+task-2,Priya Shah,fabrikam.example,deal-fabrikam,Book discovery with Ravi,2026-09-05,open
+task-3,Sam Rivera,northwind.example,deal-northwind,Share pilot success criteria,2026-10-27,open
+task-4,Lee Park,tailspin.example,deal-tailspin,Chase legal on redlines,2026-10-21,open

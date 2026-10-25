@@ -1,0 +1,14 @@
+{
+  "id": "daily-brief",
+  "title": "Daily AE brief (7:30 CT)",
+  "instructions": "Spawn signal-scout: DM each AE their rep-brief/my_brief. Post a one-line count here.",
+  "schedule": {
+    "type": "Cron",
+    "cronExpression": "30 12 * * MON-FRI"
+  },
+  "delivery": {
+    "kind": "Channel",
+    "transport": "slack",
+    "address": "#gtm-pipeline"
+  }
+}

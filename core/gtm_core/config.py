@@ -47,6 +47,9 @@ class Settings:
     model_cheap: str = field(default_factory=lambda: os.environ.get("GTM_MODEL_CHEAP", "claude-haiku-5-5"))
     model_frontier: str = field(default_factory=lambda: os.environ.get("GTM_MODEL_FRONTIER", "claude-sonnet-5-5"))
 
+    # offline: never call a model (evals, tests, demos); agents use template drafts
+    offline: bool = field(default_factory=lambda: os.environ.get("GTM_OFFLINE", "") == "1")
+
     # budgets (0 = unlimited)
     daily_token_budget: int = field(default_factory=lambda: _int("GTM_DAILY_TOKEN_BUDGET", 2_000_000))
     monthly_usd_budget: float = field(default_factory=lambda: _float("GTM_MONTHLY_USD_BUDGET", 150.0))

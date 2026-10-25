@@ -103,7 +103,161 @@ CREATE TABLE IF NOT EXISTS state (
   key TEXT PRIMARY KEY,
   value TEXT
 );
+CREATE TABLE IF NOT EXISTS contacts (
+  id TEXT PRIMARY KEY,
+  account_id TEXT,
+  crm_id TEXT,
+  name TEXT,
+  email TEXT,
+  title TEXT,
+  seniority TEXT,
+  function TEXT,
+  phone TEXT,
+  linkedin TEXT,
+  attrs TEXT,
+  updated_at TEXT
+);
+CREATE INDEX IF NOT EXISTS ix_contacts_account ON contacts(account_id);
+CREATE TABLE IF NOT EXISTS leads (
+  id TEXT PRIMARY KEY,
+  email TEXT,
+  name TEXT,
+  company TEXT,
+  domain TEXT,
+  title TEXT,
+  source TEXT,
+  event TEXT,
+  message TEXT,
+  received_at TEXT,
+  account_id TEXT,
+  contact_id TEXT,
+  status TEXT,
+  score REAL,
+  tier TEXT,
+  owner TEXT,
+  attrs TEXT,
+  updated_at TEXT
+);
+CREATE INDEX IF NOT EXISTS ix_leads_status ON leads(status, received_at);
+CREATE TABLE IF NOT EXISTS deals (
+  id TEXT PRIMARY KEY,
+  crm_id TEXT,
+  account_id TEXT,
+  name TEXT,
+  owner TEXT,
+  stage TEXT,
+  status TEXT,
+  amount REAL,
+  close_date TEXT,
+  created_at TEXT,
+  stage_entered_at TEXT,
+  last_activity_at TEXT,
+  next_step TEXT,
+  next_step_date TEXT,
+  forecast_category TEXT,
+  meddpicc TEXT,
+  attrs TEXT,
+  updated_at TEXT
+);
+CREATE INDEX IF NOT EXISTS ix_deals_account ON deals(account_id);
+CREATE TABLE IF NOT EXISTS deal_history (
+  id {AUTOID},
+  deal_id TEXT NOT NULL,
+  snapshot_at TEXT,
+  stage TEXT,
+  status TEXT,
+  amount REAL,
+  close_date TEXT,
+  forecast_category TEXT
+);
+CREATE INDEX IF NOT EXISTS ix_deal_history ON deal_history(deal_id, snapshot_at);
+CREATE TABLE IF NOT EXISTS meetings (
+  id TEXT PRIMARY KEY,
+  account_id TEXT,
+  deal_id TEXT,
+  title TEXT,
+  started_at TEXT,
+  owner TEXT,
+  attendees TEXT,
+  transcript TEXT,
+  summary TEXT,
+  source TEXT,
+  processed_at TEXT,
+  attrs TEXT,
+  updated_at TEXT
+);
+CREATE INDEX IF NOT EXISTS ix_meetings_account ON meetings(account_id, started_at);
+CREATE TABLE IF NOT EXISTS tasks (
+  id TEXT PRIMARY KEY,
+  owner TEXT,
+  account_id TEXT,
+  deal_id TEXT,
+  contact_id TEXT,
+  title TEXT,
+  due_at TEXT,
+  status TEXT,
+  source TEXT,
+  attrs TEXT,
+  updated_at TEXT
+);
+CREATE INDEX IF NOT EXISTS ix_tasks_due ON tasks(status, due_at);
+CREATE TABLE IF NOT EXISTS drafts (
+  id {AUTOID},
+  agent TEXT,
+  kind TEXT,
+  account_id TEXT,
+  deal_id TEXT,
+  contact_id TEXT,
+  lead_id TEXT,
+  subject TEXT,
+  body TEXT,
+  gate_score INTEGER,
+  gate_passed INTEGER,
+  source TEXT,
+  status TEXT,
+  approval_id INTEGER,
+  meta TEXT,
+  created_at TEXT
+);
+CREATE TABLE IF NOT EXISTS insights (
+  id {AUTOID},
+  agent TEXT,
+  kind TEXT,
+  account_id TEXT,
+  deal_id TEXT,
+  meeting_id TEXT,
+  key TEXT,
+  value TEXT,
+  evidence TEXT,
+  observed_at TEXT
+);
+CREATE INDEX IF NOT EXISTS ix_insights_kind ON insights(kind, key);
+CREATE TABLE IF NOT EXISTS handoffs (
+  id {AUTOID},
+  from_agent TEXT,
+  to_agent TEXT,
+  kind TEXT,
+  ref TEXT,
+  payload TEXT,
+  status TEXT,
+  created_at TEXT,
+  consumed_at TEXT
+);
+CREATE INDEX IF NOT EXISTS ix_handoffs_to ON handoffs(to_agent, status);
 """
+
+# Record tables with a JSON `attrs` column for anything that is not a named column.
+RECORD_TABLES = {
+    "contacts": ["id", "account_id", "crm_id", "name", "email", "title", "seniority", "function", "phone", "linkedin"],
+    "leads": ["id", "email", "name", "company", "domain", "title", "source", "event", "message", "received_at",
+              "account_id", "contact_id", "status", "score", "tier", "owner"],
+    "deals": ["id", "crm_id", "account_id", "name", "owner", "stage", "status", "amount", "close_date", "created_at",
+              "stage_entered_at", "last_activity_at", "next_step", "next_step_date", "forecast_category", "meddpicc"],
+    "meetings": ["id", "account_id", "deal_id", "title", "started_at", "owner", "attendees", "transcript", "summary",
+                 "source", "processed_at"],
+    "tasks": ["id", "owner", "account_id", "deal_id", "contact_id", "title", "due_at", "status", "source"],
+}
+JSON_COLUMNS = {"meddpicc", "attendees", "summary"}
 
 PG_EXTRA = """
 CREATE EXTENSION IF NOT EXISTS vector;
@@ -148,6 +302,8 @@ class Store:
     def init(self) -> None:
         autoid = "INTEGER PRIMARY KEY AUTOINCREMENT" if self.kind == "sqlite" else "BIGSERIAL PRIMARY KEY"
         ddl = SCHEMA.replace("{AUTOID}", autoid)
+        if self.kind == "postgres":  # REAL is 4-byte on Postgres; money and scores need 8
+            ddl = ddl.replace(" REAL", " DOUBLE PRECISION")
         with self._lock:
             if self.kind == "sqlite":
                 self.conn.executescript(ddl)
@@ -166,14 +322,16 @@ class Store:
     def _sql(self, sql: str) -> str:
         return sql if self.kind == "sqlite" else sql.replace("?", "%s")
 
-    def execute(self, sql: str, params: Iterable[Any] = ()) -> None:
+    def execute(self, sql: str, params: Iterable[Any] = ()) -> int:
+        """Run a statement; returns the number of rows changed (used for atomic claims)."""
         with self._lock:
             if self.kind == "sqlite":
-                self.conn.execute(sql, tuple(params))
+                cur = self.conn.execute(sql, tuple(params))
                 self.conn.commit()
-            else:
-                with self.conn.cursor() as cur:
-                    cur.execute(self._sql(sql), tuple(params))
+                return cur.rowcount
+            with self.conn.cursor() as cur:
+                cur.execute(self._sql(sql), tuple(params))
+                return cur.rowcount
 
     def insert(self, sql: str, params: Iterable[Any] = ()) -> int | None:
         with self._lock:
@@ -226,7 +384,13 @@ class Store:
 
     # ---------- signals ----------
     def add_signal(self, sig: dict) -> bool:
-        """Insert a signal; returns False when it is a duplicate (same id)."""
+        """Insert a signal; returns False when it is a duplicate (same id).
+        observed_at is normalized to ISO 8601 UTC; an unparseable date raises ValueError."""
+        from .pipeline import parse_dt
+        d = parse_dt(sig.get("observed_at"))
+        if d is None:
+            raise ValueError(f"signal for {sig.get('account_id')}: unreadable observed_at {sig.get('observed_at')!r}")
+        sig = {**sig, "observed_at": d.replace(microsecond=0).isoformat()}
         if self.one("SELECT id FROM signals WHERE id=?", (sig["id"],)):
             return False
         self.execute(
@@ -263,6 +427,116 @@ class Store:
                     observed_at: str | None = None) -> None:
         self.insert("INSERT INTO outcomes (account_id, outcome, value, observed_at, source) VALUES (?,?,?,?,?)",
                     (account_id, outcome, value, observed_at or now_iso(), source))
+
+    # ---------- generic records (contacts, leads, deals, meetings, tasks) ----------
+    def upsert(self, table: str, row: dict) -> None:
+        """Insert or merge a record. Unknown keys go to `attrs`; existing attrs are kept and updated.
+        Keys left out keep their stored value; a key passed as None clears it."""
+        cols = RECORD_TABLES[table]
+        if not row.get("id"):
+            raise ValueError(f"{table} record needs an id")
+        old = self.get(table, row["id"]) or {}
+        merged = {**old, **row}
+        values = []
+        for c in cols:
+            v = merged.get(c)
+            values.append(json.dumps(v, default=str) if c in JSON_COLUMNS and v is not None else v)
+        attrs = {k: v for k, v in merged.items() if k not in cols and k not in ("attrs", "updated_at") and v is not None}
+        all_cols = cols + ["attrs", "updated_at"]
+        placeholders = ",".join("?" * len(all_cols))
+        updates = ", ".join(f"{c}=excluded.{c}" for c in all_cols if c != "id")
+        self.execute(f"INSERT INTO {table} ({', '.join(all_cols)}) VALUES ({placeholders}) "
+                     f"ON CONFLICT(id) DO UPDATE SET {updates}",
+                     (*values, json.dumps(attrs, default=str), now_iso()))
+
+    def _decode(self, row: dict) -> dict:
+        for c in JSON_COLUMNS:
+            if c in row and isinstance(row[c], str):
+                try:
+                    row[c] = json.loads(row[c])
+                except json.JSONDecodeError:
+                    pass
+        if "attrs" in row:
+            row.update(json.loads(row.pop("attrs") or "{}"))
+        return row
+
+    def get(self, table: str, record_id: str) -> dict | None:
+        if table not in RECORD_TABLES:
+            raise KeyError(table)
+        r = self.one(f"SELECT * FROM {table} WHERE id=?", (record_id,))
+        return self._decode(r) if r else None
+
+    def select(self, table: str, where: str = "", params: Iterable[Any] = (), order: str = "") -> list[dict]:
+        if table not in RECORD_TABLES:
+            raise KeyError(table)
+        sql = f"SELECT * FROM {table}" + (f" WHERE {where}" if where else "") + (f" ORDER BY {order}" if order else "")
+        return [self._decode(r) for r in self.query(sql, params)]
+
+    def contact_by_email(self, email: str) -> dict | None:
+        rows = self.select("contacts", "LOWER(email)=?", ((email or "").lower(),))
+        return rows[0] if rows else None
+
+    def account_by_domain(self, domain: str) -> dict | None:
+        d = (domain or "").lower().removeprefix("www.")
+        if not d:
+            return None
+        r = self.one("SELECT * FROM accounts WHERE LOWER(domain)=? OR id=?", (d, d))
+        if r:
+            r.update(json.loads(r.pop("attrs") or "{}"))
+        return r
+
+    def snapshot_deal(self, deal: dict) -> None:
+        self.insert("INSERT INTO deal_history (deal_id, snapshot_at, stage, status, amount, close_date, forecast_category) "
+                    "VALUES (?,?,?,?,?,?,?)",
+                    (deal["id"], now_iso(), deal.get("stage"), deal.get("status"), deal.get("amount"),
+                     deal.get("close_date"), deal.get("forecast_category")))
+
+    def deal_history(self, deal_id: str) -> list[dict]:
+        return self.query("SELECT * FROM deal_history WHERE deal_id=? ORDER BY snapshot_at, id", (deal_id,))
+
+    # ---------- drafts and insights ----------
+    def add_draft(self, agent: str, kind: str, body: str, subject: str = "", gate_score: int | None = None,
+                  gate_passed: bool | None = None, source: str = "model", status: str = "draft", **refs) -> int:
+        meta = refs.pop("meta", {})
+        return self.insert(
+            "INSERT INTO drafts (agent, kind, account_id, deal_id, contact_id, lead_id, subject, body, gate_score, "
+            "gate_passed, source, status, approval_id, meta, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (agent, kind, refs.get("account_id"), refs.get("deal_id"), refs.get("contact_id"), refs.get("lead_id"),
+             subject, body, gate_score, None if gate_passed is None else int(bool(gate_passed)), source, status,
+             refs.get("approval_id"), json.dumps(meta, default=str), now_iso()))
+
+    def drafts(self, agent: str | None = None, status: str | None = None, limit: int = 100) -> list[dict]:
+        sql, params = "SELECT * FROM drafts WHERE 1=1", []
+        if agent:
+            sql += " AND agent=?"; params.append(agent)
+        if status:
+            sql += " AND status=?"; params.append(status)
+        rows = self.query(sql + " ORDER BY id DESC LIMIT ?", (*params, limit))
+        for r in rows:
+            r["meta"] = json.loads(r.get("meta") or "{}")
+        return rows
+
+    def add_insight(self, agent: str, kind: str, key: str, value: Any = None, evidence: str = "",
+                    observed_at: str | None = None, **refs) -> int:
+        return self.insert(
+            "INSERT INTO insights (agent, kind, account_id, deal_id, meeting_id, key, value, evidence, observed_at) "
+            "VALUES (?,?,?,?,?,?,?,?,?)",
+            (agent, kind, refs.get("account_id"), refs.get("deal_id"), refs.get("meeting_id"), key,
+             json.dumps(value, default=str), evidence[:2000], observed_at or now_iso()))
+
+    def insights(self, kind: str | None = None, since_iso: str | None = None, **refs) -> list[dict]:
+        sql, params = "SELECT * FROM insights WHERE 1=1", []
+        if kind:
+            sql += " AND kind=?"; params.append(kind)
+        if since_iso:
+            sql += " AND observed_at>=?"; params.append(since_iso)
+        for k in ("account_id", "deal_id", "meeting_id"):
+            if refs.get(k):
+                sql += f" AND {k}=?"; params.append(refs[k])
+        rows = self.query(sql + " ORDER BY observed_at DESC, id DESC", params)
+        for r in rows:
+            r["value"] = json.loads(r["value"]) if r.get("value") else None
+        return rows
 
     # ---------- key/value state ----------
     def get_state(self, key: str, default: Any = None) -> Any:

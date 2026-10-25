@@ -63,10 +63,15 @@ def cmd_serve(s, a):  # pragma: no cover
     serve(s, _manifest(s, a.agent), a.transport, a.host, a.port)
 
 
+def cmd_serve_api(s, a):  # pragma: no cover
+    from .api import serve
+    serve(s, a.host, a.port)
+
+
 def cmd_approvals(s, a):
     ctx = _ctx(s, a.agent)
     if a.action == "list":
-        for r in ctx.approvals.list(None if a.all else "pending"):
+        for r in ctx.approvals.list(None if a.all else "pending", all_agents=a.all_agents):
             print(f"#{r['id']:<5} {r['status']:<9} {r['action']:<18} {json.dumps(r['payload'])[:110]}")
     elif a.action in ("approve", "reject"):
         for rid in a.ids:
@@ -74,6 +79,8 @@ def cmd_approvals(s, a):
         print(f"{a.action}d: {', '.join(a.ids)}")
     elif a.action == "execute":
         from .agents import load_module
+        from .executors import register_core_executors
+        register_core_executors(ctx)
         jobs = load_module(ctx.manifest, "jobs")
         if jobs is not None and hasattr(jobs, "register_executors"):
             jobs.register_executors(ctx)
@@ -81,10 +88,74 @@ def cmd_approvals(s, a):
 
 
 def cmd_import(s, a):
-    from .importers import import_accounts, import_signals, import_outcomes
+    from .importers import RECORD_IMPORTERS
     ctx = _ctx(s, a.agent)
-    fn = {"accounts": import_accounts, "signals": import_signals, "outcomes": import_outcomes}[a.kind]
-    print(json.dumps(fn(ctx, Path(a.path)), indent=2))
+    print(json.dumps(RECORD_IMPORTERS[a.kind](ctx, Path(a.path)), indent=2))
+
+
+def cmd_ask(s, a):
+    from .assistant import Assistant
+    ans = Assistant(s, agents=a.agents.split(",") if a.agents else None).ask(" ".join(a.question))
+    print(ans.text)
+    if a.trace:
+        print(json.dumps(ans.trace, indent=2, default=str))
+
+
+def cmd_assistant(s, a):  # pragma: no cover - interactive
+    from .assistant import Assistant
+    bot = Assistant(s, agents=a.agents.split(",") if a.agents else None)
+    print(f"GTM assistant: {len(bot.tools)} tools from {len(bot.manifests)} agents. Ctrl-D to quit.")
+    history = []
+    while True:
+        try:
+            q = input("> ").strip()
+        except EOFError:
+            break
+        if not q:
+            continue
+        ans = bot.ask(q, history)
+        print(ans.text + "\n")
+        if ans.text.strip():
+            history += [{"role": "user", "content": q}, {"role": "assistant", "content": ans.text}]
+        history = history[-12:]
+
+
+def cmd_slack_bot(s, a):  # pragma: no cover
+    from .assistant import run_slack_bot
+    run_slack_bot(s)
+
+
+def cmd_models(s, a):
+    from .budgets import Budgets
+    from .gateway import check_models
+    from .store import Store
+    st = Store(s.database_url); st.init()
+    res = check_models(s, Budgets(st, agent="core"))
+    print(json.dumps(res, indent=2))
+    sys.exit(0 if any(v["ok"] for v in res.values()) else 1)
+
+
+def cmd_sync(s, a):
+    from .sync import sync_all
+    print(json.dumps(sync_all(_ctx(s, a.agent)), indent=2))
+
+
+def cmd_handoffs(s, a):
+    from .handoffs import Handoffs
+    from .store import Store
+    st = Store(s.database_url); st.init()
+    for h in Handoffs(st, "core").all(None if a.all else "pending"):
+        print(f"#{h['id']:<5} {h['status']:<9} {h['from_agent']} -> {h['to_agent']:<20} {h['kind']:<18} {h['ref']}")
+
+
+def cmd_drafts(s, a):
+    from .store import Store
+    st = Store(s.database_url); st.init()
+    for d in st.drafts(a.agent, a.status, a.limit):
+        print(f"#{d['id']:<5} {d['agent']:<20} {d['kind']:<16} {d['status']:<8} gate {d['gate_score']}/40 "
+              f"[{d['source']}] {d['subject'] or ''}")
+        if a.full:
+            print("    " + (d["body"] or "").replace("\n", "\n    ") + "\n")
 
 
 def cmd_usage(s, a):
@@ -141,14 +212,27 @@ def main(argv=None):
     sv.add_argument("--transport", default="stdio", choices=["stdio", "sse", "streamable-http"])
     sv.add_argument("--host", default="127.0.0.1"); sv.add_argument("--port", type=int, default=8000)
     sv.set_defaults(fn=cmd_serve)
+    sa = sub.add_parser("serve-api"); sa.add_argument("--host", default="127.0.0.1"); sa.add_argument("--port", type=int, default=8787)
+    sa.set_defaults(fn=cmd_serve_api)
     ap = sub.add_parser("approvals"); ap.add_argument("agent"); ap.add_argument("action", choices=["list", "approve", "reject", "execute"])
     ap.add_argument("ids", nargs="*"); ap.add_argument("--by", default="operator"); ap.add_argument("--all", action="store_true")
-    ap.add_argument("--dry-run", action="store_true"); ap.set_defaults(fn=cmd_approvals)
-    im = sub.add_parser("import"); im.add_argument("agent"); im.add_argument("kind", choices=["accounts", "signals", "outcomes"])
+    ap.add_argument("--dry-run", action="store_true"); ap.add_argument("--all-agents", action="store_true")
+    ap.set_defaults(fn=cmd_approvals)
+    im = sub.add_parser("import"); im.add_argument("agent"); im.add_argument("kind", choices=["accounts", "signals", "outcomes", "contacts", "leads", "deals", "tasks", "meetings"])
     im.add_argument("path"); im.set_defaults(fn=cmd_import)
     u = sub.add_parser("usage"); u.add_argument("agent"); u.set_defaults(fn=cmd_usage)
     rs = sub.add_parser("resume"); rs.add_argument("agent"); rs.set_defaults(fn=cmd_resume)
     sub.add_parser("selftest").set_defaults(fn=cmd_selftest)
+    sub.add_parser("models").set_defaults(fn=cmd_models)
+    ak = sub.add_parser("ask"); ak.add_argument("question", nargs="+"); ak.add_argument("--agents", default="")
+    ak.add_argument("--trace", action="store_true"); ak.set_defaults(fn=cmd_ask)
+    asst = sub.add_parser("assistant"); asst.add_argument("--agents", default=""); asst.set_defaults(fn=cmd_assistant)
+    sub.add_parser("slack-bot").set_defaults(fn=cmd_slack_bot)
+    sy = sub.add_parser("sync"); sy.add_argument("agent"); sy.set_defaults(fn=cmd_sync)
+    ho = sub.add_parser("handoffs"); ho.add_argument("--all", action="store_true"); ho.set_defaults(fn=cmd_handoffs)
+    dr = sub.add_parser("drafts"); dr.add_argument("--agent"); dr.add_argument("--status")
+    dr.add_argument("--limit", type=int, default=20); dr.add_argument("--full", action="store_true")
+    dr.set_defaults(fn=cmd_drafts)
     e = sub.add_parser("eval"); e.add_argument("agent"); e.set_defaults(fn=cmd_eval)
     li = sub.add_parser("license"); li.add_argument("action", choices=["keygen", "issue", "verify"])
     li.add_argument("--out", default="license.json"); li.add_argument("--key"); li.add_argument("--customer")

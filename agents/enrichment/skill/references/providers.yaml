@@ -1,0 +1,72 @@
+# Enrichment providers and the order they are tried per field. Edit during install.
+# A field stops at the first provider that returns a verified value. Results are cached for ttl_days.
+
+default_country: US        # used to normalize phone numbers without a country code
+ttl_days: 90               # never re-query the same person and field within this window
+caps:
+  per_run_usd: 25          # stop the run when spend in one run reaches this
+  monthly_usd: 300         # stop all lookups for the month at this amount, alert Slack
+
+order:                     # person fields
+  email: [sample_csv, manual]
+  phone: [sample_csv, manual]
+  title: [sample_csv]
+  linkedin: [sample_csv]
+account_order:             # account firmographics
+  employees: [sample_companies]
+  industry: [sample_companies]
+  revenue: [sample_companies]
+  country: [sample_companies]
+
+verifier: null             # name of a provider that checks emails, e.g. email_verifier below
+
+providers:
+  sample_csv:
+    type: csv
+    path: sample/enrichment.csv          # relative to the agent folder
+    match_on: [email, linkedin, name_domain]
+    outputs: {email: email, phone: phone, title: title, linkedin: linkedin}
+    confidence: 0.9
+    cost_per_call: 0
+  sample_companies:
+    type: csv
+    path: sample/companies.csv
+    match_on: [domain]
+    outputs: {employees: employees, industry: industry, revenue: revenue, country: country}
+    confidence: 0.85
+    cost_per_call: 0
+  manual:
+    type: manual            # nothing found: listed for a human to research
+
+# ---------------------------------------------------------------------------------------------
+# HTTP providers. Disabled examples only: verify every URL, parameter and output path with the
+# vendor's API docs and your contract before enabling. Secrets come from environment variables
+# written as ${NAME}; they are read at call time and never stored.
+#
+#  contact_data_vendor:
+#    type: http
+#    method: GET
+#    url: "https://api.vendor.example/v1/person?email={email}&linkedin={linkedin}"   # verify with the vendor's API docs
+#    headers: {Authorization: "Bearer ${VENDOR_API_KEY}"}
+#    outputs: {email: "data.email", phone: "data.mobile_phone", title: "data.job_title"}
+#    confidence: 0.85
+#    cost_per_call: 0.10
+#    rate_limit_per_minute: 60
+#
+#  workflow_webhook:                    # e.g. a table or workflow tool that returns JSON synchronously
+#    type: http
+#    method: POST
+#    url: "https://hooks.workflow.example/enrich"                                   # verify with the vendor's API docs
+#    headers: {x-api-key: "${WORKFLOW_KEY}"}
+#    json: {email: "{email}", name: "{name}", domain: "{domain}", linkedin: "{linkedin}"}
+#    outputs: {phone: "result.phone", email: "result.work_email"}
+#    cost_per_call: 0.05
+#
+#  email_verifier:
+#    type: http
+#    method: GET
+#    url: "https://api.verifier.example/v2/validate?email={email}"                  # verify with the vendor's API docs
+#    headers: {Authorization: "${VERIFIER_KEY}"}
+#    outputs: {status: "status"}
+#    accepted: [valid, deliverable]
+#    cost_per_call: 0.008

@@ -1,0 +1,3 @@
+# Never draft outbound to these. Customers, partners, legal holds, people who asked to stop.
+domains: []
+emails: []

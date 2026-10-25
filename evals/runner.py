@@ -22,11 +22,15 @@ TIER_RANK = {"A": 4, "B": 3, "C": 2, "D": 1, "X": 0}
 
 
 def _ctx(m: Manifest) -> Context:
+    """Throwaway context: in-memory DB, no CRM, no Slack, no model keys (template path)."""
+    from gtm_core.connectors.sequencer import Sequencer
     s = Settings()
     s.slack_webhook_url = s.slack_bot_token = None
+    s.anthropic_api_key = s.openai_api_key = None
+    s.offline = True  # evals are deterministic: template path only
     slack = Slack(s)
     slack.post = lambda text, **kw: slack.sent.append({"text": text}) or {"ok": True}
-    return Context.build(s, m, store=Store("sqlite:///:memory:"), crm=NullCRM(), slack=slack)
+    return Context.build(s, m, store=Store("sqlite:///:memory:"), crm=NullCRM(), slack=slack, sequencer=Sequencer(), dialer=__import__('gtm_core.connectors.dialer', fromlist=['Dialer']).Dialer())
 
 
 def eval_signal_scout(m: Manifest, spec: dict) -> list[dict]:
@@ -81,11 +85,26 @@ def eval_copy_qa_gate(m: Manifest, spec: dict) -> list[dict]:
 EVALUATORS = {"signal-scout": eval_signal_scout, "copy-qa-gate": eval_copy_qa_gate}
 
 
+def _evaluator(m: Manifest):
+    """Built-in evaluator, or agents/<id>/evals/evaluator.py with evaluate(manifest, spec, make_ctx)."""
+    if m.id in EVALUATORS:
+        return EVALUATORS[m.id]
+    f = m.root / "evals" / "evaluator.py"
+    if f.exists():
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(f"gtm_eval_{m.id.replace('-', '_')}", f)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return lambda manifest, data: mod.evaluate(manifest, data, _ctx)
+    return None
+
+
 def run_agent_evals(m: Manifest) -> dict:
-    if not m.evals or m.id not in EVALUATORS:
+    fn = _evaluator(m)
+    if not m.evals or fn is None:
         return {"agent": m.id, "passed": False, "error": "no evals defined"}
     spec = yaml.safe_load(m.path(m.evals).read_text())
-    cases = EVALUATORS[m.id](m, spec)
+    cases = fn(m, spec)
     passed = sum(c["passed"] for c in cases)
     return {"agent": m.id, "version": m.version, "passed": passed == len(cases),
             "score": f"{passed}/{len(cases)}", "cases": cases}

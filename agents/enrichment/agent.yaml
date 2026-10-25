@@ -1,0 +1,40 @@
+id: enrichment
+name: Enrichment
+version: 0.1.0
+tier: B
+description: >
+  One data layer instead of several: a provider-agnostic waterfall that finds and verifies email, mobile
+  and title for target contacts and firmographics for accounts, stops at the first verified answer, caches
+  results, caps spend, records where every value came from, and reports hit rate and cost per hit by
+  provider so overlapping data tools can be cut.
+editions: [dropin, persistent]
+skill: skill/SKILL.md
+references:
+  - skill/references/providers.yaml
+  - skill/references/waterfall-method.md
+  - skill/references/consolidation-report.md
+  - ../../config/company.yaml
+library:  # licensed playbooks bundled into the drop-in package (see THIRD_PARTY_NOTICES.md)
+  - library/sales-skills/skills/sales-enrich
+  - library/sales-skills/skills/sales-data-hygiene
+  - library/sales-skills/skills/sales-zoominfo
+  - library/sales-skills/skills/sales-clay
+tools:
+  - enrich_contact
+  - enrich_account
+  - waterfall_report
+  - coverage_report
+connectors_required: []
+connectors_optional: [crm, slack, enrichment_providers, dialer]
+jobs:
+  - {name: enrich_queue, cron: "15 * * * *", model_class: none}
+budgets: {daily_tokens: 100000, monthly_usd: 10}
+evals: evals/golden.yaml
+config:
+  company: ../../config/company.yaml
+  providers: skill/references/providers.yaml
+  max_per_run: 50
+  target_tiers: [A, B]
+  push_new_phones_to_dialer: false     # true: queue a dialer task (approval) when a new mobile is found
+  crm_fields: {email: email, phone: phone, title: jobtitle, linkedin: hs_linkedin_url}
+  crm_fields_account: {employees: numberofemployees, industry: industry, revenue: annualrevenue}

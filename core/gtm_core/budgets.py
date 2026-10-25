@@ -29,8 +29,10 @@ def cost_usd(model: str, model_class: str, input_tokens: int, output_tokens: int
 
 
 class Budgets:
-    def __init__(self, store: Store, daily_tokens: int = 0, monthly_usd: float = 0.0, notify=None):
+    def __init__(self, store: Store, daily_tokens: int = 0, monthly_usd: float = 0.0, notify=None,
+                 agent: str | None = None):
         self.store = store
+        self.agent = agent  # budgets and the pause flag are per agent; None = whole runtime
         self.daily_tokens = daily_tokens
         self.monthly_usd = monthly_usd
         self.notify = notify  # callable(text) for the Slack alert
@@ -38,17 +40,23 @@ class Budgets:
     def usage(self) -> dict:
         today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         month = today[:7]
-        d = self.store.one("SELECT COALESCE(SUM(input_tokens+output_tokens),0) AS t FROM token_usage WHERE ts LIKE ?",
-                           (today + "%",))
-        m = self.store.one("SELECT COALESCE(SUM(usd),0) AS u FROM token_usage WHERE ts LIKE ?", (month + "%",))
+        where, extra = ("AND agent=?", (self.agent,)) if self.agent else ("", ())
+        d = self.store.one("SELECT COALESCE(SUM(input_tokens+output_tokens),0) AS t FROM token_usage "
+                           f"WHERE ts LIKE ? {where}", (today + "%", *extra))
+        m = self.store.one(f"SELECT COALESCE(SUM(usd),0) AS u FROM token_usage WHERE ts LIKE ? {where}",
+                           (month + "%", *extra))
         return {"tokens_today": int(d["t"]), "usd_month": float(m["u"])}
 
+    @property
+    def _pause_key(self) -> str:
+        return f"paused:{self.agent}" if self.agent else "paused"
+
     def paused(self) -> bool:
-        return bool(self.store.get_state("paused", False))
+        return bool(self.store.get_state(self._pause_key, False) or self.store.get_state("paused", False))
 
     def check(self, agent: str = "core") -> None:
         if self.paused():
-            raise BudgetExceeded("agent runtime is paused (budget hit); run `gtm resume` after review")
+            raise BudgetExceeded(f"{self.agent or 'runtime'} is paused (budget hit); run `gtm resume {self.agent or '<agent>'}` after review")
         u = self.usage()
         reason = None
         if self.daily_tokens and u["tokens_today"] >= self.daily_tokens:
@@ -56,10 +64,11 @@ class Budgets:
         elif self.monthly_usd and u["usd_month"] >= self.monthly_usd:
             reason = f"monthly spend budget reached (${u['usd_month']:.2f} of ${self.monthly_usd:.2f})"
         if reason:
-            self.store.set_state("paused", True)
+            self.store.set_state(self._pause_key, True)
             if self.notify:
                 try:
-                    self.notify(f":pause_button: GTM agents paused: {reason}. Run `gtm resume` to continue.")
+                    self.notify(f":pause_button: {self.agent or 'GTM agents'} paused: {reason}. "
+                                f"Run `gtm resume {self.agent or '<agent>'}` to continue.")
                 except Exception:
                     pass
             raise BudgetExceeded(reason)
@@ -72,4 +81,5 @@ class Budgets:
         return usd
 
     def resume(self) -> None:
+        self.store.set_state(self._pause_key, False)
         self.store.set_state("paused", False)

@@ -1,4 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://humanizer-skill.vercel.app/sitemap.xml

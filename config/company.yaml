@@ -1,0 +1,37 @@
+# What you sell. Edit once during install; every agent drafts from this and nothing else.
+# Keep claims here true and sourced: agents will repeat them.
+company: Beacon
+product: Beacon Revenue Agents
+one_liner: Agents that rank your accounts each morning, draft the follow-ups and flag stuck deals, inside your CRM.
+sender:
+  name: Sam Rivera
+  title: Account Executive
+  calendar_link: https://cal.example/sam
+value_props:
+  - id: prioritization
+    pain: Reps waste the first hours of the week building lists by hand
+    outcome: A ranked list of accounts with fresh buying signals every morning
+  - id: follow_up
+    pain: Follow-ups and CRM notes slip after busy meeting days
+    outcome: Recap emails, notes and tasks drafted minutes after every call
+  - id: deal_hygiene
+    pain: Forecast calls surprise leadership with deals that were never qualified
+    outcome: Weekly MEDDPICC gap check on every open deal
+proof_points:  # only real, approved proof. Agents never invent these.
+  - Sample customer cut list-building time from 6 hours to 1 hour per rep per week (replace with your own)
+competitors:
+  - name: Acme Intel
+    positioning: Data provider; strong contact data, no workflow or drafting
+  - name: Globex Signals
+    positioning: Intent data only; no CRM write-back
+personas:
+  buyer_functions: [sales, revops, executive]
+  min_seniority: director
+  champion_functions: [sales, revops]
+team:  # used by Lead Triage routing and Revenue Pulse rollups
+  owners:
+    - {name: Sam Rivera, email: sam@beacon.example, regions: [US], segments: [mid_market]}
+    - {name: Priya Shah, email: priya@beacon.example, regions: [CA, GB], segments: [mid_market, enterprise]}
+    - {name: Lee Park, email: lee@beacon.example, regions: [US], segments: [enterprise]}
+  rep_names: [Sam Rivera, Priya Shah, Lee Park]   # your side of the call in transcripts
+  quarter_quota: 1200000

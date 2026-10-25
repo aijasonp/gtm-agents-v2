@@ -1,0 +1,41 @@
+id: sales-execution
+name: Sales Execution
+version: 0.1.0
+tier: B
+description: >
+  Gets reps ready for every call and keeps deals moving: a pre-call brief for each upcoming meeting
+  (account, people, deal stage, MEDDPICC gaps, last call, signals, competitor and objection history,
+  overdue tasks, a plan for the call), plus MEDDPICC questions, objection help, proposal outlines and
+  next-step summaries on demand.
+editions: [dropin, persistent]
+skill: skill/SKILL.md
+references:
+  - skill/references/precall-brief-format.md
+  - skill/references/question-bank.yaml
+  - skill/references/objection-playbook.md
+  - skill/references/proposal-outline.md
+  - ../../config/company.yaml
+library:  # licensed playbooks bundled into the drop-in package (see THIRD_PARTY_NOTICES.md)
+  - library/sales-skills/skills/sales-proposal-template
+  - library/coreyhaines-marketingskills/skills/sales-enablement
+  - library/wondelai-skills/skills/hundred-million-offers
+  - library/wondelai-skills/skills/crossing-the-chasm
+tools:
+  - precall_brief
+  - meddpicc_questions
+  - objection_help
+  - proposal_outline
+  - next_steps_summary
+connectors_required: []
+connectors_optional: [crm, slack]
+jobs:
+  - {name: precall_briefs, cron: "0 7 * * 1-5", model_class: frontier}
+budgets: {daily_tokens: 1000000, monthly_usd: 80}
+evals: evals/golden.yaml
+config:
+  company: ../../config/company.yaml
+  icp: ../../config/icp.yaml
+  question_bank: skill/references/question-bank.yaml
+  objection_playbook: skill/references/objection-playbook.md
+  lookahead_hours: 48
+  insight_days: 180

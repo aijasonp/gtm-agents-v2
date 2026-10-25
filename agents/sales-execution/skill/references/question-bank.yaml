@@ -1,0 +1,33 @@
+# Discovery questions per MEDDPICC element. The agent picks the first two for each gap.
+metrics:
+  - What would you measure to call this a success six months from now?
+  - What does that cost you today in hours or dollars?
+  - What number would your boss want to see before signing?
+economic_buyer:
+  - Who signs off on a purchase this size?
+  - What does that person need to see to say yes?
+  - Can we get 20 minutes with them before the proposal?
+decision_criteria:
+  - What has to be true for you to pick a vendor here?
+  - Which of those are must-haves and which are nice to have?
+  - How will you compare options side by side?
+decision_process:
+  - Walk me through how a decision like this gets made, step by step.
+  - Who else weighs in, and when?
+  - What date do you need this live by, and why that date?
+paper_process:
+  - Once you say yes, what happens with legal, security and procurement?
+  - How long did the last software purchase take from yes to signature?
+  - Is there a vendor security review we should start now?
+identify_pain:
+  - What made this a priority now and not last quarter?
+  - What happens if you do nothing for six months?
+  - Who feels this problem most, day to day?
+champion:
+  - Who besides you wants this fixed?
+  - If we earn it, would you be willing to make the case internally?
+  - What would you need from us to sell this inside?
+competition:
+  - What else are you looking at, including doing nothing or building it yourselves?
+  - What do you like about the current approach?
+  - What would make you stay with what you have?

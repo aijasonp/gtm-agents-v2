@@ -1,0 +1,41 @@
+# Forecast Prep golden cases. Template path, fixed now (a Thursday in Q4), in-memory DB.
+# Team quota 1,200,000 split across 3 configured owners = 400,000 each.
+now: "2026-11-12T12:00:00+00:00"
+deals:
+  - {id: A, name: Contoso Health, owner: Sam Rivera, stage: Proposal, status: open, amount: 140000, close_date: "2026-11-30", forecast_category: commit, created_at: "2026-07-15"}
+  - {id: B, name: Northwind, owner: Sam Rivera, stage: Evaluation, status: open, amount: 96000, close_date: "2026-12-15", forecast_category: commit, created_at: "2026-09-02", next_step: Pilot scoping, next_step_date: "2026-11-20"}
+  - {id: F, name: Proseware, owner: Sam Rivera, stage: Proposal, status: open, amount: 50000, close_date: "2026-12-10", forecast_category: Best Case, created_at: "2026-09-10"}
+  - {id: C, name: Tailspin, owner: Lee Park, stage: Negotiation, status: open, amount: 72000, close_date: "2026-11-25", forecast_category: best case, created_at: "2026-06-10"}
+  - {id: W, name: Litware, owner: Lee Park, stage: Closed Won, status: won, amount: 55000, close_date: "2026-10-30", created_at: "2026-05-01"}
+  - {id: H, name: Woodgrove, owner: Lee Park, stage: Proposal, status: open, amount: 70000, close_date: "2027-01-15", forecast_category: best case, created_at: "2026-08-01"}
+  - {id: D, name: Fabrikam, owner: Priya Shah, stage: Discovery, status: open, amount: 60000, close_date: "2026-12-20", forecast_category: commit, created_at: "2026-08-01", next_step: Discovery, next_step_date: "2026-11-01"}
+  - {id: G, name: Fourth Coffee, owner: Priya Shah, stage: Negotiation, status: open, amount: 200000, close_date: "2026-12-05", forecast_category: commit, created_at: "2026-07-01", next_step: Redlines, next_step_date: "2026-11-18"}
+  - {id: E, name: Adatum, owner: Priya Shah, stage: Qualification, status: open, amount: 48000, close_date: "2027-01-31", forecast_category: pipeline, created_at: "2026-10-10"}
+  - {id: L, name: Fabrikam Add-on, owner: Priya Shah, stage: Closed Lost, status: lost, amount: 30000, close_date: "2026-11-05", created_at: "2026-06-01"}
+history:  # deal_id: [[snapshot_at, stage, status, amount, close_date, forecast_category], ...]
+  A: [["2026-11-01T00:00:00+00:00", Proposal, open, 140000, "2026-11-30", pipeline],
+      ["2026-11-08T00:00:00+00:00", Proposal, open, 140000, "2026-11-30", commit]]
+  D: [["2026-10-01T00:00:00+00:00", Discovery, open, 60000, "2026-10-31", commit],
+      ["2026-10-15T00:00:00+00:00", Discovery, open, 60000, "2026-11-30", commit],
+      ["2026-11-01T00:00:00+00:00", Discovery, open, 60000, "2026-12-20", commit]]
+  H: [["2026-11-11T08:00:00+00:00", Proposal, open, 100000, "2026-12-20", commit],
+      ["2026-11-12T06:00:00+00:00", Proposal, open, 70000, "2027-01-15", best case]]
+inspections:  # latest Deal Inspection result per deal
+  - {deal_id: A, risk: 77, gaps: [economic_buyer, paper_process]}
+  - {deal_id: B, risk: 20, gaps: []}
+  - {deal_id: F, risk: 15, gaps: []}
+  - {deal_id: C, risk: 10, gaps: []}
+  - {deal_id: G, risk: 60, gaps: [champion]}
+previous_snapshot: {as_of: "2026-11-05T15:00:00+00:00", org: {won: 55000, commit: 400000, best_case: 520000, pipeline: 600000}}
+expect:
+  sam: {commit: 236000, best_case: 286000, pipeline: 286000, month_commit: 140000, suggested: 96000, dropped: [Contoso Health], flag: happy ears}
+  lee: {won: 55000, commit: 0, suggested: 72000, added: [Tailspin], flag: sandbagging}
+  priya: {commit: 260000, pipeline: 260000, suggested: 60000, not_inspected: [Fabrikam], flag: happy ears}
+  quota_each: 400000
+  team_coverage: 0.46
+  contoso_questions: [no_next_step, high_risk, economic_buyer]
+  contoso_change: moved into commit
+  slipped_twice: [Fabrikam]
+  first_to_inspect: Fourth Coffee
+  wow_commit: 96000
+  alerts: 3

@@ -1,0 +1,60 @@
+# Reply Desk golden cases. Template path (no model key), in-memory DB, fixed clock (a Friday, 15:00 UTC).
+now: "2026-10-23T15:00:00+00:00"
+accounts:
+  - {id: northwind.example, name: Northwind Logistics, domain: northwind.example, crm_id: "1001", industry: Logistics, employees: 600, country: US}
+  - {id: proseware.example, name: Proseware, domain: proseware.example, crm_id: "1008", industry: Software, employees: 350, country: US}
+deals:
+  - {id: deal-nw, account_id: northwind.example, name: Northwind Platform, owner: Sam Rivera, stage: Evaluation, status: open}
+contacts:
+  - {id: dana@northwind.example, email: dana@northwind.example, name: Dana Cole, crm_id: c-1, account_id: northwind.example}
+  - {id: omar@proseware.example, email: omar@proseware.example, name: Omar Haddad, crm_id: c-2, account_id: proseware.example, owner: Priya Shah}
+replies:
+  - {id: r-pos, from_email: dana@northwind.example, from_name: Dana Cole, subject: "Re: lists", body: "Sounds interesting. Send me a few times next week.\n\nThanks,\nDana\nVP Sales"}
+  - {id: r-unsub, from_email: omar@proseware.example, from_name: Omar Haddad, subject: "Re: idea", body: "Please remove me from your list.\n\nOn Tue, Sam wrote:\n> Hi Omar"}
+  - {id: r-footer, from_email: lee@proseware.example, from_name: Lee Ward, subject: "Re: idea", body: "Yes, let's talk. Thursday at 2pm works.\n\nOn Mon, Sam wrote:\n> Click here to unsubscribe"}
+  - {id: r-bounce, from_email: mailer-daemon@mail.example, subject: "Delivery Status Notification (Failure)", body: "Address not found. Your message to kim@proseware.example could not be delivered."}
+  - {id: r-ooo, from_email: jo@northwind.example, from_name: Jo Park, subject: "Automatic reply", body: "I am out of the office until November 3rd with limited email."}
+  - {id: r-ref, from_email: ana@northwind.example, from_name: Ana Ruiz, subject: "Re: lists", body: "I'm not the right person. You should talk to Priya Nair: priya.nair@northwind.example"}
+  - {id: r-refname, from_email: ben@proseware.example, from_name: Ben Adams, subject: "Re: idea", body: "Not the right person, try Marcus Lee on our team."}
+  - {id: r-comp, from_email: max@proseware.example, from_name: Max Vu, subject: "Re: idea", body: "We already use Acme Intel and are happy with it."}
+  - {id: r-later, from_email: ivy@proseware.example, from_name: Ivy Chen, subject: "Re: idea", body: "Not right now. Circle back next quarter."}
+  - {id: r-q-yes, from_email: tom@proseware.example, from_name: Tom Hale, subject: "Re: idea", body: "Does it draft the follow-ups after meetings?"}
+  - {id: r-q-no, from_email: sue@proseware.example, from_name: Sue Lin, subject: "Re: idea", body: "Is it SOC 2 certified?"}
+  - {id: r-neutral, from_email: al@proseware.example, from_name: Al Kim, subject: "Re: idea", body: "Got it."}
+expect:
+  class:
+    r-pos: positive
+    r-unsub: unsubscribe
+    r-footer: positive
+    r-bounce: bounce
+    r-ooo: out_of_office
+    r-ref: referral
+    r-refname: referral
+    r-comp: objection
+    r-later: not_now
+    r-q-yes: question
+    r-q-no: question
+    r-neutral: neutral
+  category: {r-comp: competitor, r-footer: meeting}
+  follow_up_date: {r-ooo: "2026-11-03", r-later: "2027-01-01"}
+  actions_include:
+    r-pos: [sequence_stop, crm_task, "crm_task (send drafted reply)"]
+    r-unsub: [sequence_stop, contact_update]
+    r-bounce: [sequence_stop, crm_task]
+    r-ref: [sequence_stop, crm_contact, "crm_task (send drafted reply)"]
+    r-refname: ["handoff: enrich_request"]
+    r-later: [sequence_stop, crm_task]
+    r-q-yes: ["crm_task (send drafted reply)"]
+  no_approvals: [r-ooo, r-neutral]
+  local_flags:
+    omar@proseware.example: {do_not_contact: true}
+    kim@proseware.example: {email_invalid: true}
+    jo@northwind.example: {ooo_until: "2026-11-03"}
+  owner:
+    r-pos: Sam Rivera       # open deal owner
+    r-unsub: Priya Shah     # contact owner
+  sla_due: {r-pos: "2026-10-23T17:00:00+00:00"}   # 2 business hours in New York from 11:00 local
+  outcomes: {northwind.example: [reply_positive], proseware.example: [reply_negative, reply_negative, meeting]}   # opt-out, competitor objection, meeting
+  drafts_pass_gate: [r-pos, r-ref, r-comp, r-q-yes]
+  question_without_facts_gets_task: r-q-no
+  second_handle_is_noop: r-pos

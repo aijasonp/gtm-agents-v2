@@ -1,11 +1,11 @@
-# Full GTM fleet on one VM: Postgres, the agent tool servers, and three NetClaw instances.
+# Optional NetClaw front end over the runtime. Use with the base compose file:
 #
-#   python3 netclaw/build.py --profile config/product_profile.yaml
+#   python3 netclaw/build.py --config config
 #   docker compose -f docker-compose.yml -f docker-compose.netclaw.yml up -d
-#   ./netclaw/install.sh            # fills config, sets secrets, imports reminders
+#   ./netclaw/install.sh
 #
-# Each NetClaw instance needs its own Slack app (bot + app token): one Socket Mode
-# app per instance so events are not split between them.
+# gtm-tools serves every runtime agent's tools over MCP. Each NetClaw instance needs
+# its own Slack app (Socket Mode) so events are not split between instances.
 
 x-netclaw: &netclaw
   image: ${NETCLAW_IMAGE:-ghcr.io/netclaw-dev/netclaw:latest}   # pin a version for production
@@ -17,38 +17,23 @@ x-netclaw: &netclaw
     NETCLAW_Models__Compaction__Type: ${SMALL_MODEL_TYPE:-ollama}
     NETCLAW_Models__Compaction__ModelId: ${SMALL_MODEL_ID:?set SMALL_MODEL_ID in .env}
     NETCLAW_Models__Compaction__Endpoint: ${SMALL_MODEL_ENDPOINT:-}
-  depends_on: [gtm-signal-scout, gtm-copy-qa, gtm-scoring]
+  depends_on: [gtm-tools]
 
 services:
-  gtm-signal-scout:
+  gtm-tools:
     image: gtm-agents:${GTM_VERSION:-0.1.0}
     env_file: .env
     environment:
       DATABASE_URL: postgresql://gtm:${POSTGRES_PASSWORD}@db:5432/gtm
-    volumes: ["./data:/data", "./license.json:/app/license.json:ro"]
-    command: ["serve-mcp", "signal-scout", "--transport", "streamable-http", "--host", "0.0.0.0", "--port", "8000"]
-    depends_on: {db: {condition: service_healthy}}
-    restart: unless-stopped
-
-  gtm-copy-qa:
-    image: gtm-agents:${GTM_VERSION:-0.1.0}
-    env_file: .env
-    environment:
-      DATABASE_URL: postgresql://gtm:${POSTGRES_PASSWORD}@db:5432/gtm
-    volumes: ["./data:/data", "./license.json:/app/license.json:ro"]
-    command: ["serve-mcp", "copy-qa-gate", "--transport", "streamable-http", "--host", "0.0.0.0", "--port", "8001"]
-    depends_on: {db: {condition: service_healthy}}
-    restart: unless-stopped
-
-  gtm-scoring:
-    build: {context: ., dockerfile: netclaw/images/scoring.Dockerfile}
-    image: gtm-scoring:${GTM_VERSION:-0.1.0}
-    env_file: .env
-    environment:
-      GTM_PRODUCT_PROFILE: /config/product_profile.yaml
+      FLEET: /app/netclaw/fleet.yaml
     volumes:
-      - ./config/product_profile.yaml:/config/product_profile.yaml:ro
-      - scoring-knowledge:/data/account-knowledge
+      - ./data:/app/data
+      - ./config:/app/config:ro
+      - ./license.json:/app/license.json:ro
+      - ./netclaw:/app/netclaw:ro
+    entrypoint: ["sh", "/app/netclaw/serve_tools.sh"]
+    depends_on:
+      db: {condition: service_healthy}
     restart: unless-stopped
 
   netclaw-pipeline:
@@ -61,7 +46,6 @@ services:
       - netclaw-pipeline:/home/netclaw/.netclaw
       - ./dist/netclaw/pipeline/skills:/opt/gtm/skills:ro
       - ./dist/netclaw/pipeline:/opt/gtm/instance:ro
-    ports: ["127.0.0.1:${PIPELINE_WEBHOOK_PORT:-8701}:8080"]
 
   netclaw-deals:
     <<: *netclaw
@@ -73,7 +57,6 @@ services:
       - netclaw-deals:/home/netclaw/.netclaw
       - ./dist/netclaw/deals/skills:/opt/gtm/skills:ro
       - ./dist/netclaw/deals:/opt/gtm/instance:ro
-    ports: ["127.0.0.1:${DEALS_WEBHOOK_PORT:-8702}:8080"]
 
   netclaw-revops:
     <<: *netclaw
@@ -85,10 +68,8 @@ services:
       - netclaw-revops:/home/netclaw/.netclaw
       - ./dist/netclaw/revops/skills:/opt/gtm/skills:ro
       - ./dist/netclaw/revops:/opt/gtm/instance:ro
-    ports: ["127.0.0.1:${REVOPS_WEBHOOK_PORT:-8703}:8080"]
 
 volumes:
-  scoring-knowledge:
   netclaw-pipeline:
   netclaw-deals:
   netclaw-revops:

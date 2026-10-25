@@ -1,0 +1,5 @@
+[
+  {"from_email": "rosa.diaz@fourthcoffee.example", "from_name": "Rosa Diaz", "to_email": "sam@beacon.example", "subject": "Re: Fourth Coffee and Beacon", "body": "Hi Sam, yes this is timely. Can you send a couple of times for next Tuesday?\n\nRosa", "received_at": "2026-10-23T14:05:00+00:00", "campaign": "outbound-q4"},
+  {"from_email": "kai.moore@fourthcoffee.example", "from_name": "Kai Moore", "to_email": "sam@beacon.example", "subject": "Automatic reply: Fourth Coffee and Beacon", "body": "I am out of the office until November 2 with limited access to email.", "received_at": "2026-10-23T14:10:00+00:00", "campaign": "outbound-q4"},
+  {"from_email": "jen.ito@proseware.example", "from_name": "Jen Ito", "to_email": "sam@beacon.example", "subject": "Re: quick note", "body": "Please remove me from your list.", "received_at": "2026-10-23T15:00:00+00:00", "campaign": "outbound-q4"}
+]

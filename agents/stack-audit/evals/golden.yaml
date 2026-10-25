@@ -1,0 +1,30 @@
+# Stack Audit golden cases. Uses sample/inventory.csv, fixed now, template path.
+now: "2026-11-02T09:00:00+00:00"
+side_by_side:
+  tool: Intent Platform A
+  file: evals/intent-top-accounts.txt
+  agent_scores: {northwind.example: A, contoso.example: B, adatum.example: A, fabrikam.example: C, tailspin.example: D}
+  outcomes: {northwind.example: meeting, contoso.example: opportunity, tailspin.example: closed_won}
+expect:
+  total_spend: 379000
+  unknown_cost: [Meeting Notes I]
+  actions:
+    Community Signals B: cut
+    Enrichment Workbench D: consolidate
+    Intent Platform A: downsize
+    Marketing Automation H: keep
+    Meeting Notes I: cut
+  savings:
+    Intent Platform A: 58500
+    Community Signals B: 36000
+    Enrichment Workbench D: 24000
+    Dialer F: 16500
+  keep_seats: {Intent Platform A: 7, Sequencer E: 20}
+  consolidate_into: {Enrichment Workbench D: [Data Provider C]}
+  total_savings: 166200
+  overlap: [contact_data, enrichment]
+  cost_per_active_seat: {Intent Platform A: 15000, Data Provider C: 3000}
+  first_renewal: Community Signals B
+  bands: {Enrichment Workbench D: "30", Intent Platform A: "90", Community Signals B: passed}
+  intent_gap: web_visitor_id
+  side_by_side: {overlap_pct: 50.0, tool_only_converted: [tailspin.example], converted_caught_pct: 66.7, condition_met: false, agent_only: [adatum.example]}

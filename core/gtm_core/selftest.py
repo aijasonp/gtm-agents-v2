@@ -43,7 +43,10 @@ def run(s: Settings) -> dict:
         except Exception as e:
             ok(f"tools:{m.id}", False, str(e))
 
-    ok("model_key", bool(s.anthropic_api_key or s.openai_api_key), "set" if (s.anthropic_api_key or s.openai_api_key) else "missing")
+    from .gateway import resolve
+    for tier in ("cheap", "frontier"):
+        ep = resolve(s, tier)
+        ok(f"model:{tier}", ep is not None, ep.describe() if ep else "not configured: template drafts only")
     ok("crm", True, s.crm if (s.hubspot_token or s.salesforce_token) else "not configured (CSV import mode)")
     ok("slack", True, "configured" if (s.slack_webhook_url or s.slack_bot_token) else "not configured (stdout)")
     lic = load_and_verify(s.license_path)

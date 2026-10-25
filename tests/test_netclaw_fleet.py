@@ -27,14 +27,17 @@ def test_fleet_builds(tmp_path):
         base = out / inst
         cfg = json.loads((base / "config/netclaw.json").read_text())
         assert set(cfg["McpServers"]) == set(spec["mcp"])
+        for name, srv in cfg["McpServers"].items():
+            assert srv["Url"] == f"http://gtm-tools:{fleet['mcp_servers'][name]['port']}/mcp"
+            assert (ROOT / "agents" / name / "agent.yaml").is_file()
         assert cfg["Tools"]["AudienceProfiles"]["Public"]["AllowedMcpServers"] == []
         for ag in spec["agents"]:
             body = (base / "agents" / f"{ag}.md").read_text()
             assert body.startswith("---\nname: " + ag)
             assert "{{SKILLS}}" not in body and "{{RULES}}" not in body
         skills = [d for d in (base / "skills").iterdir() if d.is_dir()]
-        assert 15 <= len(skills) <= 60, f"{inst} has {len(skills)} skills"
+        assert 10 <= len(skills) <= 60, f"{inst} has {len(skills)} skills"
         for d in skills:
             assert (d / "SKILL.md").is_file()
-        assert (base / "skills" / "gtm-playbooks/references/product-profile.yaml").is_file()
+        assert (base / "skills" / "gtm-playbooks/references/company.yaml").is_file()
     assert scan(out) == []

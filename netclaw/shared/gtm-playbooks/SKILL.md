@@ -1,26 +1,32 @@
 ---
 name: gtm-playbooks
-description: Standing GTM playbooks every agent follows. Load before writing any external copy, using a buying signal in outreach, building a pre-call brief, or handling rep feedback. Contains outbound copy rules, the anti-slop voice system, the signal sayability matrix, the pre-call brief template, the rep feedback loop and sequencer API notes.
+description: Standing rules every GTM agent follows, plus this deployment's company.yaml (what we sell, proof points, competitors, team) and icp.yaml (who we sell to). Load before writing external copy, using a signal in outreach, or answering a question about the product or team.
 metadata:
   version: 1.0.0
 ---
 
-# GTM Playbooks
+# GTM playbooks
 
-Reference files (load the one you need):
-
-| File | Use it when |
+## References
+| File | What it holds |
 | --- | --- |
-| `references/outbound-copy.md` | Writing or reviewing any email, LinkedIn message, subject line or sequence |
-| `references/anti-slop-voice-system.md` | Setting the brand voice (Section 0) and enforcing plain human writing (Sections 1-4) |
-| `references/linkedin-anti-slop-prompt.md` | Rewriting a LinkedIn post so it reads human |
-| `references/signal-sayability-matrix.md` | Deciding whether a signal can be mentioned in copy or is a timing trigger only |
-| `references/precall-brief-template.md` | Building a pre-call brief (2 pages max) |
-| `references/outbound-feedback-loop.md` | An AE reports bad data, weak copy, a missed signal or a process problem |
-| `references/outbound-pipeline.md` | Changing how accounts flow from sourcing to enrichment to sequencing |
-| `references/smartlead-api.md` | Pushing or editing sequences in Smartlead |
+| `references/company.yaml` | Product, one-liner, value props, the only approved proof points, competitors, personas, team and quota |
+| `references/icp.yaml` | Firmographic fit, disqualifiers and scoring weights the runtime uses |
 
-## Always true
-- Product claims come only from the product profile (`GTM_PRODUCT_PROFILE`): `proof_points`, `differentiators`, `competitors`.
-- No em dashes in anything external.
-- Every external draft passes the Copy QA Gate before an AE sees it.
+## Signal sayability
+Every signal is one of three kinds. Decide before you write.
+
+| Kind | Examples | In copy |
+| --- | --- | --- |
+| **Say it** | Funding, public launches, leadership appointments, their own posts and talks, published filings | Reference it plainly, with the public source |
+| **Generalize it** | Hiring patterns, tech stack, company growth, event attendance | Speak to the pattern ("teams growing this fast usually..."), never counts, titles or URLs |
+| **Never say it** | Email opens and clicks, website visits, intent data, internal scores, enrichment provenance, anything bought or inferred about a person | Use only to decide timing |
+
+A signal that is not in the table is "never say it" until someone adds it.
+
+## Writing rules
+- Write about the buyer's world first; the product comes second and briefly.
+- One ask per message. Short subject lines. No em dashes.
+- No fake urgency, no guilt follow-ups, no "just checking in".
+- An opt-out line asks for an explicit reply ("a quick 'no' works"); silence never ends a sequence.
+- Proof points only from company.yaml, word for word in substance.

@@ -1,0 +1,58 @@
+# Ops Monitor golden cases. Fixed now (Monday 10:00 UTC), seeded runs, approvals, handoffs, spend and drafts.
+now: "2026-11-02T10:00:00+00:00"
+agents: [signal-scout, lead-triage, copy-qa-gate]
+discovery_errors: {broken-agent: "skill/SKILL.md not found"}
+runs:   # [agent, job, started_at, status, error]
+  - [signal-scout, daily_sweep, "2026-11-02T06:00:05+00:00", ok, ""]
+  - [signal-scout, daily_sweep, "2026-11-02T07:00:00+00:00", running, ""]
+  - [signal-scout, sync_accounts, "2026-10-30T05:30:02+00:00", ok, ""]
+  - [signal-scout, sync_accounts, "2026-11-02T05:30:02+00:00", failed, "401 Unauthorized from CRM"]
+  - [signal-scout, weekly_reweight, "2026-11-01T03:00:01+00:00", ok, ""]
+  - [lead-triage, triage_inbox, "2026-11-02T08:00:01+00:00", ok, ""]
+  - [lead-triage, triage_inbox, "2026-11-02T09:15:01+00:00", failed, "model key missing"]
+  - [lead-triage, triage_inbox, "2026-11-02T09:30:01+00:00", failed, "model key missing"]
+  - [lead-triage, triage_inbox, "2026-11-02T09:45:01+00:00", failed, "model key missing"]
+approvals:  # [agent, action, status, requested_at, decided_at]
+  - [lead-triage, sequence_enroll, executing, "2026-11-02T08:50:00+00:00", "2026-11-02T09:00:00+00:00"]
+  - [lead-triage, crm_task, approved, "2026-11-02T06:00:00+00:00", "2026-11-02T07:00:00+00:00"]
+  - [lead-triage, crm_contact, pending, "2026-10-31T12:00:00+00:00", null]
+  - [signal-scout, crm_update, pending, "2026-11-02T09:30:00+00:00", null]
+handoffs:   # [from, to, kind, status, created_at, error]
+  - [meeting-intelligence, seller-follow-up, meeting_recap, failed, "2026-11-01T10:00:00+00:00", "KeyError: deal"]
+  - [meeting-intelligence, deal-inspection, meddpicc_evidence, pending, "2026-11-02T01:00:00+00:00", ""]
+  - [meeting-intelligence, deal-inspection, meddpicc_evidence, pending, "2026-11-02T09:00:00+00:00", ""]
+paused: [icp-outbound]
+token_usage:  # [agent, ts, tokens]
+  - [lead-triage, "2026-11-02T09:00:00+00:00", 1300000]
+  - [signal-scout, "2026-11-02T09:00:00+00:00", 100000]
+drafts:      # [agent, gate_passed] created this week
+  - [lead-triage, 1]
+  - [lead-triage, 1]
+  - [lead-triage, 1]
+  - [lead-triage, 1]
+  - [lead-triage, 0]
+  - [lead-triage, 0]
+expect:
+  overall: fail
+  statuses:
+    job:signal-scout:daily_sweep:cadence: ok
+    job:signal-scout:daily_sweep:failures: ok
+    job:signal-scout:daily_sweep:stuck: warn
+    job:signal-scout:sync_accounts:cadence: fail
+    job:signal-scout:sync_accounts:failures: warn
+    job:signal-scout:weekly_reweight:cadence: ok
+    job:lead-triage:triage_inbox:cadence: fail
+    job:lead-triage:triage_inbox:failures: fail
+    job:lead-triage:sla_check:cadence: warn
+    approvals:executing: fail
+    approvals:approved: warn
+    approvals:backlog: warn
+    handoffs:failed: fail
+    handoffs:waiting: warn
+    budget:paused: fail
+    spend:lead-triage: warn
+    spend:signal-scout: ok
+    gate:lead-triage: warn
+    load:broken-agent: fail
+  problems: 15
+  backlog_by_agent: {lead-triage: 1}

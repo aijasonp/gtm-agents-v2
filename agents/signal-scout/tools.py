@@ -57,7 +57,10 @@ def add_signal(ctx, account: str, signal_type: str, observed_at: str = "", url: 
     sig = {"id": signal_id(acct["id"], signal_type, url or title, obs), "account_id": acct["id"],
            "signal_type": signal_type, "category": tax.types[signal_type].category, "source": "tool",
            "url": url or None, "observed_at": obs, "strength": strength, "payload": {"title": title}}
-    added = ctx.store.add_signal(sig)
+    try:
+        added = ctx.store.add_signal(sig)
+    except ValueError as e:
+        return {"error": str(e)}
     return {"added": added, "duplicate": not added, "new_score": _eng(ctx).score_one(ctx, acct).as_dict()}
 
 

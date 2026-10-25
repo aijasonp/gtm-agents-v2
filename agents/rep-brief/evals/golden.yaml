@@ -1,0 +1,45 @@
+# Rep Brief golden cases. Template path, in-memory DB, fixed clock.
+now: "2026-10-23T09:00:00+00:00"
+accounts:
+  - {id: fourthcoffee.example, name: Fourth Coffee, domain: fourthcoffee.example, crm_id: "1010", industry: Software, employees: 520, country: US}
+  - {id: northwind.example, name: Northwind Logistics, domain: northwind.example, crm_id: "1001", industry: Logistics, employees: 600, country: US}
+  - {id: proseware.example, name: Proseware, domain: proseware.example, crm_id: "1008", industry: Software, employees: 350, country: US}
+  - {id: adatum.example, name: Adatum Fintech, domain: adatum.example, crm_id: "1007", industry: Fintech, employees: 450, country: GB}
+  - {id: contoso.example, name: Contoso Health, domain: contoso.example, crm_id: "1002", industry: Healthcare Technology, employees: 900, country: US}
+  - {id: wingtip.example, name: Wingtip Public Schools, domain: wingtip.example, industry: Education, employees: 800, country: US}
+contacts:
+  - {id: rosa@fourthcoffee.example, email: rosa@fourthcoffee.example, name: Rosa Diaz, title: VP of Sales, account_id: fourthcoffee.example, phone: "+1 555 0100"}
+  - {id: kai@fourthcoffee.example, email: kai@fourthcoffee.example, name: Kai Moore, title: Head of Revenue Operations, account_id: fourthcoffee.example}
+  - {id: dana@northwind.example, email: dana@northwind.example, name: Dana Cole, title: VP of Sales Development, account_id: northwind.example}
+  - {id: omar@proseware.example, email: omar@proseware.example, name: Omar Haddad, title: VP of Sales, account_id: proseware.example}
+signals:
+  - {account_id: fourthcoffee.example, signal_type: new_exec_in_buyer_function, observed_at: "2026-10-08", url: "u1", payload: {title: "New VP of Sales: Rosa Diaz", person: Rosa Diaz}}
+  - {account_id: fourthcoffee.example, signal_type: funding_round, observed_at: "2026-10-12", url: "u2", payload: {title: Series C}}
+  - {account_id: fourthcoffee.example, signal_type: pricing_page_visit, observed_at: "2026-10-22", url: "u3", payload: {title: pricing x3}}
+scores:
+  - {account_id: fourthcoffee.example, tier: A, score: 84}
+  - {account_id: northwind.example, tier: A, score: 82}
+  - {account_id: proseware.example, tier: B, score: 65}
+  - {account_id: adatum.example, tier: B, score: 60}
+  - {account_id: wingtip.example, tier: X, score: 0}
+deals:
+  - {id: deal-nw, crm_id: "5001", account_id: northwind.example, name: Northwind Platform, owner: Sam Rivera, stage: Evaluation, status: open, amount: 96000, last_activity_at: "2026-09-20"}
+  - {id: deal-contoso, crm_id: "5002", account_id: contoso.example, name: Contoso Agents, owner: Sam Rivera, stage: Proposal, status: open, amount: 140000, next_step: Send revised proposal, next_step_date: "2026-10-10", last_activity_at: "2026-10-20"}
+inspections:
+  - {deal_id: deal-contoso, recommendation: fix, risk: 77, flags: ["missing data: economic buyer"]}
+leads:
+  - {id: l-omar, email: omar@proseware.example, domain: proseware.example, account_id: proseware.example, name: Omar Haddad, company: Proseware, status: routed, tier: hot, owner: Sam Rivera, score: 88, received_at: "2026-10-23T07:40:00+00:00", sla_due: "2026-10-23T07:55:00+00:00"}
+replies:
+  - {key: positive, account_id: northwind.example, value: {from: Dana Cole, owner: Sam Rivera, summary: "Yes, Tuesday works"}, observed_at: "2026-10-23T08:00:00+00:00"}
+expect:
+  owner: {fourthcoffee.example: Sam Rivera, adatum.example: Priya Shah}
+  top_order_sam: [fourthcoffee.example, northwind.example, proseware.example]
+  never_listed: [wingtip.example]
+  why_now_not_timing: fourthcoffee.example
+  open_deal_no_contacts: northwind.example
+  pipeline_sam: {quota: 400000, open_pipeline: 236000, coverage: 0.59, pipeline_gap: 964000}
+  do_next_first: Dana Cole
+  do_next_second: Omar Haddad
+  push_rosa: {approvals: [sequence_enroll, crm_task, dialer_enqueue], opener_contains: "new role"}
+  push_kai: {approvals: [sequence_enroll, crm_task], opener_not_contains: "new role"}
+  refuse: {northwind.example: "open deal owned by Sam Rivera", proseware.example: "inbound lead in progress"}

@@ -7,3 +7,8 @@ contoso.example,hiring_buyer_team,2026-10-15,https://example.com/c2,SDR manager 
 fabrikam.example,new_regulation_applies,2026-09-01,https://example.com/f1,New disclosure rule,news
 adatum.example,event_attended,2026-10-22,https://example.com/a1,Booth scan at Pipeline Conference,event
 adatum.example,exec_post_about_problem,2026-10-20,https://example.com/a2,CRO post on list quality,linkedin
+proseware.example,funding_round,2026-10-15,https://example.com/p1,Series B,news
+proseware.example,hiring_buyer_team,2026-10-19,https://example.com/p2,6 SDR roles posted,jobs
+woodgrove.example,new_exec_in_buyer_function,2026-10-10,https://example.com/wg1,New CRO: Hana Sato,linkedin
+fourthcoffee.example,funding_round,2026-10-12,https://example.com/fc1,Series C,news
+fourthcoffee.example,new_exec_in_buyer_function,2026-10-08,https://example.com/fc2,New VP of Sales: Rosa Diaz,linkedin

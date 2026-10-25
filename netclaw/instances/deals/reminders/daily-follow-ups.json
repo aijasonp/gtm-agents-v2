@@ -1,0 +1,14 @@
+{
+  "id": "daily-follow-ups",
+  "title": "Daily follow-up nudge (8:30 CT)",
+  "instructions": "Spawn deal-manager: run seller-follow-up/whats_overdue for each AE and DM only the AEs who have overdue items, top three each.",
+  "schedule": {
+    "type": "Cron",
+    "cronExpression": "30 13 * * TUE-FRI"
+  },
+  "delivery": {
+    "kind": "Channel",
+    "transport": "slack",
+    "address": "#gtm-deals"
+  }
+}

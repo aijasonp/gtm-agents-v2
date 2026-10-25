@@ -1,0 +1,45 @@
+id: social-signals
+name: Social Signals
+version: 0.1.0
+tier: A
+description: >
+  Turns engagement with your company's and your influencers' LinkedIn and YouTube content into buying
+  signals: matches each engager to a contact and account, scores the engagement, feeds Signal Scout, and
+  tells the account owner who engaged and with what. A lower-cost replacement for community-signal tools.
+editions: [dropin, persistent]
+skill: skill/SKILL.md
+references:
+  - skill/references/engagement-scoring.md
+  - skill/references/identity-resolution.md
+  - skill/references/export-formats.md
+  - ../../config/icp.yaml
+  - ../../config/company.yaml
+library:  # licensed playbooks bundled into the drop-in package (see THIRD_PARTY_NOTICES.md)
+  - library/sales-skills/skills/sales-intent
+  - library/sales-skills/skills/sales-social-listening
+  - library/coreyhaines-marketingskills/skills/social-content
+tools:
+  - add_engagement
+  - engagement_for
+  - top_engagers
+  - creator_report
+  - resolve_person
+connectors_required: []
+connectors_optional: [crm, slack]
+jobs:
+  - {name: ingest_engagement, cron: "*/30 * * * *", model_class: none}
+  - {name: weekly_creator_report, cron: "0 14 * * 5", model_class: none}
+budgets: {daily_tokens: 200000, monthly_usd: 15}
+evals: evals/golden.yaml
+config:
+  company: ../../config/company.yaml
+  icp: ../../config/icp.yaml
+  taxonomy: ../signal-scout/skill/references/signal-taxonomy.yaml
+  engagement_inbox: data/engagement/inbox
+  # Whose content counts. "company" is your own page and channel; add influencers by name.
+  tracked_creators:
+    - {name: company, weight: 1.0}
+    # - {name: Your Influencer, weight: 0.9}
+  repeat_window_days: 30
+  max_strength: 1.5
+  propose_contacts: true

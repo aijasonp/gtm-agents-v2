@@ -1,0 +1,51 @@
+# Enrichment golden cases. CSV providers only (no network), fixed clock, in-memory DB.
+now: "2026-10-23T15:00:00+00:00"
+providers:
+  default_country: US
+  ttl_days: 90
+  caps: {per_run_usd: 100, monthly_usd: 1000}
+  order:
+    email: [p1, p2, manual]
+    phone: [p1, p2, p3, manual]
+    title: [p1, p2]
+    linkedin: [p2]
+  account_order: {employees: [companies], industry: [companies], revenue: [companies]}
+  providers:
+    p1: {type: csv, path: evals/fixtures/p1.csv, match_on: [email, name_domain], outputs: {phone: phone, title: title, email: email}, confidence: 0.8, cost_per_call: 0.10}
+    p2: {type: csv, path: evals/fixtures/p2.csv, match_on: [email, name_domain], outputs: {phone: phone, title: title, email: email, linkedin: linkedin}, confidence: 0.9, cost_per_call: 0.25}
+    p3: {type: csv, path: evals/fixtures/p3.csv, match_on: [email], outputs: {phone: phone}, cost_per_call: 1.00}
+    companies: {type: csv, path: evals/fixtures/companies.csv, match_on: [domain], outputs: {employees: employees, industry: industry, revenue: revenue}}
+    manual: {type: manual}
+accounts:
+  - {id: nw.example, name: Northwind, domain: nw.example, crm_id: "1001", country: US}
+  - {id: adatum.example, name: Adatum, domain: adatum.example, crm_id: "1007", country: GB}
+scores:   # latest Signal Scout tiers
+  - {account_id: nw.example, tier: A}
+  - {account_id: adatum.example, tier: B}
+contacts:
+  - {id: dana@nw.example, email: dana@nw.example, name: Dana Cole, title: VP of Sales Development, crm_id: c-1, account_id: nw.example}
+  - {id: new@nw.example, email: new@nw.example, name: New Person, account_id: nw.example}
+  - {id: bad@nw.example, email: bad@nw.example, name: Bad Row, crm_id: c-3, account_id: nw.example}
+  - {id: gb@adatum.example, email: gb@adatum.example, name: Gail Brown, crm_id: c-4, account_id: adatum.example}
+  - {id: zed.quinn@nw.example, name: Zed Quinn, account_id: nw.example}   # no email: looked up by name plus domain
+  - {id: dnc@nw.example, email: dnc@nw.example, name: No Contact, account_id: nw.example, do_not_contact: true}
+handoffs:
+  - {kind: enrich_request, ref: "priya nair@nw.example", payload: {name: Priya Nair, domain: nw.example, account_id: nw.example, fields: [email, phone]}}
+expect:
+  phone:
+    dana@nw.example: {value: "+14155550142", provider: p2}
+    gb@adatum.example: {value: "+442079460018", provider: p1}
+  not_called: {dana@nw.example: p3}       # waterfall stops at the first verified phone
+  crm_value_kept: {dana@nw.example: {title: VP of Sales Development}}
+  invalid_phone_is_miss: bad@nw.example   # "123" is not a phone; p2 and p3 have nothing, manual next
+  contact_update_fields: {dana@nw.example: [phone]}   # only the changed field; title from the CRM is left alone
+  invalid_email_rejected: zed.quinn@nw.example                         # 'zed[at]nw.example' is not an email
+  new_contact_gets_crm_contact: new@nw.example
+  skipped_do_not_contact: dnc@nw.example
+  request_contact: {id: priya.nair@nw.example, email: priya@nw.example, phone: "+14155550190"}
+  cache_second_run_no_calls: dana@nw.example
+  ttl_expired_requeries_after_days: 100
+  per_run_cap: {cap: 0.30, expect_stopped: true}
+  account: {nw.example: {employees: 1200, industry: Logistics, revenue: 150000000.0}}
+  report_keep: {phone: p2}
+  coverage_phone: {valid: 4, of: 6}         # dana, new, gail, priya have phones; bad and zed do not

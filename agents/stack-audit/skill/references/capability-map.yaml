@@ -1,0 +1,23 @@
+# Which capabilities the agent pack covers. Edit to match the agents installed.
+# replace: full    = an agent does this job; the tool can go once the condition is met
+#          partial = an agent covers part of it; keep the tool until the gap is closed
+#          none    = no agent replacement; the tool (or another tool) must stay
+capabilities:
+  account_scoring: {agent: signal-scout, replace: full, condition: "30-day side-by-side: agent tier A and B accounts include at least 70% of the tool's top accounts that converted"}
+  intent: {agent: signal-scout, replace: partial, condition: "first-party signals cover it only if third-party intent is not driving pipeline; check the side-by-side first"}
+  web_visitor_id: {agent: null, replace: none, condition: "needs a reverse-IP or visitor ID feed into Signal Scout before the tool can go"}
+  social_signals: {agent: social-signals, replace: full, condition: "social engagement signals live for 30 days and matched to accounts"}
+  community_signals: {agent: social-signals, replace: full, condition: "community and creator engagement exports flowing into Social Signals for 30 days"}
+  enrichment: {agent: enrichment, replace: full, condition: "enrichment waterfall live on one contact data source with match rate at or above today's"}
+  research_workflows: {agent: sales-execution, replace: full, condition: "pre-call briefs and account research used by reps for 30 days"}
+  contact_data: {agent: null, replace: none, condition: "agents need one contact data source; keep exactly one"}
+  company_data: {agent: null, replace: none, condition: "keep one firmographic source"}
+  sequencing: {agent: null, replace: none, condition: "agents queue into the sequencer; it stays"}
+  email_tracking: {agent: null, replace: none, condition: "comes with the sequencer"}
+  dialing: {agent: null, replace: none, condition: "agents queue calls into the dialer; it stays"}
+  call_recording: {agent: null, replace: none, condition: "Meeting Intelligence reads its transcripts; it stays"}
+  conversation_intelligence: {agent: meeting-intelligence, replace: partial, condition: "call analysis covered; coaching libraries and scorecards stay in the recorder"}
+  meeting_notes: {agent: meeting-intelligence, replace: full, condition: "transcripts flowing into Meeting Intelligence with summaries reps accept for 30 days"}
+  marketing_automation: {agent: null, replace: none, condition: "system of record for marketing email and forms; it stays and feeds signals"}
+  email_marketing: {agent: null, replace: none, condition: "comes with marketing automation"}
+  web_tracking: {agent: null, replace: none, condition: "feeds web signals; it stays"}

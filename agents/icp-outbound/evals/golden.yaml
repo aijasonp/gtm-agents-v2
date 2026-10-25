@@ -1,0 +1,49 @@
+# ICP Outbound golden cases. Template path (no model key), in-memory DB, fixed clock.
+now: "2026-10-23T12:00:00+00:00"
+accounts:
+  - {id: proseware.example, name: Proseware, domain: proseware.example, industry: Software, employees: 350, country: US, revenue: 50000000, tech: [hubspot]}
+  - {id: woodgrove.example, name: Woodgrove Bank, domain: woodgrove.example, industry: Financial Services, employees: 1400, country: CA, revenue: 400000000}
+  - {id: northwind.example, name: Northwind Logistics, domain: northwind.example, industry: Logistics, employees: 600, country: US}
+  - {id: wingtip.example, name: Wingtip Public Schools, domain: wingtip.example, industry: Education, employees: 800, country: US}
+  - {id: fourth.example, name: Fourth Coffee, domain: fourth.example, industry: Software, employees: 500, country: US}
+  - {id: alpine.example, name: Alpine Ski House, domain: alpine.example, industry: Software, employees: 400, country: US}
+  - {id: blocked.example, name: Blocked Co, domain: blocked.example, industry: Software, employees: 400, country: US}
+scores:   # latest Signal Scout rows
+  - {account_id: proseware.example, score: 88, tier: A}
+  - {account_id: woodgrove.example, score: 64, tier: B}
+  - {account_id: northwind.example, score: 82, tier: A}
+  - {account_id: wingtip.example, score: 70, tier: X}
+  - {account_id: fourth.example, score: 60, tier: B}
+  - {account_id: alpine.example, score: 58, tier: B}
+  - {account_id: blocked.example, score: 75, tier: A}
+deals:
+  - {id: deal-nw, account_id: northwind.example, name: Northwind Platform, owner: Sam Rivera, stage: Evaluation, status: open}
+contacts:
+  - {id: omar@proseware.example, email: omar@proseware.example, name: Omar Haddad, title: VP of Sales, account_id: proseware.example}
+  - {id: jen@proseware.example, email: jen@proseware.example, name: Jen Ito, title: Revenue Operations Manager, account_id: proseware.example}
+  - {id: max@proseware.example, email: max@proseware.example, name: Max Roe, title: Software Engineer, account_id: proseware.example}
+  - {id: lena@woodgrove.example, email: lena@woodgrove.example, name: Lena Kraus, title: Director of Sales Operations, account_id: woodgrove.example}
+  - {id: dana@northwind.example, email: dana@northwind.example, name: Dana Cole, title: VP Sales, account_id: northwind.example}
+  - {id: eng@fourth.example, email: eng@fourth.example, name: Ed Ng, title: Staff Engineer, account_id: fourth.example}
+  - {id: amy@alpine.example, email: amy@alpine.example, name: Amy Diaz, title: VP Sales, account_id: alpine.example, last_touched: "2026-10-01"}
+  - {id: bo@blocked.example, email: bo@blocked.example, name: Bo Li, title: VP Sales, account_id: blocked.example}
+signals:
+  - {account_id: proseware.example, signal_type: funding_round, observed_at: "2026-10-15", title: Series B}
+  - {account_id: proseware.example, signal_type: pricing_page_visit, observed_at: "2026-10-22", title: Pricing x2}
+  - {account_id: woodgrove.example, signal_type: new_exec_in_buyer_function, observed_at: "2026-10-10", title: New CRO}
+do_not_contact: {domains: [blocked.example], emails: []}
+expect:
+  order: [[proseware.example, woodgrove.example]]
+  excluded_reason:
+    northwind.example: active pipeline
+    wingtip.example: excluded industry
+    alpine.example: contacted in the last
+    blocked.example: do-not-contact
+  first_contact: {proseware.example: Omar Haddad}
+  never_contacted: [max@proseware.example]
+  no_buyer_flag: [fourth.example]
+  copy_excludes:
+    woodgrove.example: ["new role"]
+    proseware.example: ["pricing", "visit"]
+  copy_includes: {proseware.example: ["raise"]}
+  skip_draft_for: [northwind.example]

@@ -1,0 +1,14 @@
+{
+  "id": "replies-digest",
+  "title": "Open replies digest (11:00 and 16:00 CT)",
+  "instructions": "Spawn inbound-router: run reply-desk/replies_needing_action for the last 2 days and remind each owning AE of buyer replies still waiting on them. Post only if something is waiting.",
+  "schedule": {
+    "type": "Cron",
+    "cronExpression": "0 16,21 * * MON-FRI"
+  },
+  "delivery": {
+    "kind": "Channel",
+    "transport": "slack",
+    "address": "#gtm-pipeline"
+  }
+}

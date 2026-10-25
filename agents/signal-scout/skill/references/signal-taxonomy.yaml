@@ -71,6 +71,22 @@ categories:
       - {type: email_engaged, name: Opened or clicked recent outreach, base_weight: 0.3, half_life_days: 7, say_it: ""}
       - {type: social_engagement, name: Engaged with our social posts, base_weight: 0.4, half_life_days: 14, say_it: ""}
 
+  - id: social
+    name: Social and content engagement
+    half_life_days: 21
+    signals:
+      # Written by the Social Signals agent from LinkedIn and YouTube engagement exports.
+      # Public comments and shares may be referenced; reactions, follows and views are timing only.
+      - {type: social_buying_question, name: Asked a buying question in public comments, base_weight: 0.85, half_life_days: 14,
+         say_it: "Saw your question under our \"{topic}\" post"}
+      - {type: social_comment, name: Commented on our or a tracked creator's post, base_weight: 0.6, half_life_days: 21,
+         say_it: "Saw your comment on our \"{topic}\" post"}
+      - {type: social_share, name: Shared or reposted our content, base_weight: 0.5, half_life_days: 21,
+         say_it: "Thanks for sharing our \"{topic}\" post"}
+      - {type: social_follow, name: Followed or subscribed to our channels, base_weight: 0.3, half_life_days: 30, say_it: ""}
+      - {type: social_reaction, name: Reacted to our content, base_weight: 0.25, half_life_days: 14, say_it: ""}
+      - {type: content_view_repeat, name: Repeat views of our videos, base_weight: 0.3, half_life_days: 14, say_it: ""}
+
   - id: pain
     name: Public pain
     half_life_days: 45

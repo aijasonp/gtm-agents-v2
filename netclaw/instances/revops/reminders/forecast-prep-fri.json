@@ -1,0 +1,14 @@
+{
+  "id": "forecast-prep-fri",
+  "title": "Forecast prep for leaders (Fri 8:00 CT)",
+  "instructions": "Spawn forecast-hygiene: send forecast-prep/manager_prep, forecast-prep/exec_prep and forecast-prep/call_agenda to the leaders listed in company.yaml.",
+  "schedule": {
+    "type": "Cron",
+    "cronExpression": "0 13 * * FRI"
+  },
+  "delivery": {
+    "kind": "Channel",
+    "transport": "slack",
+    "address": "#gtm-forecast"
+  }
+}

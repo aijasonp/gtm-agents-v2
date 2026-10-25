@@ -1,0 +1,59 @@
+# Deal Inspection golden cases. Fixed `now`, in-memory DB, template path.
+now: "2026-10-23T12:00:00+00:00"
+accounts:
+  - {id: northwind.example, name: Northwind Logistics, domain: northwind.example, industry: Logistics, employees: 600, country: US, revenue: 120000000, tech: [salesforce]}
+  - {id: contoso.example, name: Contoso Health, domain: contoso.example, industry: Healthcare Technology, employees: 900, country: US, revenue: 200000000}
+  - {id: tailspin.example, name: Tailspin Software, domain: tailspin.example, industry: Software, employees: 300, country: US, revenue: 40000000, tech: [hubspot]}
+  - {id: wingtip.example, name: Wingtip Public Schools, domain: wingtip.example, industry: Education, employees: 800, country: US}
+  - {id: fabrikam.example, name: Fabrikam Insurance, domain: fabrikam.example, industry: Insurance, employees: 1200, country: CA, revenue: 300000000}
+contacts:
+  - {id: dana@northwind.example, account_id: northwind.example, name: Dana Cole, title: VP of Sales Development}
+  - {id: marcus@northwind.example, account_id: northwind.example, name: Marcus Lee, title: Director of Revenue Operations}
+  - {id: kim@tailspin.example, account_id: tailspin.example, name: Kim Ortiz, title: VP Sales}
+  - {id: ben@tailspin.example, account_id: tailspin.example, name: Ben Adams, title: Account Executive}
+  - {id: jo@contoso.example, account_id: contoso.example, name: Jo Patel, title: Sales Operations Manager}
+deals:
+  # healthy late-stage deal: everything confirmed, recent activity
+  - {id: d-tailspin, crm_id: "5004", account_id: tailspin.example, name: Tailspin Expansion, owner: Lee Park, stage: Negotiation, status: open, amount: 72000, close_date: "2026-11-07", stage_entered_at: "2026-10-12", last_activity_at: "2026-10-21", next_step: Redlines back, next_step_date: "2026-10-27",
+     meddpicc: {identify_pain: "confirmed: ramp takes 5 months", metrics: "confirmed: ramp to 3 months", champion: "confirmed: Kim Ortiz", economic_buyer: "confirmed: Kim Ortiz", decision_criteria: "confirmed: SOC 2", decision_process: "confirmed: committee Nov 3", paper_process: "confirmed: MSA in legal", competition: "confirmed: Globex Signals"}}
+  # stuck proposal: close date passed, idle, overdue next step, big MEDDPICC gaps
+  - {id: d-contoso, crm_id: "5002", account_id: contoso.example, name: Contoso Agents, owner: Sam Rivera, stage: Proposal, status: open, amount: 140000, close_date: "2026-10-15", stage_entered_at: "2026-09-01", last_activity_at: "2026-09-25", next_step: Send revised proposal, next_step_date: "2026-10-10",
+     meddpicc: {identify_pain: "confirmed: forecast misses", champion: Jo Patel}}
+  # evaluation, active, some gaps -> fix by gap rule
+  - {id: d-northwind, crm_id: "5001", account_id: northwind.example, name: Northwind Platform, owner: Sam Rivera, stage: Evaluation, status: open, amount: 96000, close_date: "2026-12-15", stage_entered_at: "2026-10-06", last_activity_at: "2026-10-20", next_step: Pilot scoping, next_step_date: "2026-10-28",
+     meddpicc: {identify_pain: "confirmed: 6 hours a week on lists", metrics: cut to 1 hour, champion: Dana Cole, decision_criteria: must sync with Salesforce, competition: Acme Intel}}
+  # wrong fit account -> disqualify
+  - {id: d-wingtip, account_id: wingtip.example, name: Wingtip Pilot, owner: Priya Shah, stage: Discovery, status: open, amount: 20000, close_date: "2026-12-01", stage_entered_at: "2026-10-15", last_activity_at: "2026-10-20", next_step: Demo, next_step_date: "2026-10-30"}
+  # dead deal -> disqualify on inactivity
+  - {id: d-fabrikam, account_id: fabrikam.example, name: Fabrikam Pilot, owner: Priya Shah, stage: Discovery, status: open, amount: 60000, close_date: "2026-11-30", stage_entered_at: "2026-08-01", last_activity_at: "2026-08-15"}
+  # closed deals are not inspected
+  - {id: d-won, account_id: northwind.example, name: Old Win, owner: Lee Park, stage: Closed Won, status: won, amount: 10000, close_date: "2026-09-01"}
+history:   # close-date snapshots for slips (oldest first)
+  d-contoso: ["2026-09-30", "2026-10-15"]
+evidence_handoff:
+  deal_id: d-northwind
+  meeting_id: mtg-1
+  evidence:
+    economic_buyer: ["Dana Cole: Ana Ruiz, our CFO, signs off on anything over fifty thousand."]
+    decision_process: ["Dana Cole: We would run a two week pilot first."]
+    metrics: ["Dana Cole: about five extra hours of selling per rep"]
+expect:
+  recommendation:
+    d-tailspin: progress
+    d-contoso: fix
+    d-northwind: fix
+    d-wingtip: disqualify
+    d-fabrikam: disqualify
+  max_risk: {d-tailspin: 10}
+  min_risk: {d-contoso: 70}
+  order: [[d-contoso, d-northwind], [d-northwind, d-tailspin]]
+  drivers_include:
+    d-contoso: ["close date", "no activity", "next step overdue", "missing data", "moved later 1x"]
+    d-fabrikam: ["no activity", "no next step"]
+  gap_kinds: {d-contoso: {economic_buyer: missing, champion: unconfirmed}}
+  not_inspected: [d-won]
+  insights_written: 5
+  evidence:
+    changed: [economic_buyer, decision_process]   # metrics was already partial: unchanged
+    approval_action: deal_update
+    never_confirms: true

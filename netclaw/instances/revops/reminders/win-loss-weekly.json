@@ -1,7 +1,7 @@
 {
   "id": "win-loss-weekly",
   "title": "Weekly win/loss (Fri 15:00 CT)",
-  "instructions": "Spawn win-loss-learning: summarize deals closed this week, record outcomes, and post patterns here.",
+  "instructions": "Spawn win-loss-learning: record outcomes for deals closed this week and post the win/loss patterns here.",
   "schedule": {
     "type": "Cron",
     "cronExpression": "0 20 * * FRI"

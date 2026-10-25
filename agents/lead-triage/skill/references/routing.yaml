@@ -1,0 +1,30 @@
+# Lead Triage rules. Edit during install. All matching is case-insensitive.
+
+# How much each part counts toward the 0-100 lead score.
+weights: {icp: 0.35, persona: 0.25, intent: 0.30, heat: 0.10}
+
+# Intent by lead source. Unknown sources get `default`.
+source_intent:
+  demo_request: 100
+  contact_sales: 95
+  pricing: 90
+  trial_signup: 85
+  event: 70
+  referral: 80
+  webinar: 50
+  content_download: 40
+  newsletter: 20
+  default: 40
+
+# Score cut-offs and response SLA (minutes) per tier.
+tiers:
+  - {tier: hot, min: 70, sla_minutes: 15}
+  - {tier: warm, min: 50, sla_minutes: 240}
+  - {tier: nurture, min: 30, sla_minutes: 2880}
+  - {tier: disqualify, min: 0, sla_minutes: 0}
+
+# Hard rules, checked before the score.
+free_email_domains: [gmail.com, yahoo.com, hotmail.com, outlook.com, icloud.com, aol.com, proton.me, protonmail.com]
+disqualify_titles: [student, intern, teacher, professor, job seeker, retired]
+# Accounts at or above this headcount route to the enterprise segment.
+enterprise_employees: 1000

@@ -1,0 +1,46 @@
+# Social Signals golden cases. Template path, in-memory DB, fixed clock.
+now: "2026-10-23T12:00:00+00:00"
+tracked_creators:
+  - {name: company, weight: 1.0}
+  - {name: Alex Rivera, weight: 0.9}
+accounts:
+  - {id: northwind.example, name: Northwind Logistics, domain: northwind.example, crm_id: "1001", industry: Logistics, employees: 600, country: US}
+  - {id: fourthcoffee.example, name: Fourth Coffee, domain: fourthcoffee.example, crm_id: "1010", industry: Software, employees: 520, country: US}
+  - {id: proseware.example, name: Proseware Inc, domain: proseware.example, crm_id: "1008", industry: Software, employees: 350, country: US}
+contacts:
+  - {id: dana@northwind.example, email: dana@northwind.example, name: Dana Cole, title: VP of Sales Development, account_id: northwind.example, linkedin: "https://www.linkedin.com/in/dana-cole-example/"}
+  - {id: omar@proseware.example, email: omar@proseware.example, name: Omar Haddad, title: VP of Sales, account_id: proseware.example}
+deals:
+  - {id: deal-nw, account_id: northwind.example, name: Northwind Platform, owner: Sam Rivera, stage: Evaluation, status: open}
+scores:
+  - {account_id: fourthcoffee.example, tier: A, score: 84}
+engagements:
+  - {platform: linkedin, post_url: "https://example.com/p/1", post_title: Ranking accounts every morning, author: company, engager_name: Dana Cole, engager_profile_url: "linkedin.com/in/dana-cole-example?trk=x", engagement_type: comment, comment_text: "How does pricing work for a 20 rep team? We use Acme Intel today.", engaged_at: "2026-10-22T15:00:00Z"}
+  - {platform: linkedin, post_url: "https://example.com/p/1", post_title: Ranking accounts every morning, author: company, engager_name: Dana Cole, engager_profile_url: "https://linkedin.com/in/dana-cole-example", engagement_type: comment, comment_text: "How does pricing work for a 20 rep team? We use Acme Intel today.", engaged_at: "2026-10-22T15:30:00Z"}
+  - {platform: linkedin, post_url: "https://example.com/p/2", post_title: Forecast hygiene in 5 steps, author: Alex Rivera, engager_name: Omar Haddad, engager_company: "Proseware, Inc.", engager_title: VP of Sales, engagement_type: repost, engaged_at: "2026-10-21T10:00:00Z"}
+  - {platform: linkedin, post_url: "https://example.com/p/1", post_title: Ranking accounts every morning, author: company, engager_name: Kai Moore, engager_company: Fourth Coffee, engager_title: Head of Sales, engagement_type: like, engaged_at: "2026-10-22T09:00:00Z"}
+  - {platform: linkedin, post_url: "https://example.com/p/1", post_title: Ranking accounts every morning, author: company, engager_name: Lou Park, engager_company: Fourth Coffee, engager_title: Marketing Intern, engagement_type: like, engaged_at: "2026-10-22T09:05:00Z"}
+  - {platform: linkedin, post_url: "https://example.com/p/1", post_title: Ranking accounts every morning, author: company, engager_name: Pat Doe, engager_company: Unknown Widgets, engager_title: VP Sales, engagement_type: comment, comment_text: Great post, engaged_at: "2026-10-22T09:10:00Z"}
+  - {platform: linkedin, post_url: "https://example.com/p/9", post_title: Not ours, author: Someone Else, engager_name: Dana Cole, engager_profile_url: "https://linkedin.com/in/dana-cole-example", engagement_type: comment, comment_text: nice, engaged_at: "2026-10-22T09:15:00Z"}
+  - {platform: youtube, post_url: "https://example.com/v/1", post_title: Pipeline demo walkthrough, author: company, engager_name: Omar Haddad, engager_company: Proseware, engagement_type: view, engaged_at: "2026-10-20T10:00:00Z"}
+  - {platform: youtube, post_url: "https://example.com/v/1", post_title: Pipeline demo walkthrough, author: company, engager_name: Omar Haddad, engager_company: Proseware, engagement_type: view, engaged_at: "2026-10-22T10:00:00Z"}
+expect:
+  resolved:
+    Dana Cole: {method: profile url, contact_id: dana@northwind.example}
+    Omar Haddad: {method: name + company, contact_id: omar@proseware.example}
+    Kai Moore: {method: "company only (person not in CRM)", account_id: fourthcoffee.example}
+  unresolved_count: 1
+  skipped: 1          # untracked creator
+  duplicates: 1
+  signals_for:
+    northwind.example: [social_buying_question]
+    proseware.example: [social_share, content_view_repeat]
+    fourthcoffee.example: [social_reaction, social_reaction]
+  timing_only_types: [social_reaction, content_view_repeat, social_follow]
+  mentionable_types: [social_comment, social_share, social_buying_question]
+  competitor_insight: Acme Intel
+  proposals_for: [Kai Moore]
+  no_proposal_for: [Lou Park, Pat Doe]
+  alert_owner: {Sam Rivera: Dana Cole}
+  creator_report_has: [company, Alex Rivera]
+  repeat_raises_strength: Omar Haddad

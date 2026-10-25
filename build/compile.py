@@ -65,6 +65,57 @@ def knowledge_files(m: Manifest, dest: Path) -> list[str]:
     return names
 
 
+def library_items(m: Manifest) -> list[dict]:
+    """Library skills listed in agent.yaml `library:` (repo-relative folders), with their license."""
+    items = []
+    for rel in m.library:
+        d = ROOT / rel
+        skill = d / "SKILL.md"
+        if not skill.exists():
+            raise FileNotFoundError(f"{m.id}: library skill {rel} has no SKILL.md")
+        parts = Path(rel).parts
+        source = parts[1] if len(parts) > 1 and parts[0] == "library" else "unknown"
+        lic = ROOT / "library" / source / "LICENSE"
+        if not lic.exists():
+            raise FileNotFoundError(f"{m.id}: library source {source} has no LICENSE; it cannot ship")
+        items.append({"name": d.name, "source": source, "text": skill.read_text(), "license": lic.read_text(), "dir": d})
+    return items
+
+
+def notice_text(items: list[dict]) -> str:
+    seen, out = set(), ["# Third-party notices\n", "These playbooks are included under their original licenses.\n"]
+    for it in items:
+        if it["source"] in seen:
+            continue
+        seen.add(it["source"])
+        names = ", ".join(i["name"] for i in items if i["source"] == it["source"])
+        out.append(f"\n## {it['source']} ({names})\n\n```\n{it['license'].strip()}\n```\n")
+    return "".join(out)
+
+
+def add_library(m: Manifest, skill_root: Path) -> list[str]:
+    """Write library skills into <skill_root>/references/library/ as reference files plus NOTICE."""
+    items = library_items(m)
+    if not items:
+        return []
+    lib = skill_root / "references" / "library"
+    lib.mkdir(parents=True, exist_ok=True)
+    for it in items:  # whole playbook folder; SKILL.md renamed so only the agent's own skill is a skill
+        dest = lib / it["name"]
+        shutil.copytree(it["dir"], dest, ignore=shutil.ignore_patterns(".*", "node_modules", "*.lock", "package*.json"))
+        (dest / "SKILL.md").rename(dest / "PLAYBOOK.md")
+    (lib / "NOTICE.md").write_text(notice_text(items))
+    sk = skill_root / "SKILL.md"
+    sk.write_text(sk.read_text().rstrip() + "\n\n" + playbook_note(items, "references/library/<name>/PLAYBOOK.md") + "\n")
+    return [i["name"] for i in items]
+
+
+def playbook_note(items: list[dict], where: str) -> str:
+    names = ", ".join(i["name"] for i in items)
+    return (f"## Playbooks\n\nDeeper method for this work is in {where}: {names}. Use them for technique. "
+            "When a playbook conflicts with the rules above, the rules above win.")
+
+
 def mcp_config(m: Manifest) -> dict:
     return {"mcpServers": {m.id: {"command": "gtm", "args": ["serve-mcp", m.id],
                                   "env": {"GTM_AGENTS_DIR": "${GTM_AGENTS_DIR}", "DATABASE_URL": "${DATABASE_URL}"}}}}
@@ -72,7 +123,17 @@ def mcp_config(m: Manifest) -> dict:
 
 def build_claude(m: Manifest, out: Path) -> None:
     out.mkdir(parents=True, exist_ok=True)
-    skill_dir = m.path("skill")
+    staged = out / "_skill"
+    if staged.exists():
+        shutil.rmtree(staged)
+    shutil.copytree(m.path("skill"), staged)
+    for rel in m.references:  # shared files outside the skill folder (config/icp.yaml, config/company.yaml)
+        src = m.path(rel).resolve()
+        if m.path("skill").resolve() not in src.parents:
+            (staged / "references").mkdir(exist_ok=True)
+            shutil.copy2(src, staged / "references" / src.name)
+    add_library(m, staged)
+    skill_dir = staged
     zpath = out / f"{m.id}-skill.zip"
     with zipfile.ZipFile(zpath, "w", zipfile.ZIP_DEFLATED) as z:
         for f in sorted(skill_dir.rglob("*")):
@@ -87,6 +148,7 @@ def build_claude(m: Manifest, out: Path) -> None:
     shutil.copytree(skill_dir, plug / "skills" / m.id)
     if m.tools:
         (plug / ".mcp.json").write_text(json.dumps(mcp_config(m), indent=2))
+    shutil.rmtree(staged)
 
 
 def build_chat(m: Manifest, out: Path, target: str) -> dict:
@@ -95,12 +157,19 @@ def build_chat(m: Manifest, out: Path, target: str) -> dict:
     know = out / "knowledge"
     names = knowledge_files(m, know)
     full_name = "instructions-full.md"
+    items = library_items(m)
+    if items:
+        body = body.rstrip() + "\n\n" + playbook_note(items, "the knowledge file `library-playbooks.md`")
     text, moved = condense(body.strip(), INSTRUCTION_LIMITS[target], full_name)
     if moved:
         (know / full_name).write_text(body)
         names.append(full_name)
+    if items:
+        lib = "\n\n---\n\n".join(f"# Playbook: {i['name']}\n\n{i['text']}" for i in items)
+        (know / "library-playbooks.md").write_text(lib + "\n\n---\n\n" + notice_text(items))
+        names.append("library-playbooks.md")
     (out / "instructions.md").write_text(text + "\n")
-    meta = {"name": m.name, "description": fm.get("description", m.description), "version": m.version,
+    meta = {"library": [i["name"] for i in items], "name": m.name, "description": fm.get("description", m.description), "version": m.version,
             "instructions_chars": len(text), "knowledge": names,
             "tools": "connect the MCP server in mcp.json (persistent edition)" if m.tools else "none"}
     if target == "chatgpt" and m.tools:

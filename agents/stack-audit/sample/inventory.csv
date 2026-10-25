@@ -1,0 +1,10 @@
+tool,capabilities,owner,seats_purchased,seats_active_30d,logins_30d,logins_90d,annual_cost,renewal_date,notice_days,contract_term,integrations,data_exported_to
+Intent Platform A,intent;account_scoring;web_visitor_id,Marketing Ops,20,6,40,150,90000,2027-03-31,60,12 months,crm;marketing_automation,crm
+Community Signals B,social_signals;community_signals,Marketing,10,2,8,30,36000,2027-01-15,90,12 months,crm,
+Data Provider C,contact_data;company_data;enrichment,Sales Ops,25,20,400,1300,60000,2027-06-30,60,12 months,crm;sequencer,crm;warehouse
+Enrichment Workbench D,enrichment;research_workflows;contact_data,Sales Ops,5,3,60,200,24000,2026-12-31,30,12 months,crm,crm
+Sequencer E,sequencing;email_tracking,Sales Ops,30,18,900,2800,45000,2027-04-30,30,12 months,crm,crm
+Dialer F,dialing,Sales Ops,20,8,300,1100,30000,2027-02-28,30,12 months,crm;sequencer,crm
+Call Recorder G,call_recording;conversation_intelligence,Enablement,30,22,500,1600,54000,2027-08-31,60,24 months,crm,crm;agents
+Marketing Automation H,marketing_automation;email_marketing;web_tracking,Marketing Ops,6,5,200,640,40000,2027-05-31,60,12 months,crm,crm;warehouse
+Meeting Notes I,meeting_notes,Sales,15,4,30,120,,2027-02-15,30,12 months,,

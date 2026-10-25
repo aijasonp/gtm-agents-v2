@@ -1,7 +1,7 @@
 {
   "id": "weekly-deal-review",
   "title": "Weekly deal review (Mon 8:00 CT)",
-  "instructions": "Spawn deal-manager to inspect every open deal for each AE: risks, single next move, drafted assets. DM each AE their list sorted by risk, then post the team summary here (at-risk count and value, top three patterns).",
+  "instructions": "Spawn deal-manager for the weekly review: at-risk deals with the next move, overdue follow-ups, team summary here.",
   "schedule": {
     "type": "Cron",
     "cronExpression": "0 13 * * MON"

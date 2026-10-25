@@ -1,0 +1,14 @@
+{
+  "id": "daily-health",
+  "title": "Runtime health (7:00 CT)",
+  "instructions": "Spawn forecast-hygiene: run ops-monitor/health_report and ops-monitor/stuck_items. Post only warnings and failures.",
+  "schedule": {
+    "type": "Cron",
+    "cronExpression": "0 12 * * *"
+  },
+  "delivery": {
+    "kind": "Channel",
+    "transport": "slack",
+    "address": "#gtm-forecast"
+  }
+}

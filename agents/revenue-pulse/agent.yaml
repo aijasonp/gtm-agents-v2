@@ -1,0 +1,38 @@
+id: revenue-pulse
+name: Revenue Pulse
+version: 0.1.0
+tier: B
+description: >
+  Weekly operating summary for sales leadership, computed from the CRM: open and weighted pipeline,
+  coverage against remaining quota, what was created, won, lost and slipped this week, stage moves,
+  stale deals, this month's forecast by category, a per-owner scorecard and the top deal risks from
+  Deal Inspection, with week-over-week changes. Every number is computed in code.
+editions: [dropin, persistent]
+skill: skill/SKILL.md
+references:
+  - skill/references/metrics-definitions.md
+  - skill/references/pulse-format.md
+  - skill/references/stage-probabilities.yaml
+  - ../../config/company.yaml
+library:  # licensed playbooks bundled into the drop-in package (see THIRD_PARTY_NOTICES.md)
+  - library/sales-skills/skills/sales-forecast
+  - library/coreyhaines-marketingskills/skills/revops
+tools:
+  - pipeline_summary
+  - forecast_rollup
+  - slipped_deals
+  - stale_deals
+  - top_risks
+  - owner_scorecard
+connectors_required: []
+connectors_optional: [crm, slack]
+jobs:
+  - {name: weekly_pulse, cron: "0 8 * * 1", model_class: frontier}
+budgets: {daily_tokens: 300000, monthly_usd: 20}
+evals: evals/golden.yaml
+config:
+  company: ../../config/company.yaml
+  stages: skill/references/stage-probabilities.yaml
+  period_days: 7
+  stale_days: 14
+  top_risks: 5
