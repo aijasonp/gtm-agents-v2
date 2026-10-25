@@ -1,0 +1,61 @@
+# Event Campaigns golden cases. Fixed now, template path, sample events from config/events.yaml.
+now: "2026-10-26T12:00:00+00:00"
+event: chi-revenue-dinner
+
+accounts:
+  - {id: northwind.example, name: Northwind Logistics, domain: northwind.example, industry: Logistics, employees: 600, country: US, revenue: 120000000}
+  - {id: contoso.example, name: Contoso Health, domain: contoso.example, industry: Healthcare Technology, employees: 900, country: US, revenue: 200000000}
+  - {id: fabrikam.example, name: Fabrikam Insurance, domain: fabrikam.example, industry: Insurance, employees: 1200, country: CA}
+  - {id: tailspin.example, name: Tailspin Software, domain: tailspin.example, industry: Software, employees: 300, country: US}
+  - {id: adatum.example, name: Adatum Fintech, domain: adatum.example, industry: Fintech, employees: 450, country: US, revenue: 60000000}
+  - {id: litware.example, name: Litware Manufacturing, domain: litware.example, industry: Manufacturing, employees: 40000, country: US}
+
+scores:  # latest Signal Scout rows
+  - {account_id: northwind.example, score: 82, tier: A}
+  - {account_id: contoso.example, score: 70, tier: B}
+  - {account_id: fabrikam.example, score: 80, tier: A}
+  - {account_id: tailspin.example, score: 30, tier: D}
+
+contacts:
+  - {id: dana, account_id: northwind.example, name: Dana Cole, email: dana@northwind.example, title: VP of Sales}
+  - {id: raj, account_id: northwind.example, name: Raj Patel, email: raj@northwind.example, title: Director of Revenue Operations}
+  - {id: ana, account_id: northwind.example, name: Ana Ruiz, email: ana@northwind.example, title: Senior Director of Sales, unsubscribed: true}
+  - {id: kim, account_id: northwind.example, name: Kim Lee, email: kim@northwind.example, title: Sales Development Representative}
+  - {id: omar, account_id: contoso.example, name: Omar Haddad, email: omar@contoso.example, title: CRO}
+  - {id: li, account_id: fabrikam.example, name: Li Wei, email: li@fabrikam.example, title: VP Sales}
+  - {id: sara, account_id: adatum.example, name: Sara Okafor, email: sara@adatum.example, title: Head of Revenue Operations}
+  - {id: tom, account_id: tailspin.example, name: Tom Diaz, email: tom@tailspin.example, title: VP Sales}
+
+deals:
+  - {id: d-contoso, account_id: contoso.example, name: Contoso expansion, stage: Evaluation, status: open, owner: Lee Park, amount: 90000}
+
+attendees:  # loaded after the event
+  - {name: Dana Cole, email: dana@northwind.example, company: Northwind Logistics, title: VP of Sales, attended: "yes"}
+  - {name: Sara Okafor, email: sara@adatum.example, company: Adatum Fintech, title: Head of Revenue Operations, attended: "no"}
+  - {name: Pat Quinn, email: pat@unknownco.example, company: Unknown Co, title: Director of Sales, attended: "yes"}
+  - {name: No Email, email: "", company: X, attended: "yes"}
+
+after_event:
+  outcomes:
+    - {account_id: northwind.example, outcome: meeting, observed_at: "2026-11-14T10:00:00+00:00"}
+    - {account_id: northwind.example, outcome: meeting, observed_at: "2026-10-01T10:00:00+00:00"}  # before: not counted
+  deals:
+    - {id: d-nw, account_id: northwind.example, name: Northwind new, stage: Discovery, status: open, amount: 48000, created_at: "2026-11-20"}
+
+expect:
+  invite_order: [northwind.example, adatum.example]
+  invite_contacts: {northwind.example: [Dana Cole, Raj Patel], adatum.example: [Sara Okafor]}
+  excluded:
+    contoso.example: active pipeline
+    fabrikam.example: outside the event region
+    tailspin.example: tier D
+    litware.example: no contact matching the event personas
+  cap: 36
+  drafted: 3
+  queued: 3
+  redraft_skipped: 3
+  import: {added: 3, attended: 2, signals_added: 1, errors: 1}
+  reimport_updated: 3
+  report: {registered: 3, attended: 2, no_shows: 1, meetings: 1, new_deals: 1, pipeline: 48000, invited: 3}
+  reminder_registrants: 3
+  followups: {attended: 2, missed: 1}

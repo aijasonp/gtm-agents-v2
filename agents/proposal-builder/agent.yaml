@@ -35,5 +35,5 @@ evals: evals/golden.yaml
 config:
   company: ../../config/company.yaml
   pricebook: ../../config/pricebook.yaml
-  output_dir: data/proposals
+  output_dir: ../../data/proposals   # gitignored; point at a shared folder in production
   expiry_warning_days: 7

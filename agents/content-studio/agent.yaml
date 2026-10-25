@@ -1,0 +1,45 @@
+id: content-studio
+name: Content Studio
+version: 0.1.0
+tier: C
+description: >
+  Turns what buyers say on calls into seller content. Drafts LinkedIn posts from recent call and
+  deal themes and approved proof points, writes short video scripts timed to a word budget,
+  builds SRT captions, and checks on-screen text frames for safe zone, line length, reading time,
+  banned words and dashes. Never names a customer. Publishing waits for human approval.
+editions: [dropin, persistent]
+skill: skill/SKILL.md
+references:
+  - skill/references/content-rules.md
+  - ../../config/company.yaml
+library:  # licensed playbooks bundled into the drop-in package (see THIRD_PARTY_NOTICES.md)
+  - library/coreyhaines-marketingskills/skills/social-content
+  - library/coreyhaines-marketingskills/skills/content-strategy
+  - library/coreyhaines-marketingskills/skills/copywriting
+  - library/sales-skills/skills/sales-content
+tools:
+  - linkedin_post
+  - publish_post
+  - video_script
+  - captions
+  - frame_qa
+connectors_required: []
+connectors_optional: [slack, social_webhook]
+jobs:
+  - {name: weekly_content_ideas, cron: "0 9 * * 1", model_class: none}
+budgets: {daily_tokens: 400000, monthly_usd: 30}
+evals: evals/golden.yaml
+config:
+  company: ../../config/company.yaml
+  insight_kinds: [win_loss, objection, theme, competitor, pain]
+  insight_days: 30
+  post_max_words: 180
+  words_per_second: 2.4
+  hook_seconds: 3
+  caption_max_chars: 32
+  caption_max_lines: 2
+  safe_side_pct: 10
+  safe_top_pct: 0
+  safe_bottom_pct: 15
+  frame_max_chars_per_line: 32
+  min_seconds_per_word: 0.3

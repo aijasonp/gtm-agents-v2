@@ -330,7 +330,7 @@ def render_proposal(ctx, qid: str) -> dict:
     if q["status"] in ("blocked", "discount_rejected"):
         return {"error": f"quote {qid} is {q['status']}: {q['guardrail'].get('reason', 'rebuild it')}"}
     page, md = render(ctx, q)
-    out = ctx.manifest.path(ctx.manifest.config.get("output_dir", "data/proposals"))
+    out = ctx.manifest.path(ctx.manifest.config.get("output_dir", "../../data/proposals"))
     out.mkdir(parents=True, exist_ok=True)
     slug = re.sub(r"[^a-z0-9]+", "-", (q.get("account") or "proposal").lower()).strip("-")
     hp, mp = out / f"{slug}-{qid}.html", out / f"{slug}-{qid}.md"
