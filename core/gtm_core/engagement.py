@@ -22,7 +22,13 @@ EVENTS = {"sent", "delivered", "open", "click", "reply", "reply_positive", "repl
 ALIASES = {"opened": "open", "email_opened": "open", "clicked": "click", "email_clicked": "click",
            "replied": "reply", "email_replied": "reply", "bounced": "bounce", "email_bounced": "bounce",
            "emailsent": "sent", "email_sent": "sent", "unsubscribed": "unsubscribe", "interested": "reply_positive",
-           "not_interested": "reply_negative"}
+           "not_interested": "reply_negative",
+           # Lemlist webhook types
+           "emailssent": "sent", "emailsopened": "open", "emailsclicked": "click", "emailsreplied": "reply",
+           "emailsbounced": "bounce", "emailsunsubscribed": "unsubscribe", "emailsinterested": "reply_positive",
+           "emailsnotinterested": "reply_negative",
+           # Smartlead webhook types
+           "email_open": "open", "email_link_click": "click", "email_reply": "reply", "lead_unsubscribed": "unsubscribe"}
 MACHINE_OPEN_SECONDS = 5
 
 
@@ -87,8 +93,16 @@ def record(store, email: str, event: str, occurred_at: str | None = None, draft_
         (email, d["contact_id"] if d else None, d["account_id"] if d else m.get("account_id"), d["id"] if d else None,
          step, m.get("angle_key") or m.get("angle"), m.get("value_prop"), ev, int(bool(machine)), at_s, source,
          now_iso()))
+    suppressed = None
+    if ev in ("unsubscribe", "bounce"):
+        # Local suppression only (safer, never a CRM write): no agent drafts to this address again.
+        c = store.contact_by_email(email)
+        flag = "unsubscribed" if ev == "unsubscribe" else "email_invalid"
+        if c:
+            store.upsert("contacts", {"id": c["id"], flag: True, f"{flag}_at": at_s})
+            suppressed = flag
     return {"added": True, "duplicate": False, "event_id": eid, "event": ev, "machine": bool(machine),
-            "matched_draft": d["id"] if d else None}
+            "matched_draft": d["id"] if d else None, "suppressed": suppressed}
 
 
 def threads(store, since_iso: str | None = None) -> list[dict]:

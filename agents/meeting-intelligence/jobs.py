@@ -48,3 +48,29 @@ def process_meetings(ctx, now: datetime | None = None) -> dict:
     return {"ingested": ingest.get("meetings", 0), "processed": len(results),
             "handoffs": sum(len(r["handoffs"]) for r in results),
             "approvals_queued": sum(len(r["approvals"]) for r in results)}
+
+
+def pull_transcripts(ctx, now: datetime | None = None, pullers: list | None = None) -> dict:
+    """Pull new call transcripts from Gong, Fireflies or Fathom (whichever keys are set) into meetings.
+    Starts from the last successful pull, or `pull_lookback_days` ago on the first run."""
+    from datetime import timedelta, timezone
+
+    from gtm_core.connectors import notetakers
+    from gtm_core.pipeline import parse_dt
+    now = now or datetime.now(timezone.utc)
+    pullers = notetakers.from_env() if pullers is None else pullers
+    if not pullers:
+        return {"skipped": "no notetaker keys set (GONG_ACCESS_KEY, FIREFLIES_API_KEY or FATHOM_API_KEY)"}
+    out = {}
+    for p in pullers:
+        key = f"notetaker_last_pull:{p.source}"
+        since = parse_dt(ctx.store.get_state(key)) or now - timedelta(days=int(ctx.manifest.config.get("pull_lookback_days", 3)))
+        try:
+            res = notetakers.store_meetings(ctx.store, p.pull(since, now))
+        except Exception as e:  # one vendor failing must not stop the others
+            ctx.audit.log("notetaker.error", source=p.source, error=str(e)[:300])
+            out[p.source] = {"error": str(e)[:200]}
+            continue
+        ctx.store.set_state(key, now.isoformat())
+        out[p.source] = res
+    return out

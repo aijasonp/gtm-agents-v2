@@ -44,4 +44,28 @@ def coverage_report(ctx) -> dict:
     return _eng(ctx).coverage_report(ctx)
 
 
-TOOLS = {f.__name__: f for f in [enrich_contact, enrich_account, waterfall_report, coverage_report]}
+def push_to_clay(ctx, accounts: list[str] | None = None, limit: int = 50) -> dict:
+    """Send accounts (ids or domains; default: those missing industry, employees or country) to the Clay table
+    webhook for enrichment. Sends firmographic lookups only; results come back through import_clay or /v1/enrichment."""
+    from gtm_core.connectors.clay import ClayTable
+    clay = getattr(ctx, "clay", None) or ClayTable.from_env()
+    if clay is None:
+        return {"error": "set GTM_CLAY_WEBHOOK to the Clay table's webhook URL"}
+    rows = [ctx.store.account(a) for a in accounts] if accounts else \
+        [a for a in ctx.store.accounts() if not (a.get("industry") and a.get("employees") and a.get("country"))]
+    rows = [{"domain": a.get("domain") or a["id"], "company_name": a.get("name"), "gtm_account_id": a["id"]}
+            for a in rows if a][:limit]
+    return {**clay.push(rows), "accounts": [r["domain"] for r in rows]}
+
+
+def import_clay(ctx, file: str) -> dict:
+    """Merge a Clay CSV export into accounts and contacts. Blank Clay cells never overwrite stored values."""
+    from gtm_core.connectors.clay import import_csv
+    try:
+        return import_csv(ctx.store, file)
+    except OSError as e:
+        return {"error": str(e)}
+
+
+TOOLS = {f.__name__: f for f in [enrich_contact, enrich_account, waterfall_report, coverage_report, push_to_clay,
+                                 import_clay]}

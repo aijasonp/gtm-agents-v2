@@ -6,6 +6,7 @@ contact and the approved copy to one of:
   webhook   -> POST JSON to GTM_SEQUENCER_WEBHOOK (Clay, n8n, Make, Zapier, Outreach or
                Apollo via their automation layer; the customer maps fields once)
   smartlead -> Smartlead campaign API (copy goes in custom fields the campaign template uses)
+  lemlist   -> Lemlist campaign API (copy goes in lead variables gtm_subject_N / gtm_body_N)
   none      -> recorded only (demo, tests, drop-in edition)
 """
 from __future__ import annotations
@@ -89,10 +90,59 @@ class SmartleadSequencer(Sequencer):
                 "note": f"Stop {email} in Smartlead (reason: {reason}); auto-stop needs the webhook sequencer"}
 
 
+class LemlistSequencer(Sequencer):
+    """Lemlist: HTTP Basic auth with an empty login and the API key as password.
+    The campaign's email steps reference {{gtm_subject_1}}, {{gtm_body_1}} ... so the approved copy is
+    what goes out. Engagement comes back through a Lemlist webhook pointed at POST /v1/email-events
+    (Lemlist event names such as emailsOpened map automatically)."""
+    name = "lemlist"
+    API = "https://api.lemlist.com/api"
+
+    def __init__(self, api_key: str, default_campaign: str | None = None, client: httpx.Client | None = None):
+        super().__init__()
+        self.auth = ("", api_key)
+        self.default_campaign = default_campaign
+        self.http = client or httpx.Client(timeout=30)
+
+    def _campaign(self, campaign: str | None, meta: dict | None) -> str:
+        cid = campaign or (meta or {}).get("campaign") or self.default_campaign
+        if not cid:
+            raise ValueError("Lemlist campaign id missing: set LEMLIST_CAMPAIGN_ID or pass campaign")
+        return cid
+
+    def enroll(self, contact: dict, steps: list[dict], campaign: str | None = None, meta: dict | None = None) -> dict:
+        cid = self._campaign(campaign, meta)
+        name = (contact.get("name") or "").split(" ", 1)
+        body = {"firstName": name[0] if name else "", "lastName": name[1] if len(name) > 1 else "",
+                "companyName": contact.get("company", "")}
+        for i, s in enumerate(steps, 1):
+            body[f"gtm_subject_{i}"] = s.get("subject", "")
+            body[f"gtm_body_{i}"] = s.get("body", "")
+        for k in ("draft_ids", "value_prop", "angle_key"):
+            if (meta or {}).get(k) is not None:
+                body[f"gtm_{k}"] = ",".join(map(str, meta[k])) if isinstance(meta[k], list) else str(meta[k])
+        r = self.http.post(f"{self.API}/campaigns/{cid}/leads/{contact['email']}", json=body, auth=self.auth,
+                           params={"deduplicate": "true"})
+        r.raise_for_status()
+        return {"ok": True, "sequencer": self.name, "campaign": cid, "response": r.json() if r.content else {}}
+
+    def stop(self, email: str, reason: str = "", meta: dict | None = None) -> dict:
+        try:
+            cid = self._campaign(None, meta)
+        except ValueError:
+            return {"ok": False, "sequencer": self.name, "manual": True,
+                    "note": f"Stop {email} in Lemlist (reason: {reason}); no campaign id to stop it in"}
+        r = self.http.delete(f"{self.API}/campaigns/{cid}/leads/{email}", auth=self.auth)
+        r.raise_for_status()
+        return {"ok": True, "sequencer": self.name, "campaign": cid, "status": r.status_code}
+
+
 def get_sequencer() -> Sequencer:
     kind = os.environ.get("GTM_SEQUENCER", "none").lower()
     if kind == "webhook" and os.environ.get("GTM_SEQUENCER_WEBHOOK"):
         return WebhookSequencer(os.environ["GTM_SEQUENCER_WEBHOOK"], os.environ.get("GTM_SEQUENCER_SECRET"))
+    if kind == "lemlist" and os.environ.get("LEMLIST_API_KEY"):
+        return LemlistSequencer(os.environ["LEMLIST_API_KEY"], os.environ.get("LEMLIST_CAMPAIGN_ID"))
     if kind == "smartlead" and os.environ.get("SMARTLEAD_API_KEY"):
         return SmartleadSequencer(os.environ["SMARTLEAD_API_KEY"], os.environ.get("SMARTLEAD_CAMPAIGN_ID"))
     return Sequencer()
