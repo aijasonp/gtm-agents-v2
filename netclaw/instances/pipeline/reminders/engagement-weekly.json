@@ -1,0 +1,14 @@
+{
+  "id": "engagement-weekly",
+  "title": "Open and reply rates by angle (Mon 8:30 CT)",
+  "instructions": "Spawn prospecting-writer: run icp-outbound/angle_performance for 30 days. Post human open and reply rates by value prop, by angle and by judged ICP band. Name the best and worst value prop. Do not change anything.",
+  "schedule": {
+    "type": "Cron",
+    "cronExpression": "30 13 * * MON"
+  },
+  "delivery": {
+    "kind": "Channel",
+    "transport": "slack",
+    "address": "#gtm-pipeline"
+  }
+}

@@ -1,0 +1,33 @@
+id: rep-feedback
+name: Rep Feedback
+version: 0.1.0
+tier: C
+description: >
+  Turns rep feedback on agent output into reviewed changes. Reps say what was wrong with a draft or
+  a list; the agent files it, sorts it to the file that controls that behavior (an agent's SKILL.md
+  rules, config/icp.yaml for targeting, config/company.yaml for value props and proof), drafts the
+  rule to add as a patch, and after approval opens a GitHub pull request. It never edits third-party
+  playbooks under library/ and never changes a file without an approved pull request.
+editions: [dropin, persistent]
+skill: skill/SKILL.md
+references:
+  - skill/references/routing-rules.md
+library:  # licensed playbooks bundled into the drop-in package (see THIRD_PARTY_NOTICES.md)
+  - library/sales-skills/skills/sales-customer-feedback
+tools:
+  - submit_feedback
+  - list_feedback
+  - propose_change
+  - open_pr
+connectors_required: []
+connectors_optional: [slack, github]
+jobs:
+  - {name: weekly_feedback_digest, cron: "0 9 * * 5", model_class: none}
+budgets: {daily_tokens: 50000, monthly_usd: 5}
+evals: evals/golden.yaml
+config:
+  repo_root: ../..                # where agents/ and config/ live, relative to this folder
+  max_rule_chars: 200
+  branch_prefix: rep-feedback/
+  icp_words: [icp, target, targeting, wrong company, wrong companies, industry, industries, headcount, employees, too small, too big, segment, territory, region, bad fit, not a fit]
+  company_words: [value prop, value proposition, pain, proof, proof point, case study, claim, positioning, competitor, pricing, messaging, outcome]

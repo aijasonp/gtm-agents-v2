@@ -68,4 +68,36 @@ def check_conflicts(ctx, account: str) -> dict:
     return {"account": a["name"], "clear": not why, "reasons": why}
 
 
-TOOLS = {f.__name__: f for f in [build_target_list, why_now, pick_contacts, draft_sequence, check_conflicts]}
+def record_email_event(ctx, email: str, event: str, occurred_at: str = "", draft_id: int | None = None,
+                       step: str = "", machine: bool = False) -> dict:
+    """Log a sequencer event (sent, open, click, reply, reply_positive, reply_negative, bounce, unsubscribe)
+    against the draft that produced it, so angle and value prop learning sees it. Machine opens are kept out of rates."""
+    from gtm_core import engagement
+    try:
+        return engagement.record(ctx.store, email, event, occurred_at or None, draft_id, step or None, machine,
+                                 source="tool")
+    except ValueError as e:
+        return {"error": str(e)}
+
+
+def angle_performance(ctx, days: int = 120) -> dict:
+    """Human open, reply and positive reply rates by value prop, by angle (signal-led or value-led) and by
+    judged ICP band, over the last `days`. This is what the value prop picker learns from."""
+    from gtm_core import decision, engagement
+    since = engagement.since_days(days)
+    out = {"by_value_prop": engagement.breakdown(ctx.store, "value_prop", since),
+           "by_angle": engagement.breakdown(ctx.store, "angle", since),
+           "overall": engagement.rates(engagement.threads(ctx.store, since))}
+    rows = engagement.threads(ctx.store, since)
+    bands: dict = {}
+    for t in rows:
+        d = decision.latest(ctx.store, "icp_fit", t.get("account_id") or "")
+        sc = d["score"] if d else None
+        b = "unjudged" if sc is None else ("80-100" if sc >= 80 else "60-79" if sc >= 60 else "40-59" if sc >= 40 else "0-39")
+        bands.setdefault(b, []).append(t)
+    out["by_judged_icp"] = {k: engagement.rates(v) for k, v in sorted(bands.items())}
+    return out
+
+
+TOOLS = {f.__name__: f for f in [build_target_list, why_now, pick_contacts, draft_sequence, check_conflicts,
+                                 record_email_event, angle_performance]}

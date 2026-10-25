@@ -1,0 +1,34 @@
+# Events Event Campaigns invites to. Edit per quarter. Dates are local to the event city.
+# countries: empty means anyone may attend (webinars). target_tiers: Signal Scout tiers to invite.
+# personas: who to invite at each account (functions from gtm_core.personas, lowest seniority to invite).
+events:
+  - id: chi-revenue-dinner
+    name: Revenue Leaders Dinner, Chicago
+    type: hosted
+    date: "2026-11-12"
+    city: Chicago
+    countries: [US]
+    capacity: 12
+    registration_link: https://events.beacon.example/chicago-dinner
+    target_tiers: [A, B]
+    personas: {functions: [sales, revops, executive], min_seniority: director}
+  - id: london-booth
+    name: Pipeline Summit London, booth 14
+    type: booth
+    date: "2026-12-03"
+    city: London
+    countries: [GB]
+    capacity: 40
+    registration_link: https://events.beacon.example/london-booth
+    target_tiers: [A, B, C]
+    personas: {functions: [sales, revops], min_seniority: manager}
+  - id: forecast-webinar
+    name: "Webinar: Running a forecast call that holds"
+    type: webinar
+    date: "2026-11-19"
+    city: Online
+    countries: []
+    capacity: 300
+    registration_link: https://events.beacon.example/forecast-webinar
+    target_tiers: [A, B, C]
+    personas: {functions: [sales, revops, executive], min_seniority: manager}

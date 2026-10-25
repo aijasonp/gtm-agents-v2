@@ -47,3 +47,10 @@ expect:
     northwind.example: change_plus_intent
     contoso.example: money_plus_hiring
   duplicates_ignored: 1
+  judged_pain:         # judged primary pain from the account's own facts (rules backend offline)
+    northwind.example: deal_hygiene
+    contoso.example: prioritization
+  judged_min:
+    northwind.example: 90
+  judged_cannot_rescue: [wingtip.example]
+  judged_cached: northwind.example

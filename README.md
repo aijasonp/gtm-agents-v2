@@ -1,6 +1,6 @@
 # gtm-agents
 
-A full-stack GTM agent pack a mid-market sales team installs in its own environment and runs on the model keys it already pays for, frontier or open-weight. Seventeen agents cover the revenue motion from first signal to the forecast call, on one runtime with a chat assistant (terminal and Slack), approvals for every write, and a licensed library of 716 sales and marketing playbooks. No agent host is required: see [docs/RUNNING.md](docs/RUNNING.md).
+A full-stack GTM agent pack a mid-market sales team installs in its own environment and runs on the model keys it already pays for, frontier or open-weight. Twenty-four agents cover the revenue motion from first signal and event to signed proposal and the board forecast, on one runtime with a chat assistant (terminal and Slack), approvals for every write, and a licensed library of 716 sales and marketing playbooks. No agent host is required: see [docs/RUNNING.md](docs/RUNNING.md).
 
 Every agent ships in two editions from one source:
 
@@ -14,22 +14,29 @@ Every agent ships in two editions from one source:
 | # | Agent | Tier | Job | Main schedule |
 | --- | --- | --- | --- | --- |
 | 1 | **Lead Triage** | A | Qualifies inbound and event leads in minutes: account and open-deal match, ICP, persona and intent score, owner and SLA, first follow-up drafted | every 15 min |
-| 2 | **ICP Outbound** | A | Short ranked target list from ICP fit and fresh signals, conflicts removed (open deals, inbound in progress, recent touches), buyers picked, 3-step signal-led sequence drafted | weekly list, daily drafts |
+| 2 | **ICP Outbound** | A | Short ranked target list from ICP fit and fresh signals, conflicts removed (open deals, inbound in progress, recent touches), buyers picked, 3-step signal-led sequence drafted; the pain it leads with is picked from the judged ICP and learned open and reply rates | weekly list, daily drafts, weekly engagement report |
 | 3 | **Seller Follow-Up** | A | One short daily list per rep (overdue tasks, missed next steps, quiet deals, late leads, calls with no recap); recap email, CRM note and tasks drafted after every call | daily, every 30 min |
 | 4 | **Deal Inspection** | A | Every open deal checked for stage age, activity, slips, next step, MEDDPICC gaps by stage, coverage and fit; risk score with progress / fix / disqualify and the fixes | weekly, hourly evidence |
-| 5 | **Meeting Intelligence** | A | Reads call transcripts: summary, pain, next steps, objections, competitors, pricing talk, MEDDPICC evidence, coaching flags; hands work to Follow-Up and Deal Inspection | every 30 min |
+| 5 | **Meeting Intelligence** | A | Reads call transcripts: summary, pain, next steps, objections, competitors, pricing talk, MEDDPICC evidence, coaching flags; hands work to Follow-Up and Deal Inspection; pulls transcripts from Gong, Fireflies or Fathom | every 30 min |
 | 6 | **Sales Execution** | B | Pre-call brief for every upcoming meeting, MEDDPICC questions, objection help, proposal outline, next-steps summary | daily 7am |
 | 7 | **Product Marketing** | B | Competitor trends, win/loss by competitor and segment, objection library with gaps, evidence-backed battlecards, messaging and launch briefs | weekly, monthly |
-| 8 | **Revenue Pulse** | B | Weekly leadership summary computed from the CRM: pipeline, coverage, created / won / lost, slips, stage moves, stale deals, forecast rollup, owner scorecards, top risks | Monday 8am |
+| 8 | **Revenue Pulse** | B | Weekly leadership summary computed from the CRM: pipeline, coverage, created / won / lost, slips, stage moves, stale deals, forecast rollup, owner scorecards, top risks; plus a daily whole-funnel GTM report | Monday 8am, weekdays 7:30am |
 | 9 | **Rep Brief** | A | One daily brief per AE: top accounts, top people, new signals, pipeline gaps, replies, what to do next; plus the push-button AE workflow (research, gated first touch, sequence and call task in one approval) | weekdays 7:30am |
 | 10 | **Social Signals** | A | Engagement with company and influencer LinkedIn and YouTube content resolved to contacts and accounts, scored, and routed to the owner as signals | every 30 min |
 | 11 | **Reply Desk** | A | Every reply sorted (bounce, opt-out, out of office, referral, not now, objection, interested, question) and handled: stops, opt-outs, tasks, drafted answers | every 10 min |
-| 12 | **Enrichment** | B | Provider-agnostic email and phone waterfall with caching, spend caps and provenance; hit rate and cost per hit decide which data vendor stays | hourly |
-| 13 | **Forecast Prep** | B | Forecast call prep at AE, manager and exec level: commit vs suggested commit, changes since last week, questions to ask, change alerts | weekly, daily alerts |
+| 12 | **Enrichment** | B | Provider-agnostic email and phone waterfall with caching, spend caps and provenance; hit rate and cost per hit decide which data vendor stays; Clay table push and import | hourly |
+| 13 | **Forecast Prep** | B | Forecast call prep at AE, manager and exec level: commit vs suggested commit, changes since last week, questions to ask, change alerts; stores every rep's forecast call, tracks call accuracy and builds the board forecast range | weekly, daily alerts, Friday board |
 | 14 | **Stack Audit** | B | Tool inventory, utilization, overlap, renewal calendar with notice dates, savings scenarios, side-by-side against agent signals, tool-cut memo | weekly, monthly |
-| 15 | Signal Scout | A | Scores every account on ICP fit plus decayed, stacked buying signals; feeds Outbound, Triage, Rep Brief and Sales Execution | daily |
+| 15 | **Signal Scout** | A | Scores every account on ICP fit (rules plus judged, evidence-checked typed questions that learn from email opens and replies) and decayed, stacked buying signals; feeds Outbound, Triage, Rep Brief and Sales Execution | daily |
 | 16 | Copy QA Gate | C | Scores any outbound copy 0 to 40 (32 passes); every agent's drafts go through it | on call |
 | 17 | Ops Monitor | C | Watches the runtime: missed jobs, failures, stuck approvals, failed handoffs, budget pauses, spend | every 15 min |
+| 18 | **CRM Hygiene** | B | Duplicate accounts and contacts, contacts with no account, bounced contacts sent back for re-enrichment, stale stages and past close dates; every fix queued for approval | weekly |
+| 19 | **Quality Monitor** | B | Re-scores a fixed daily sample of live drafts with the Copy QA Gate, flags unsourced claims, alerts when quality drops against the 28-day baseline | weekdays |
+| 20 | Rep Feedback | C | Turns AE feedback on agent output into a one-line rule for the right file and a reviewed GitHub pull request | weekly digest |
+| 21 | **Event Campaigns** | B | Invite lists for dinners, booths and webinars from tiers, region and personas; invites, reminders, follow-ups; attendee import as leads and signals; event report | weekdays |
+| 22 | Content Studio | C | LinkedIn posts from call themes and approved proof, timed video scripts, SRT captions, frame QA; publishing waits for approval | weekly ideas |
+| 23 | **Proposal Builder** | B | Exact quote math from the price book (tiers, term and extra discounts, floor, role limits), branded proposal document from deal evidence; discounts and sends go through approval | weekly expiring quotes |
+| 24 | **Call Coach** | B | AE roleplays with the model as the buyer, 100-point scoring of any roleplay or real call, weekly drills from each AE's own calls | weekly |
 
 How they hand work to each other, what each one reads and writes, and which playbooks each bundles: [docs/AGENTS.md](docs/AGENTS.md).
 
@@ -45,14 +52,14 @@ How they hand work to each other, what each one reads and writes, and which play
 
 ## Optional: Slack front end on NetClaw
 
-`netclaw/` adds three Slack bots (pipeline, deals, revops) with 10 conversational subagents for an AE-only team. They call these 17 agents' tools over MCP; the runtime still does every calculation and holds every write for approval. See [netclaw/README.md](netclaw/README.md).
+`netclaw/` adds three Slack bots (pipeline, deals, revops) with 13 conversational subagents for an AE-only team. They call these 24 agents' tools over MCP; the runtime still does every calculation and holds every write for approval. See [netclaw/README.md](netclaw/README.md).
 
 ## Quick start (development)
 
 ```bash
 pip install -e ".[mcp,dev]"
-make test        # 140 tests
-make evals       # 354 golden cases across 17 agents (release gate)
+make test        # 186 tests
+make evals       # 506 golden cases across 24 agents (release gate)
 make demo        # every agent runs once on the fictional sample data, in pipeline order
 make compile     # drop-in packages in dist/<agent>/<version>/{claude,chatgpt,gemini,copilot}
 ```

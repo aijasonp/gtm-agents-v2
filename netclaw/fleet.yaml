@@ -1,7 +1,7 @@
 # GTM fleet on NetClaw: the single source of truth for the NetClaw build.
 #
-# 3 NetClaw instances, 10 subagents, lead in to closed deal out, AE-only team.
-# Each subagent is a conversational front end over the 17 runtime agents in agents/:
+# 3 NetClaw instances, 13 subagents, lead in to closed deal out, AE-only team.
+# Each subagent is a conversational front end over the 24 runtime agents in agents/:
 # the runtime computes (scores, routing, risk, forecast math) and queues every write
 # for approval; NetClaw talks to AEs in Slack and calls those tools over MCP.
 #
@@ -34,13 +34,20 @@ mcp_servers:
   signal-scout:         {port: 8115}
   copy-qa-gate:         {port: 8116}
   ops-monitor:          {port: 8117}
+  crm-hygiene:          {port: 8118}
+  quality-monitor:      {port: 8119}
+  rep-feedback:         {port: 8120}
+  event-campaigns:      {port: 8121}
+  content-studio:       {port: 8122}
+  proposal-builder:     {port: 8123}
+  call-coach:           {port: 8124}
 
 instances:
 
   pipeline:
     purpose: "Lead in and prospecting: inbound leads and replies, account ranking, sequences, copy gate."
     slack_channel: gtm-pipeline
-    mcp: [lead-triage, reply-desk, enrichment, signal-scout, social-signals, rep-brief, icp-outbound, copy-qa-gate]
+    mcp: [lead-triage, reply-desk, enrichment, signal-scout, social-signals, rep-brief, icp-outbound, copy-qa-gate, event-campaigns, content-studio]
     agents:
       inbound-router:
         stage: Lead in
@@ -62,11 +69,16 @@ instances:
         job: "Score every draft 0 to 40 (32 passes) and list exactly what to fix before an AE sees it."
         tools: [copy-qa-gate]
         skills: [agents/copy-qa-gate/skill, lib:avoid-ai-writing, lib:humanizer@blader-humanizer, lib:no-slop, lib:unslop, lib:copy-editing]
+      events-content:
+        stage: Demand
+        job: "Fill hosted dinners, booths and webinars with the right accounts, run reminders and follow-ups, and turn call themes into LinkedIn posts and short video scripts. Every invite and post waits for approval."
+        tools: [event-campaigns, content-studio, copy-qa-gate]
+        skills: [agents/event-campaigns/skill, agents/content-studio/skill, lib:social-content, lib:copy-editing]
 
   deals:
     purpose: "Discovery through close: prep every meeting, capture every call, manage every deal, build every proposal."
     slack_channel: gtm-deals
-    mcp: [sales-execution, meeting-intelligence, seller-follow-up, deal-inspection, product-marketing, copy-qa-gate]
+    mcp: [sales-execution, meeting-intelligence, seller-follow-up, deal-inspection, product-marketing, copy-qa-gate, proposal-builder, call-coach]
     agents:
       meeting-prep:
         stage: Discovery, demo
@@ -86,13 +98,18 @@ instances:
       proposal-close:
         stage: Negotiate, close
         job: "Proposal outline, business case, pricing narrative and objection handling, grounded in config/company.yaml; tracks proposal engagement."
-        tools: [sales-execution/proposal_outline, sales-execution/objection_help, product-marketing]
-        skills: [agents/product-marketing/skill, lib:sales-proposal-template, lib:sales-proposal-page, lib:sales-proposal-analytics, lib:sales-getaccept, lib:pricing-strategy, lib:hundred-million-offers, lib:competitor-alternatives]
+        tools: [sales-execution/proposal_outline, sales-execution/objection_help, product-marketing, proposal-builder]
+        skills: [agents/product-marketing/skill, agents/proposal-builder/skill, lib:sales-proposal-template, lib:sales-proposal-page, lib:sales-proposal-analytics, lib:sales-getaccept, lib:pricing-strategy, lib:hundred-million-offers, lib:competitor-alternatives]
+      call-coach:
+        stage: Rep skills
+        job: "Roleplay discovery, objections, pricing and competitor calls with the AE, score any roleplay or real call, and assign weekly drills from each AE's own calls."
+        tools: [call-coach, meeting-intelligence/coaching_notes]
+        skills: [agents/call-coach/skill, lib:sales-coaching, lib:sales-call-review]
 
   revops:
     purpose: "Forecast, hygiene and learning: forecast calls, pipeline roll-ups, runtime health, win/loss and stack review."
     slack_channel: gtm-forecast
-    mcp: [forecast-prep, revenue-pulse, ops-monitor, product-marketing, signal-scout, stack-audit]
+    mcp: [forecast-prep, revenue-pulse, ops-monitor, product-marketing, signal-scout, stack-audit, crm-hygiene, quality-monitor, rep-feedback, icp-outbound]
     agents:
       forecast-hygiene:
         stage: Whole pipeline
@@ -104,3 +121,8 @@ instances:
         job: "Win/loss by competitor and segment, outcomes recorded so signal weights learn, ICP refresh proposals, and the quarterly stack audit."
         tools: [product-marketing/win_loss_report, signal-scout/record_outcome, stack-audit]
         skills: [agents/stack-audit/skill, lib:sales-winn, lib:sales-call-review, lib:sales-customer-feedback]
+      system-quality:
+        stage: Always on
+        job: "Keep the CRM trustworthy (duplicates, orphan contacts, bounces, stale stages), watch the quality of live drafts, and turn AE feedback into reviewed pull requests. Every fix waits for approval."
+        tools: [crm-hygiene, quality-monitor, rep-feedback, icp-outbound/angle_performance, signal-scout/judge_account]
+        skills: [agents/crm-hygiene/skill, agents/quality-monitor/skill, agents/rep-feedback/skill, lib:sales-data-hygiene, lib:revops]

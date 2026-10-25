@@ -1,0 +1,40 @@
+# Price book for Proposal Builder. Sample numbers: replace with your real list prices during install.
+# All money is per unit per year in `currency`. Volume tiers: the highest min_qty at or below the
+# quantity sets the unit price for every unit on that line.
+currency: USD
+quote_valid_days: 30
+products:
+  - sku: AGENT-SEAT
+    name: Revenue Agents seat
+    unit: seat
+    list_price: 1200
+    tiers:
+      - {min_qty: 1, price: 1200}
+      - {min_qty: 25, price: 1080}
+      - {min_qty: 100, price: 960}
+  - sku: PLATFORM
+    name: Platform fee
+    unit: workspace
+    list_price: 15000
+    tiers: []
+  - sku: ONBOARD
+    name: Onboarding and CRM setup
+    unit: package
+    list_price: 7500
+    one_time: true          # charged once, not every year; no term discount
+    tiers: []
+terms:                      # discount applied to recurring lines for a longer commitment
+  - {years: 1, discount_pct: 0}
+  - {years: 2, discount_pct: 5}
+  - {years: 3, discount_pct: 10}
+discount_guardrails:        # extra discount on top of tiers and term, by who approves it
+  ae: 10
+  manager: 20
+  vp: 30
+floor_pct_of_list: 60       # recurring net price below this share of list is blocked, no one can approve it
+payment_terms: Net 30, billed annually in advance
+brand:
+  primary: "#1F2933"
+  accent: "#3E7CB1"
+  muted: "#F5F7FA"
+  logo_url: ""

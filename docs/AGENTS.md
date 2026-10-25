@@ -1,6 +1,6 @@
 # Agent guide
 
-How the seventeen agents work together, what each one reads and writes, and which licensed playbooks each bundles.
+How the twenty-four agents work together, what each one reads and writes, and which licensed playbooks each bundles.
 
 ## The flow
 
@@ -62,7 +62,7 @@ Agents share one database and pass work through `handoffs` (deduplicated, consum
 
 | Action | Queued by | Executes |
 | --- | --- | --- |
-| `sequence_enroll` | Lead Triage, ICP Outbound | Pushes contact plus approved copy to the sequencer (webhook or Smartlead) |
+| `sequence_enroll` | Lead Triage, ICP Outbound, Event Campaigns | Pushes contact plus approved copy to the sequencer (webhook, Smartlead or Lemlist) |
 | `crm_task` | Lead Triage, Seller Follow-Up | Task on the deal or account for the owner |
 | `crm_contact` | Lead Triage | Creates the contact on the account |
 | `crm_update` | Signal Scout | Score, tier and reasons on the account |
@@ -71,28 +71,40 @@ Agents share one database and pass work through `handoffs` (deduplicated, consum
 | `sequence_stop` | Reply Desk | Stops every sequence for a person; runs at once (`auto:safety`). Webhook sequencer; Smartlead flags a manual stop |
 | `contact_update` | Reply Desk, Enrichment | Opt-out flag, enriched email or phone |
 | `dialer_enqueue` | Rep Brief (push-button), Enrichment (opt-in) | Call task with a short script to the dialer webhook |
+| `crm_merge` | CRM Hygiene | Posts the merge instruction (no connector merges records) and marks losers `merged_into` locally |
+| `discount_approval` | Proposal Builder | Records the approved discount level on the quote |
+| `proposal_send` | Proposal Builder | Marks the quote and draft sent and adds a CRM note; the rep sends the document |
+| `github_pr` | Rep Feedback | Opens a pull request with the approved rule change; never touches `library/` |
+| `social_post` | Content Studio | Hands an approved post to the publishing tool |
 
 ## Per agent
 
 | Agent | Reads | Writes (local) | Queues for approval | Tools | Jobs | Bundled playbooks |
 | --- | --- | --- | --- | --- | --- | --- |
 | Lead Triage | leads, accounts, contacts, deals, scores | lead status, score, tier, owner, SLA; drafts | crm_contact, crm_task, sequence_enroll | triage_lead, list_leads, add_lead, route_lead, draft_follow_up | triage_inbox, sla_check | sales-lead-score, sales-lead-routing, email-sequence, icp-persona, predictable-revenue |
-| ICP Outbound | scores, signals, accounts, contacts, deals, leads, drafts | drafts (3 steps), contact outbound_queued_at | sequence_enroll | build_target_list, why_now, pick_contacts, draft_sequence, check_conflicts | weekly_list_build, daily_drafts | cold-email, email-sequence, sales-cadence, sales-deliverability, sales-prospect-list, icp-persona, predictable-revenue, influence-psychology |
+| ICP Outbound | scores, signals, accounts, contacts, deals, leads, drafts | drafts (3 steps, tagged with angle and value prop), contact outbound_queued_at, email events | sequence_enroll | build_target_list, why_now, pick_contacts, draft_sequence, check_conflicts, record_email_event, angle_performance | weekly_list_build, daily_drafts, weekly_angle_report | cold-email, email-sequence, sales-cadence, sales-deliverability, sales-prospect-list, icp-persona, predictable-revenue, influence-psychology |
 | Seller Follow-Up | tasks, deals, leads, meetings, drafts, handoffs | drafts (recaps, follow-ups), snoozes | crm_task, deal_note, deal_update | whats_overdue, draft_follow_up, draft_recap, log_next_step, snooze | daily_digest, process_recaps | sales-cadence, email-sequence, humanizer |
 | Deal Inspection | deals, deal history, contacts, accounts, insights, handoffs | deal MEDDPICC (proposed), deal_inspection insights | deal_update | inspect_deal, list_at_risk, meddpicc_gaps, update_meddpicc, recommend_action | sync_deals, weekly_inspection, apply_evidence | sales-deal-inspect, sales-forecast, revops |
-| Meeting Intelligence | meetings (transcripts), deals, accounts | meeting summary, insights, handoffs | deal_note | analyze_call, meeting_summary, list_meetings, coaching_notes, search_mentions | ingest_inbox, process_meetings | sales-call-review, sales-coaching |
+| Meeting Intelligence | meetings (transcripts), deals, accounts | meeting summary, insights, handoffs | deal_note | analyze_call, meeting_summary, list_meetings, coaching_notes, search_mentions | ingest_inbox, pull_transcripts, process_meetings | sales-call-review, sales-coaching |
 | Sales Execution | meetings, deals, contacts, scores, insights, tasks | precall_brief insights | none | precall_brief, meddpicc_questions, objection_help, proposal_outline, next_steps_summary | precall_briefs | sales-proposal-template, sales-enablement, hundred-million-offers, crossing-the-chasm |
 | Product Marketing | insights, deals, accounts | battlecard insights and drafts | none | competitor_intel, battlecard, win_loss_report, objection_library, messaging_brief, launch_brief | weekly_field_report, battlecard_refresh | competitor-alternatives, competitor-profiling, product-marketing-context, launch-strategy, pricing-strategy, product-positioning, product-messaging, case-study-builder, sales-compete, obviously-awesome, storybrand-messaging, made-to-stick |
-| Revenue Pulse | deals, deal history, insights, tasks | weekly snapshot (state) | none | pipeline_summary, forecast_rollup, slipped_deals, stale_deals, top_risks, owner_scorecard | weekly_pulse | sales-forecast, revops |
-| Signal Scout | accounts, signals, outcomes | scores, learned weights | crm_update | score_account, list_priority_accounts, explain_score, add_signal, record_outcome, push_to_crm | sync_accounts, daily_sweep, weekly_reweight | sales-intent, sales-account-map, sales-enrich, clay-gtm-outbound |
+| Revenue Pulse | deals, deal history, insights, tasks | weekly snapshot (state) | none | pipeline_summary, forecast_rollup, slipped_deals, stale_deals, top_risks, owner_scorecard, daily_report | weekly_pulse, daily_gtm_report | sales-forecast, revops |
+| Signal Scout | accounts, signals, outcomes, email events | scores, decisions (judged ICP), learned signal and question weights | crm_update | score_account, list_priority_accounts, explain_score, add_signal, record_outcome, push_to_crm, judge_account | sync_accounts, daily_sweep, weekly_reweight | sales-intent, sales-account-map, sales-enrich, clay-gtm-outbound |
 | Copy QA Gate | text | none | none | check_copy, check_batch | none | avoid-ai-writing, humanizer, unslop, no-slop, copy-editing |
 | Rep Brief | scores, signals, deals, tasks, leads, replies, insights | brief state | sequence_enroll, crm_task, dialer_enqueue | my_brief, push_button, top_accounts, pipeline_gaps, whats_new | daily_briefs | sales-account-map, sales-cadence, cold-email, predictable-revenue |
 | Social Signals | engagement exports, contacts, accounts | signals, insights | crm_contact | add_engagement, engagement_for, top_engagers, creator_report, resolve_person | ingest_engagement, weekly_creator_report | sales-intent, sales-social-listening, social-content |
 | Reply Desk | replies, contacts, drafts | replies table, contact flags, outcomes, insights | sequence_stop, contact_update, crm_contact, crm_task | classify_reply, add_reply, handle_reply, replies_needing_action, opt_out | process_replies, reply_digest | sales-reply, sales-inbox-zero, sales-deliverability, humanizer |
-| Enrichment | contacts, scores, leads, handoffs | contact fields with provenance, cache | contact_update, crm_contact, dialer_enqueue (opt-in) | enrich_contact, enrich_account, waterfall_report, coverage_report | enrich_queue | sales-enrich, sales-data-hygiene, sales-zoominfo, sales-clay |
-| Forecast Prep | deals, deal history, insights | weekly snapshot | none | ae_prep, manager_prep, exec_prep, forecast_changes, call_agenda | forecast_prep, forecast_change_alerts | sales-forecast, sales-deal-inspect, revops |
+| Enrichment | contacts, scores, leads, handoffs | contact fields with provenance, cache | contact_update, crm_contact, dialer_enqueue (opt-in) | enrich_contact, enrich_account, waterfall_report, coverage_report, push_to_clay, import_clay | enrich_queue | sales-enrich, sales-data-hygiene, sales-zoominfo, sales-clay |
+| Forecast Prep | deals, deal history, insights | weekly snapshot, forecast calls | none | ae_prep, manager_prep, exec_prep, forecast_changes, call_agenda, submit_forecast_call, forecast_call_history, board_forecast | forecast_prep, forecast_change_alerts, board_forecast_post | sales-forecast, sales-deal-inspect, revops |
 | Stack Audit | tool inventory, scores, outcomes | memo draft | none | stack_summary, overlap_matrix, renewal_calendar, savings_scenarios, compare_lists, cut_memo | renewal_watch, monthly_utilization | revops, lean-analytics |
 | Ops Monitor | runs, approvals, handoffs, token usage, manifests | alert state | none | health_report, job_status, stuck_items, spend_report | health_check, daily_ops_summary | none |
+| CRM Hygiene | accounts, contacts, deals, deal history | merged_into marks, enrichment handoffs | crm_merge, contact_update, crm_contact, deal_update | find_duplicate_accounts, find_duplicate_contacts, contacts_missing_account, bounced_contacts, stale_stages, propose_fix | weekly_hygiene_report | sales-data-hygiene, revops |
+| Quality Monitor | drafts, company.yaml proof points | quality insights | none | sample_drafts, quality_report, regression_check, draft_scorecard | daily_quality | avoid-ai-writing, copy-editing |
+| Rep Feedback | feedback, drafts, agent SKILL.md and config files | feedback and proposals | github_pr | submit_feedback, list_feedback, propose_change, open_pr | weekly_feedback_digest | sales-customer-feedback |
+| Event Campaigns | config/events.yaml, scores, accounts, contacts, deals, outcomes | drafts, leads, event signals | sequence_enroll | list_events, build_invite_list, draft_invites, import_attendees, event_report | event_reminders, post_event_followups | sales-webinar, copywriting |
+| Content Studio | insights, company.yaml | drafts (posts, scripts) | social_post | linkedin_post, publish_post, video_script, captions, frame_qa | weekly_content_ideas | social-content, content-strategy, copywriting, sales-content |
+| Proposal Builder | config/pricebook.yaml, deals, MEDDPICC, company.yaml | quotes, proposal documents and drafts | discount_approval, proposal_send | list_products, build_quote, check_discount, render_proposal, send_proposal, get_quote | expiring_quotes | sales-proposal-template, sales-proposal-page, hundred-million-offers |
+| Call Coach | meetings, insights, scenarios | none | none | list_scenarios, start_roleplay, score_roleplay, drill_plan | weekly_drills | sales-coaching, sales-call-review, influence-psychology |
 
 ## Selling agents separately
 

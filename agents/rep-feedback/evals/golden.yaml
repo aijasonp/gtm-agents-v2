@@ -1,0 +1,12 @@
+# Rep Feedback golden cases: routing, sanitizing, insertion, grouping, refusals.
+feedback:
+  - {agent: icp-outbound, text: "Bumps read like templates. Make step two sound like a person wrote it.", expect: agents/icp-outbound/skill/SKILL.md}
+  - {agent: icp-outbound, text: "Keep first touches under 80 words \u2014 reps cut them anyway", expect: agents/icp-outbound/skill/SKILL.md}
+  - {agent: signal-scout, text: "The list had government agencies and companies too small for us", expect: config/icp.yaml}
+  - {agent: reply-desk, text: "Stop using the 6 hours proof point with enterprise buyers", expect: config/company.yaml}
+  - {agent: lead-triage, text: "Route faster on Fridays", expect: agents/lead-triage/skill/SKILL.md}
+expect:
+  unknown_agent: library
+  em_dash_removed_from: 1
+  rules_section_gets: 2             # the two icp-outbound items become two bullets in Rules
+  mixed_targets_refused: [0, 2]

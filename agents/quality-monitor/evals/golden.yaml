@@ -1,0 +1,23 @@
+# Quality Monitor golden cases. Fixed now; drafts dated relative to it.
+now: "2026-11-02T09:00:00+00:00"
+good: "Hi Dana,\n\nSaw the new role. Teams like yours start with one outcome: a ranked list of accounts each morning.\n\nWorth 15 minutes next week?\n\nSam"
+bad: "Hi Dana,\n\nI hope this email finds you well! We leverage cutting-edge AI to boost pipeline 300% and customers like Globex Bank love it.\n\nCan we talk? Are you free? Thanks!\n\nSam"
+sourced: "Hi Lee,\n\nOne team cut list building from 6 hours to 1 hour per rep per week.\n\nWorth a look?\n\nSam"
+drafts:
+  # icp-outbound: steady and good in both windows
+  - {agent: icp-outbound, body: good, days_ago: [2, 3, 4, 5, 10, 12, 15, 20, 25, 30]}
+  # reply-desk: good baseline, bad last week
+  - {agent: reply-desk, body: good, days_ago: [10, 12, 14, 16, 20, 22]}
+  - {agent: reply-desk, body: bad, days_ago: [1, 2, 3, 4]}
+  # lead-triage: only recent drafts, no baseline
+  - {agent: lead-triage, body: sourced, days_ago: [1, 2]}
+  # internal doc and ungated drafts are ignored
+  - {agent: product-marketing, body: bad, kind: battlecard, days_ago: [1, 2, 3]}
+expect:
+  regressed: [reply-desk]
+  not_regressed: [icp-outbound]
+  no_baseline: [lead-triage]
+  sample_size: {icp-outbound: 4, reply-desk: 4, lead-triage: 2}
+  excluded_agent: product-marketing
+  unsourced_in_bad: ["300%", "customers like Globex Bank"]
+  sourced_ok: "6 hours"

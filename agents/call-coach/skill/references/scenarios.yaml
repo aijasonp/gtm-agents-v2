@@ -1,0 +1,66 @@
+# Roleplay scenarios. `trains` names the skills each scenario drills (see references/rubric.md).
+# The buyer card is for the model playing the buyer: never show hidden_pain or unlocks to the rep.
+scenarios:
+  - id: discovery_first_call
+    type: discovery
+    title: First discovery call with a sales leader
+    persona_function: sales
+    setup: Inbound demo request. The buyer filled in a form but gave no detail.
+    goal: Find the pain, its cost, who else decides, and agree a dated next step.
+    hidden_pain: Reps spend Monday mornings building account lists by hand and miss fresh buying signals.
+    objections: ["We already have a data provider", "Not sure this is a priority this quarter"]
+    unlocks: Questions about how reps decide who to call on Monday, and what a missed quarter cost.
+    focus: [identify_pain, metrics, decision_process, economic_buyer]
+    min_questions: 8
+    trains: [questioning, open_questions, qualification, next_step]
+  - id: price_objection
+    type: objection
+    title: The buyer says it costs too much
+    persona_function: revops
+    setup: Late evaluation. The buyer has seen pricing and pushes back on cost.
+    goal: Acknowledge, find what is behind the objection, tie price to the agreed metric, keep the next step.
+    hidden_pain: Budget is fixed this half; they need the cost to come out of tools they would cut.
+    objections: ["This is too expensive", "Our budget is tight this half"]
+    unlocks: Asking what the price is being compared to, and what they would cut to fund it.
+    focus: [metrics, economic_buyer, paper_process]
+    min_questions: 5
+    requires_objection: true
+    trains: [objection_handling, talk_ratio, monologue]
+  - id: pricing_negotiation
+    type: pricing
+    title: Procurement asks for a bigger discount
+    persona_function: executive
+    setup: Verbal yes. Procurement asks for 25% off to sign this month.
+    goal: Trade, never give. Get term, volume or timing in return and confirm the paper process.
+    hidden_pain: Procurement is measured on percent saved, not on price.
+    objections: ["We need 25% off to sign this month", "Your competitor came in cheaper"]
+    unlocks: Offering a longer term or a larger commitment in exchange for a discount within policy.
+    focus: [paper_process, decision_process, economic_buyer]
+    min_questions: 5
+    requires_objection: true
+    trains: [objection_handling, next_step, monologue]
+  - id: competitor_displacement
+    type: competitor
+    title: The buyer is happy with an incumbent
+    persona_function: sales
+    setup: Outbound reply. The buyer uses a competitor and says it works fine.
+    goal: Find the gap the incumbent leaves without attacking it, and agree to compare on criteria.
+    hidden_pain: The incumbent gives data but no workflow; reps still copy rows into the CRM.
+    objections: ["We already use another tool and it works fine"]
+    unlocks: Asking what happens after the data lands, and who does the copying.
+    focus: [competition, decision_criteria, identify_pain]
+    min_questions: 6
+    requires_objection: true
+    trains: [questioning, open_questions, objection_handling]
+  - id: champion_building
+    type: champion
+    title: Turn a friendly user into a champion
+    persona_function: revops
+    setup: Second call. The contact likes the product but has never bought software.
+    goal: Test whether they will sell it internally, map the decision process and the economic buyer, and coach their pitch.
+    hidden_pain: They want a promotion and need a visible win this quarter.
+    objections: ["I need to run it by my boss", "I am not sure how our approval process works"]
+    unlocks: Asking what a win would mean for them, and offering to build the internal case together.
+    focus: [champion, economic_buyer, decision_process, paper_process]
+    min_questions: 6
+    trains: [qualification, next_step, talk_ratio]

@@ -24,6 +24,8 @@ tools:
   - enrich_account
   - waterfall_report
   - coverage_report
+  - push_to_clay
+  - import_clay
 connectors_required: []
 connectors_optional: [crm, slack, enrichment_providers, dialer]
 jobs:

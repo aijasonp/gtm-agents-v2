@@ -49,6 +49,13 @@ TOOL_OVERRIDES = {
     "reply-desk/opt_out": "Approval",
     "deal-inspection/update_meddpicc": "Approval",
     "seller-follow-up/log_next_step": "Approval",
+    "crm-hygiene/propose_fix": "Approval",
+    "rep-feedback/open_pr": "Approval",
+    "event-campaigns/draft_invites": "Approval",
+    "content-studio/publish_post": "Approval",
+    "proposal-builder/send_proposal": "Approval",
+    "icp-outbound/record_email_event": "Approval",
+    "forecast-prep/submit_forecast_call": "Auto",
 }
 TOOLS_HOST = "gtm-tools"
 

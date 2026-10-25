@@ -1,10 +1,10 @@
 # NetClaw front end (optional)
 
-The runtime in this repo already schedules every agent, holds memory, takes intake over HTTP and serves a chat assistant. This folder adds an optional conversational layer on [NetClaw](https://netclaw.dev) (open source, Apache 2.0, self-hosted): three Slack bots that talk to AEs and leaders and call the 17 runtime agents' tools over MCP.
+The runtime in this repo already schedules every agent, holds memory, takes intake over HTTP and serves a chat assistant. This folder adds an optional conversational layer on [NetClaw](https://netclaw.dev) (open source, Apache 2.0, self-hosted): three Slack bots that talk to AEs and leaders and call the 24 runtime agents' tools over MCP.
 
 Use it when the team wants to work in Slack with separate workspaces for pipeline, deals and forecasting. Skip it and the runtime still runs end to end.
 
-## Shape: 3 instances, 10 subagents, AE-only team
+## Shape: 3 instances, 13 subagents, AE-only team
 
 ```
 LEAD IN ─► PIPELINE ──────────────────────► DEALS ─────────────────────► CLOSED
@@ -17,9 +17,9 @@ LEAD IN ─► PIPELINE ──────────────────�
 
 | Instance | Subagents | Runtime agents it calls | Skills |
 | --- | --- | --- | --- |
-| pipeline | inbound-router, signal-scout, prospecting-writer, copy-qa-gate | lead-triage, reply-desk, enrichment, signal-scout, social-signals, rep-brief, icp-outbound, copy-qa-gate | 44 |
-| deals | meeting-prep, call-intel, deal-manager, proposal-close | sales-execution, meeting-intelligence, seller-follow-up, deal-inspection, product-marketing, copy-qa-gate | 32 |
-| revops | forecast-hygiene, win-loss-learning | forecast-prep, revenue-pulse, ops-monitor, product-marketing, signal-scout, stack-audit | 14 |
+| pipeline | inbound-router, signal-scout, prospecting-writer, copy-qa-gate, events-content | lead-triage, reply-desk, enrichment, signal-scout, social-signals, rep-brief, icp-outbound, copy-qa-gate, event-campaigns, content-studio | 47 |
+| deals | meeting-prep, call-intel, deal-manager, proposal-close, call-coach | sales-execution, meeting-intelligence, seller-follow-up, deal-inspection, product-marketing, copy-qa-gate, proposal-builder, call-coach | 34 |
+| revops | forecast-hygiene, win-loss-learning, system-quality | forecast-prep, revenue-pulse, ops-monitor, product-marketing, signal-scout, stack-audit, crm-hygiene, quality-monitor, rep-feedback, icp-outbound | 18 |
 
 `fleet.yaml` is the source of truth. Skills come from the licensed library (`lib:<name>`), the runtime agents' own skills (`agents/<id>/skill`), and two first-party skills in `shared/` (`gtm-playbooks`, `forecast-call`).
 
@@ -36,11 +36,14 @@ LEAD IN ─► PIPELINE ──────────────────�
 | pipeline | daily-brief | weekdays 7:30 |
 | pipeline | replies-digest | weekdays 11:00 and 16:00 |
 | pipeline | weekly-target-list | Mon 9:00 |
+| pipeline | engagement-weekly | Mon 8:30 |
 | deals | next-day-meeting-prep | Sun to Thu 17:00 |
 | deals | weekly-deal-review | Mon 8:00 |
 | deals | daily-follow-ups | Tue to Fri 8:30 |
 | revops | forecast reminder / call / nudge / leader prep | Wed 9:00, Thu 8:00, Thu 16:00, Fri 8:00 |
 | revops | weekly-pulse-mon | Mon 8:00 |
+| revops | daily-gtm-report | weekdays 7:30 |
+| revops | board-forecast-fri | Fri 11:00 |
 | revops | daily-health | daily 7:00 |
 | revops | win-loss-weekly | Fri 15:00 |
 | revops | icp-review-monthly | 1st of month 9:00 |

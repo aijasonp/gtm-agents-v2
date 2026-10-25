@@ -70,4 +70,8 @@ def evaluate(m, spec, make_ctx) -> list[dict]:
         add("job stores snapshot for next week", ctx.store.get_state(eng.STATE_KEY)["open_pipeline"] == ex["open_pipeline"],
             json.dumps(ctx.store.get_state(eng.STATE_KEY)))
         add("every number in the post is from the pulse", "$270,000" in text and "$120,000" in text and "0.26x" in text, "")
+    d = eng.daily(ctx, now, days=7)
+    add("daily report: won in window matches the pulse", d["deals"]["won"]["count"] == p["won"]["count"],
+        (d["deals"]["won"], p["won"]))
+    add("daily report text renders", "Daily GTM report" in eng.format_daily(d), "")
     return out

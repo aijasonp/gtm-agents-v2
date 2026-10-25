@@ -1,0 +1,43 @@
+id: event-campaigns
+name: Event Campaigns
+version: 0.1.0
+tier: B
+description: >
+  Fills hosted dinners, booths and webinars with the right accounts. Builds the invite list from
+  Signal Scout tiers, event region and event personas, skips accounts in active pipeline or on
+  do-not-contact, drafts invites, reminders and follow-ups through the Copy QA Gate, imports
+  registrants as leads with an attended-event signal, and reports meetings and pipeline from
+  attending accounts. Every send waits for human approval.
+editions: [dropin, persistent]
+skill: skill/SKILL.md
+references:
+  - skill/references/event-playbook.md
+  - ../../config/events.yaml
+  - ../../config/icp.yaml
+  - ../../config/company.yaml
+library:  # licensed playbooks bundled into the drop-in package (see THIRD_PARTY_NOTICES.md)
+  - library/sales-skills/skills/sales-webinar
+  - library/coreyhaines-marketingskills/skills/copywriting
+tools:
+  - list_events
+  - build_invite_list
+  - draft_invites
+  - import_attendees
+  - event_report
+connectors_required: []
+connectors_optional: [crm, slack, sequencer]
+jobs:
+  - {name: event_reminders, cron: "0 8 * * 1-5", model_class: frontier}
+  - {name: post_event_followups, cron: "30 8 * * 1-5", model_class: frontier}
+budgets: {daily_tokens: 600000, monthly_usd: 40}
+evals: evals/golden.yaml
+config:
+  company: ../../config/company.yaml
+  icp: ../../config/icp.yaml
+  events: ../../config/events.yaml
+  do_not_contact: ../icp-outbound/skill/references/do-not-contact.yaml
+  invite_multiplier: 3          # invites per seat (hosted dinners usually convert 1 in 3)
+  icp_only_min: 60              # accounts without a Signal Scout score need this ICP fit
+  max_contacts_per_account: 2
+  reminder_days: 7
+  max_words: 90

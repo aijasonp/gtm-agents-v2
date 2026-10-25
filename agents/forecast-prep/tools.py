@@ -1,4 +1,4 @@
-"""Forecast Prep MCP tools. Read-only: nothing here writes to the CRM."""
+"""Forecast Prep MCP tools. Nothing here writes to the CRM; forecast calls are stored locally."""
 from __future__ import annotations
 
 from gtm_core.agents import load_module
@@ -39,4 +39,28 @@ def call_agenda(ctx, level: str = "manager", owner: str = "") -> dict:
     return _eng(ctx).agenda(ctx, level, owner)
 
 
-TOOLS = {f.__name__: f for f in [ae_prep, manager_prep, exec_prep, forecast_changes, call_agenda]}
+def submit_forecast_call(ctx, owner: str, commit: float, best_case: float | None = None, pipeline: float | None = None,
+                         notes: str = "", deal_ids: list[str] | None = None) -> dict:
+    """Record what a rep called this quarter (commit, optional best case and pipeline, notes, the deals in it), saved
+    next to the system's suggested commit at that moment. Local record; nothing goes to the CRM."""
+    try:
+        return _eng(ctx).submit_call(ctx, owner, commit, best_case, notes, deal_ids, pipeline_call=pipeline)
+    except ValueError as e:
+        return {"error": str(e)}
+
+
+def forecast_call_history(ctx, owner: str = "", period: str = "") -> dict:
+    """Every submitted call (optionally one rep or one quarter like Q4 2026), plus call accuracy on closed quarters."""
+    eng = _eng(ctx)
+    return {"calls": eng.calls(ctx, period, owner), "accuracy": eng.accuracy(ctx, owner)}
+
+
+def board_forecast(ctx) -> dict:
+    """Board view: won to date and a low, call and high range (suggested commit, rep calls scaled by each rep's
+    past accuracy, and best case), attainment percents, reps with no call, and next quarter pipeline."""
+    b = _eng(ctx).board_forecast(ctx)
+    return {**b, "text": _eng(ctx).format_board(b)}
+
+
+TOOLS = {f.__name__: f for f in [ae_prep, manager_prep, exec_prep, forecast_changes, call_agenda,
+                                 submit_forecast_call, forecast_call_history, board_forecast]}

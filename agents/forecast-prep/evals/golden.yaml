@@ -27,6 +27,8 @@ inspections:  # latest Deal Inspection result per deal
   - {deal_id: C, risk: 10, gaps: []}
   - {deal_id: G, risk: 60, gaps: [champion]}
 previous_snapshot: {as_of: "2026-11-05T15:00:00+00:00", org: {won: 55000, commit: 400000, best_case: 520000, pipeline: 600000}}
+calls:  # submitted forecast calls this quarter (others fall back to CRM commit)
+  - {owner: Sam Rivera, commit: 150000}
 expect:
   sam: {commit: 236000, best_case: 286000, pipeline: 286000, month_commit: 140000, suggested: 96000, dropped: [Contoso Health], flag: happy ears}
   lee: {won: 55000, commit: 0, suggested: 72000, added: [Tailspin], flag: sandbagging}
@@ -39,3 +41,4 @@ expect:
   first_to_inspect: Fourth Coffee
   wow_commit: 96000
   alerts: 3
+  board: {call: 465000, no_call: [Priya Shah, Lee Park]}

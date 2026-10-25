@@ -6,3 +6,83 @@ revenue: [20000000, 500000000]
 countries: [US, CA, GB]
 tech_any: [salesforce, hubspot, outreach, salesloft, gong, clay]
 weights: {industry: 0.35, employees: 0.30, country: 0.10, revenue: 0.10, tech: 0.15}
+
+# Judged ICP: typed questions a rule cannot answer from firmographics alone. Answers come from
+# the rules below (offline), the customer's model, or a remote decision service, and every
+# answer must quote evidence from the account's own facts. The judged score blends into ICP fit:
+#   icp = (1 - blend x coverage) x rule_fit + blend x coverage x judged
+# coverage is the share of question weight that got an answer, so thin evidence moves little.
+# Weekly learning (signal-scout `weekly_reweight`) tunes each question's weight from email
+# opens and replies. Edit questions for the buyer during install; change `version` to re-judge.
+judgment:
+  enabled: true
+  backend: auto            # auto | rules | model | remote | shadow
+  blend: 0.5
+  cache_days: 30
+  remote: {url_env: GTM_DECISION_URL, token_env: GTM_DECISION_TOKEN, timeout: 20}
+  shadow: {primary: rules, candidate: model}
+  learning: {window_days: 120, min_per_side: 20, weights: {open: 0.4, reply: 0.6}}
+  models:
+    icp_fit:
+      version: "1"
+      questions:
+        - id: sells_with_reps
+          kind: bool
+          ask: Does this company sell B2B through a sales team (account executives or SDRs)?
+          weight: 0.30
+          rules:
+            fields: [tech, description, keywords]
+            no_any: [self-serve only, consumer app, b2c only]
+            yes_any: [salesforce, hubspot, outreach, salesloft, gong, apollo, sales team, account executives, sdr]
+        - id: sales_motion
+          kind: choice
+          ask: What is the main sales motion?
+          weight: 0.25
+          options: {outbound_led: 1.0, mixed: 0.7, inbound_led: 0.45, self_serve: 0.1}
+          rules:
+            fields: [tech, description, keywords]
+            match:
+              self_serve: [self-serve, freemium, product-led]
+              outbound_led: [outreach, salesloft, apollo, outbound, sdr team]
+              mixed: [inbound and outbound]
+              inbound_led: [inbound-led, hubspot marketing hub]
+        - id: team_scale
+          kind: score
+          ask: How well does the size of the go-to-market team fit (1 poor, 5 ideal)?
+          weight: 0.25
+          rules:
+            field: employees
+            bands: [[0, 50, 1], [50, 150, 2], [150, 400, 4], [400, 2000, 5], [2000, null, 3]]
+        - id: data_maturity
+          kind: score
+          ask: How disciplined is their revenue data and tooling (1 none, 5 mature)?
+          weight: 0.20
+          rules:
+            fields: [tech, description, keywords]
+            levels: {5: [gong, clay, revops team], 4: [salesforce], 3: [hubspot]}
+        - id: primary_pain
+          kind: choice
+          ask: Which of our value props names the pain most likely top of mind right now?
+          weight: 0          # used by ICP Outbound to choose the pain, not scored
+          options_from: value_props
+          rules:
+            fields: [signals, description, keywords]
+            match:
+              deal_hygiene: [new executive in the buying function, forecast, new c-suite executive]
+              prioritization: [hiring into the buying team, headcount up, territory]
+              follow_up: [call recording, meeting heavy, gong]
+    signal_relevance:
+      version: "1"
+      floor: 0.85          # signal heat multiplier when signals are unrelated to our pains
+      ceiling: 1.15        # multiplier when they point straight at them
+      questions:
+        - id: signals_point_to_pain
+          kind: score
+          ask: How directly do the recent signals point to a pain we solve (1 unrelated, 5 directly)?
+          weight: 1.0
+          rules:
+            fields: [signals]
+            levels:
+              5: [hiring into the buying team, new executive in the buying function, visited pricing page, uses a competitor, executive posted about the problem we solve]
+              3: [raised a funding round, headcount up, new c-suite executive, downloaded content, repeat website visits]
+              2: [new regulation applies to them]

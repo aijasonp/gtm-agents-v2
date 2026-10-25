@@ -1,7 +1,7 @@
 {
   "id": "icp-review-monthly",
   "title": "Monthly ICP and stack review (1st, 9:00 CT)",
-  "instructions": "Spawn win-loss-learning: propose ICP edits from win/loss data, and list tool renewals due in 60 days with savings scenarios.",
+  "instructions": "Spawn win-loss-learning: propose ICP edits from win/loss data and from judged ICP engagement (open and reply rates by judged band, questions whose weight moved), and list tool renewals due in 60 days with savings scenarios.",
   "schedule": {
     "type": "Cron",
     "cronExpression": "0 14 1 * *"

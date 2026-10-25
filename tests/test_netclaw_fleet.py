@@ -22,7 +22,7 @@ def test_fleet_builds(tmp_path):
     assert r.returncode == 0, r.stderr
     fleet = yaml.safe_load((ROOT / "netclaw/fleet.yaml").read_text())
     agents = [a for i in fleet["instances"].values() for a in i["agents"]]
-    assert len(agents) == 10
+    assert len(agents) == 13
     for inst, spec in fleet["instances"].items():
         base = out / inst
         cfg = json.loads((base / "config/netclaw.json").read_text())

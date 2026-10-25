@@ -1,0 +1,29 @@
+# CRM Hygiene golden cases. Fixed now.
+now: "2026-11-02T09:00:00+00:00"
+accounts:
+  - {id: northwind.example, name: Northwind Logistics, domain: northwind.example, crm_id: "1001"}
+  - {id: nw-dup, name: "Northwind Logistics, LLC", domain: "https://www.northwind.example/about"}
+  - {id: contoso.example, name: Contoso Health Inc., domain: contoso.example}
+  - {id: contoso-health.example, name: Contoso Health, domain: contoso-health.example, industry: Healthcare}
+  - {id: fabrikam.example, name: Fabrikam Insurance, domain: fabrikam.example}
+contacts:
+  - {id: c1, name: Dana Cole, email: dana@northwind.example, account_id: northwind.example, crm_id: "c-1"}
+  - {id: c2, name: Dana Cole, email: DANA@northwind.example, account_id: northwind.example}
+  - {id: c3, name: Lee Park, email: lee@fabrikam.example}
+  - {id: c4, name: Ana Ruiz, email: ana.ruiz@gmail.com}
+  - {id: c5, name: Omar Haddad, email: omar@unknown.example}
+  - {id: c6, name: Priya Shah, email: priya@contoso.example, account_id: contoso.example, email_invalid: true}
+deals:
+  - {id: d1, crm_id: "o-1", name: Northwind expansion, owner: Sam Rivera, stage: Proposal, status: open, close_date: "2026-10-15", last_activity_at: "2026-10-30"}
+  - {id: d2, name: Fabrikam pilot, owner: Lee Park, stage: Negotiation, status: open, close_date: "2026-12-15", last_activity_at: "2026-10-01"}
+  - {id: d3, name: Contoso renewal, owner: Priya Shah, stage: Evaluation, status: open, close_date: "2026-12-20", last_activity_at: "2026-10-28"}
+  - {id: d4, name: Old win, stage: Closed Won, status: won, close_date: "2026-01-01"}
+expect:
+  account_groups: [[northwind.example, nw-dup], [contoso-health.example, contoso.example]]
+  account_survivor: {northwind.example: northwind.example}
+  contact_groups: [[c1, c2]]
+  contact_survivor: c1
+  missing_match: {c3: fabrikam.example, c4: null, c5: null}
+  bounced: [c6]
+  stale: [d1, d2]
+  d1_close_date: "2026-12-02"

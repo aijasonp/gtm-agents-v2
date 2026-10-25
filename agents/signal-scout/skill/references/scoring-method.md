@@ -71,3 +71,14 @@ new = 0.7 x current + 0.3 x target, bounded to [0.25x, 3x] base_weight
 ```
 
 Positive outcomes: reply_positive, meeting, opportunity, closed_won.
+
+## Judged ICP blend
+
+```
+coverage = answered question weight / total question weight
+b        = blend x coverage            (blend from config, default 0.5)
+icp      = (1 - b) x rule_fit + b x judged_score
+signal   = signal_heat x relevance     (relevance from floor 0.85 to ceiling 1.15)
+```
+
+Question scores: yes = 1, no = 0; a choice uses its option value; a 1 to 5 score maps to (n - 1) / 4. Weekly, each question's weight multiplier moves toward the square root of its engagement lift (human open 0.4, reply 0.6), bounded to 0.5x through 2x, and only with 20 emailed accounts on each side.

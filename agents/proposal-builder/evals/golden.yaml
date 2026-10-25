@@ -1,0 +1,55 @@
+# Proposal Builder golden cases. Uses config/pricebook.yaml as shipped. Exact cents.
+now: "2026-10-23T12:00:00+00:00"
+deal:
+  {id: d-nw, account_id: northwind.example, name: Northwind expansion, stage: Proposal, status: open, owner: Sam Rivera,
+   crm_id: "crm-77",
+   meddpicc: {identify_pain: "confirmed: reps build account lists by hand every Monday",
+              metrics: "cut list building from 6 hours to 1 hour per rep per week",
+              decision_criteria: "must write back to Salesforce"}}
+account: {id: northwind.example, name: Northwind Logistics, domain: northwind.example, industry: Logistics, employees: 600}
+quotes:
+  - name: two-year with tier and small discount
+    lines: [{sku: AGENT-SEAT, qty: 40}, {sku: PLATFORM, qty: 1}, {sku: ONBOARD, qty: 1}]
+    term_years: 2
+    discount_pct: 5
+    role: ae
+    expect: {tier: "tier 25+", recurring_subtotal: "58200.00", term_discount: "2910.00", extra_discount: "2764.50",
+             annual_recurring: "52525.50", one_time: "7500.00", year_one_total: "60025.50",
+             total_contract_value: "112551.00", effective_discount_pct: "16.6", guardrail: ok}
+  - name: above the AE limit needs manager
+    lines: [{sku: AGENT-SEAT, qty: 10}]
+    term_years: 1
+    discount_pct: 15
+    role: ae
+    expect: {annual_recurring: "10200.00", guardrail: needs_approval, level: manager}
+  - name: above every approval level is blocked
+    lines: [{sku: AGENT-SEAT, qty: 10}]
+    term_years: 1
+    discount_pct: 35
+    role: vp
+    expect: {guardrail: blocked}
+  - name: within VP limit but below the floor is blocked
+    lines: [{sku: AGENT-SEAT, qty: 120}, {sku: PLATFORM, qty: 1}]
+    term_years: 3
+    discount_pct: 30
+    role: vp
+    expect: {annual_recurring: "82026.00", guardrail: blocked, reason_has: floor}
+  - name: fractional discount to the cent
+    lines: [{sku: AGENT-SEAT, qty: 7}]
+    term_years: 1
+    discount_pct: 3.33
+    role: ae
+    expect: {extra_discount: "279.72", annual_recurring: "8120.28"}
+  - name: half a cent rounds up, not to even
+    lines: [{sku: PLATFORM, qty: 1}]
+    term_years: 1
+    discount_pct: 0.0003
+    role: ae
+    expect: {extra_discount: "0.05", annual_recurring: "14999.95"}
+errors:
+  - {lines: [{sku: NOPE, qty: 1}], term_years: 1, has: unknown sku}
+  - {lines: [{sku: AGENT-SEAT, qty: 0}], term_years: 1, has: whole number}
+  - {lines: [{sku: AGENT-SEAT, qty: 5}], term_years: 4, has: no 4-year term}
+proposal:
+  must_include: ["reps build account lists by hand", "must write back to Salesforce", "$112,551.00", "Net 30"]
+  must_not_include: ["Draft:"]

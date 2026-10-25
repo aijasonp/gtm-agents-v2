@@ -1,0 +1,40 @@
+# Content Studio golden cases. Fixed now, template path.
+now: "2026-10-23T12:00:00+00:00"
+
+insights:
+  - {kind: objection, key: forecast_accuracy, value: {note: forecast misses}, evidence: "Contoso Health said the forecast slipped", account_id: contoso.example, observed_at: "2026-10-20T10:00:00+00:00"}
+  - {kind: objection, key: forecast_accuracy, observed_at: "2026-10-22T10:00:00+00:00"}
+  - {kind: pain, key: manual_list_building, value: {note: lists by hand}, observed_at: "2026-10-21T10:00:00+00:00"}
+  - {kind: competitor, key: acme_intel_pricing, observed_at: "2026-10-19T10:00:00+00:00"}
+  - {kind: theme, key: old_theme, observed_at: "2026-08-01T10:00:00+00:00"}
+  - {kind: meddpicc, key: champion_missing, observed_at: "2026-10-22T10:00:00+00:00"}
+
+post:
+  topic: Why forecast calls go sideways
+  expect_theme: forecast accuracy
+  must_not_contain: [Contoso, contoso]
+
+script:
+  topic: Why does your forecast miss every quarter
+  seconds: 45
+
+captions:
+  text: "HOOK: Sound familiar?\nBEAT: Reps lose the first hours of every week to building lists by hand.\nCTA: Follow for part two."
+  seconds: 10
+  max_chars: 32
+  cues: 2
+
+frames:
+  width: 1080
+  height: 1920
+  good:
+    - {t: 0, end: 2.5, text: "Sound familiar?", x: 140, y: 600, w: 800, h: 120}
+    - {t: 2.5, end: 6, text: "Lists built by hand\ncost reps hours", x: 140, y: 700, w: 800, h: 220}
+  bad:
+    - {t: 0, text: "We leverage signals \u2014 daily", x: 20, y: 1700, w: 900, h: 120}
+    - {t: 0.5, end: 1.0, text: "This line is far too long to read on a phone screen", x: 140, y: 600, w: 800, h: 120}
+  bad_issues: ["side safe zone", "bottom safe zone", "banned words: leverage", "dash", "over 32 characters", "needs"]
+
+expect:
+  ideas_top: "Answer the objection: forecast accuracy"
+  ideas_count: 3

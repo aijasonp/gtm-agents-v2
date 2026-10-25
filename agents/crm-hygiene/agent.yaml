@@ -1,0 +1,38 @@
+id: crm-hygiene
+name: CRM Hygiene
+version: 0.1.0
+tier: B
+description: >
+  Keeps the CRM clean enough to trust. Finds duplicate accounts (same domain, or same name once
+  suffixes like Inc and LLC are stripped) and duplicate contacts, contacts with no account that an
+  email domain can match, bounced contacts that need a new email, and open deals with a past close
+  date or no activity past the stage limit. Read only by default: every merge, link or deal
+  revision is queued for human approval with the survivor and the reason.
+editions: [dropin, persistent]
+skill: skill/SKILL.md
+references:
+  - skill/references/hygiene-rules.md
+library:  # licensed playbooks bundled into the drop-in package (see THIRD_PARTY_NOTICES.md)
+  - library/sales-skills/skills/sales-data-hygiene
+  - library/coreyhaines-marketingskills/skills/revops
+tools:
+  - find_duplicate_accounts
+  - find_duplicate_contacts
+  - contacts_missing_account
+  - bounced_contacts
+  - stale_stages
+  - propose_fix
+connectors_required: []
+connectors_optional: [crm, slack]
+jobs:
+  - {name: weekly_hygiene_report, cron: "0 8 * * 1", model_class: none}
+budgets: {daily_tokens: 100000, monthly_usd: 5}
+evals: evals/golden.yaml
+config:
+  free_mail_domains: [gmail.com, googlemail.com, yahoo.com, outlook.com, hotmail.com, live.com, icloud.com, me.com, aol.com, proton.me, protonmail.com]
+  name_suffixes: [inc, incorporated, llc, ltd, limited, corp, corporation, co, company, plc, gmbh, sa, ag, bv, pty, holdings, group]
+  stage_max_days: {discovery: 30, qualification: 30, evaluation: 45, proposal: 30, negotiation: 21}
+  default_stage_max_days: 45
+  close_date_push_days: 30          # proposed new close date for a past-due deal, counted from today
+  contact_account_field: {hubspot: associatedcompanyid, salesforce: AccountId}
+  report_examples: 5

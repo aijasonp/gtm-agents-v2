@@ -71,4 +71,14 @@ def evaluate(m, spec, make_ctx) -> list[dict]:
     add("alerts fire once", eng.change_alerts(ctx, now) == [], "")
     add("template summaries without a model key",
         sam["summary_source"] == mg["summary_source"] == xp["summary_source"] == "template", "")
+    # Forecast calls and the board range
+    for c in spec.get("calls", []):
+        eng.submit_call(ctx, c["owner"], c["commit"], c.get("best_case"), now=now)
+    if "board" in ex:
+        b = eng.board_forecast(ctx, now)
+        bx = ex["board"]
+        add("board range is ordered low <= high", b["range"]["low"] <= b["range"]["high"], b["range"])
+        add("board low = won + suggested commit", b["range"]["low"] == round(b["won"] + mg["suggested_commit"], 2), b["range"])
+        add("board call uses submitted calls", b["range"]["call"] == bx["call"], b["range"])
+        add("reps without a call are listed", sorted(b["no_call_this_quarter"]) == sorted(bx["no_call"]), b["no_call_this_quarter"])
     return out

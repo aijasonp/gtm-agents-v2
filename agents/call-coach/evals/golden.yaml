@@ -1,0 +1,21 @@
+# Call Coach golden cases. Deterministic scoring on fixed transcripts; fixed now for drill plans.
+now: "2026-10-23T12:00:00+00:00"
+scores:
+  - {file: evals/good-discovery.txt, scenario: discovery_first_call, min_total: 90, rep: [Sam Rivera]}
+  - {file: evals/weak-discovery.txt, scenario: discovery_first_call, max_total: 30,
+     fixes_include: [qualification, talk_ratio, open_questions]}
+  - {file: evals/objection-handled.txt, scenario: price_objection, min_total: 80, skill_full: [objection_handling, next_step]}
+  - {file: evals/good-discovery.txt, scenario: price_objection, max_skill: {objection_handling: 0}}  # required objection never came up
+scenarios:
+  must_include: [discovery_first_call, price_objection, pricing_negotiation, competitor_displacement, champion_building,
+                 competitor_acme_intel]
+  buyer_prompt_hides_from_brief: hidden_pain
+drill:
+  rep: Sam Rivera
+  meetings:
+    - {id: m1, owner: Sam Rivera, started_at: "2026-10-10T15:00:00+00:00", transcript_file: evals/weak-discovery.txt}
+    - {id: m2, owner: Sam Rivera, started_at: "2026-10-17T15:00:00+00:00", transcript_file: evals/weak-discovery.txt}
+    - {id: m3, owner: Priya Shah, started_at: "2026-10-17T15:00:00+00:00", transcript_file: evals/good-discovery.txt}
+    - {id: m0, owner: Sam Rivera, started_at: "2026-08-01T15:00:00+00:00", transcript_file: evals/good-discovery.txt}
+  expect_calls: 2
+  expect_weakest: [talk_ratio, open_questions, objection_handling]   # each scored 0 on both calls

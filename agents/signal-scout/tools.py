@@ -36,7 +36,7 @@ def explain_score(ctx, account: str) -> dict:
     missing = [tax.categories[c] for c in tax.categories if c not in present]
     return {
         "account": r.name, "score": r.score, "tier": r.tier, "icp": r.icp, "signal": r.signal,
-        "reasons": r.reasons,
+        "reasons": r.reasons, "rule_icp": r.rule_icp, "judged": r.judged,
         "signals": r.as_dict()["top_signals"],
         "would_raise_score": f"A strong signal in a new category ({', '.join(missing[:3])}) would trigger stacking."
         if missing else "Already stacked across categories.",
@@ -91,5 +91,21 @@ def push_to_crm(ctx, account: str) -> dict:
     return {"queued_for_approval": rid, "note": "Run `gtm approvals signal-scout list` to review."}
 
 
+def judge_account(ctx, account: str, refresh: bool = False) -> dict:
+    """Judged ICP answers for one account: each typed question, its answer, the quoted evidence and
+    the backend that answered (rules, model or remote). refresh=True ignores the cached verdict."""
+    acct = ctx.store.account(account)
+    if not acct:
+        return {"error": f"account '{account}' not found"}
+    eng = _eng(ctx)
+    from datetime import datetime, timedelta, timezone
+    since = (datetime.now(timezone.utc) - timedelta(days=int(ctx.manifest.config.get("lookback_days", 120)))).isoformat()
+    v = eng.judge(ctx, acct, ctx.store.signals_for(acct["id"], since), refresh=refresh)
+    if not v:
+        return {"account": acct["name"], "judgment": "off (no judgment section in config/icp.yaml)"}
+    return {"account": acct["name"], **{k: x.as_dict() for k, x in v.items()},
+            "score": eng.score_one(ctx, acct).as_dict()}
+
+
 TOOLS = {f.__name__: f for f in [score_account, list_priority_accounts, explain_score, add_signal,
-                                 record_outcome, push_to_crm]}
+                                 record_outcome, push_to_crm, judge_account]}

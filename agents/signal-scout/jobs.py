@@ -86,15 +86,31 @@ def daily_sweep(ctx) -> dict:
             "ranked": [r.as_dict() for r in ranked[:size]]}
 
 
-def weekly_reweight(ctx) -> dict:
-    """Learn signal weights from this customer's outcomes."""
+def weekly_reweight(ctx, now=None) -> dict:
+    """Learn signal weights from outcomes, and judged ICP question weights from email opens and replies."""
+    from gtm_core import decision, profile
     changes = reweight(ctx.store, _engine(ctx).taxonomy(ctx))
+    lines = []
     if changes:
-        lines = ["*Signal Scout weekly learning*"] + [
+        lines += ["*Signal Scout weekly learning*"] + [
             f"- {k}: {v['from']} -> {v['to']} (lift {v['lift']}, {v['positive']}/{v['accounts']} positive)"
             for k, v in sorted(changes.items(), key=lambda kv: -abs(kv[1]['to'] - kv[1]['from']))[:10]]
+    judged = {}
+    cfg = _engine(ctx).judgment(ctx)
+    model = decision.get_model(cfg, "icp_fit", profile.company(ctx).get("value_props", [])) if decision.enabled(cfg) else None
+    if model:
+        lc = cfg.get("learning") or {}
+        judged = decision.learn(ctx.store, model, int(lc.get("window_days", 120)), int(lc.get("min_per_side", 20)),
+                                weights=lc.get("weights"), now=now)
+        moved = {k: v for k, v in judged["questions"].items() if "to" in v}
+        if judged["threads"]:
+            bands = ", ".join(f"{b}: {r['open_rate']:.0%} open / {r['reply_rate']:.0%} reply ({r['sends']})"
+                              for b, r in judged["by_icp_band"].items() if r["sends"])
+            lines.append(f"*Judged ICP vs engagement* ({judged['threads']} threads) {bands}")
+        lines += [f"- question {k}: x{v['from']} -> x{v['to']} (lift {v['lift']})" for k, v in moved.items()]
+    if lines:
         ctx.slack.post("\n".join(lines))
-    return {"reweighted": len(changes), "changes": changes}
+    return {"reweighted": len(changes), "changes": changes, "judged": judged}
 
 
 # ---- executors for approved actions ----

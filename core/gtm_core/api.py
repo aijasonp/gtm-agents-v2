@@ -145,6 +145,29 @@ class Api:
             added, dupes = (added + 1, dupes) if ok else (added, dupes + 1)
         return 200, {"added": added, "duplicates": dupes, "rejected": unknown}
 
+    def enrichment(self, body) -> tuple[int, dict]:
+        """Finished rows from a Clay table HTTP action (or any enrichment tool): merged into accounts and contacts."""
+        from .connectors.clay import apply_rows
+        res = apply_rows(self.store, _rows(body))
+        return (201 if res["accounts"] else 400), res
+
+    def email_events(self, body) -> tuple[int, dict]:
+        """Sequencer engagement events: {email, event, occurred_at?, draft_id?, step?, machine?}."""
+        from . import engagement
+        added = dupes = 0
+        errors = []
+        for r in _rows(body):
+            try:
+                res = engagement.record(self.store, _str(r.get("email")), _str(r.get("event") or r.get("type")),
+                                        r.get("occurred_at") or r.get("timestamp"), r.get("draft_id"),
+                                        r.get("step") or None, bool(r.get("machine")), source=_str(r.get("source")) or "api")
+            except ValueError as e:
+                errors.append({"email": r.get("email"), "error": str(e)})
+                continue
+            added += res["added"]
+            dupes += res["duplicate"]
+        return (201 if added else 200 if dupes else 400), {"added": added, "duplicates": dupes, "errors": errors}
+
     def to_inbox(self, agent: str, key: str, body, required: tuple[str, ...]) -> tuple[int, dict]:
         """Drop rows into an agent's inbox folder; its scheduled job ingests and archives them."""
         import uuid
@@ -205,6 +228,7 @@ class Api:
         if method == "GET" and path == "/v1/health":
             return 200, {"ok": True, "agents": sorted(self.manifests)}
         intake = {"/v1/leads": self.leads, "/v1/meetings": self.meetings, "/v1/signals": self.signals,
+                  "/v1/email-events": self.email_events, "/v1/enrichment": self.enrichment,
                   "/v1/replies": lambda b: self.to_inbox("reply-desk", "reply_inbox", b, ("from_email", "body")),
                   "/v1/engagement": lambda b: self.to_inbox("social-signals", "engagement_inbox", b,
                                                             ("engager_name", "engagement_type"))}

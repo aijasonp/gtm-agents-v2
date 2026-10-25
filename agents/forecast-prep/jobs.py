@@ -29,3 +29,11 @@ def forecast_change_alerts(ctx, now: datetime | None = None) -> dict:
     if alerts:
         ctx.slack.post(eng.format_alerts(alerts), channel=ctx.manifest.config.get("manager_channel"))
     return {"alerts": len(alerts)}
+
+
+def board_forecast_post(ctx, now: datetime | None = None) -> dict:
+    """Friday board forecast to the leadership channel. Read only."""
+    eng = _eng(ctx)
+    b = eng.board_forecast(ctx, now)
+    ctx.slack.post(eng.format_board(b), channel=ctx.manifest.config.get("exec_channel", ctx.manifest.config.get("manager_channel")))
+    return {"range": b["range"], "no_call": b["no_call_this_quarter"]}

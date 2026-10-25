@@ -13,6 +13,10 @@ agents/<id>/                 one folder per sellable agent
 core/gtm_core/               shared runtime, built once
   store.py                   SQLite (dev) or Postgres + pgvector (prod); customer-owned
   scoring/                   taxonomy, decay, stacking, ICP fit, account score, weekly reweight
+  decision/                  judged ICP: typed questions answered by rules, model or a remote decision
+                             service; evidence-checked, cached, shadow mode, weekly learning from opens
+  engagement.py              email events (sent, open, reply, bounce...), machine-open filter, rates,
+                             value prop picker; unsubscribes and bounces suppress locally
   copy_gate.py               deterministic copy checks
   approvals.py               approval queue + executor registry
   budgets.py                 daily token and monthly spend caps, auto-pause, Slack alert
@@ -20,7 +24,8 @@ core/gtm_core/               shared runtime, built once
   guardrails.py              hard step limits
   audit.py                   append-only audit log with secret masking
   connectors/                HubSpot, Salesforce (accounts, contacts, deals, notes, tasks), Slack,
-                             sequencer (webhook or Smartlead); writes only via approvals
+                             sequencer (webhook, Smartlead or Lemlist), Clay (table push and import),
+                             notetakers (Gong, Fireflies, Fathom transcript pull); writes only via approvals
   executors.py               shared executors for approved actions (crm_task, deal_note, sequence_enroll...)
   handoffs.py                agent-to-agent work queue in the customer's database
   writer.py                  drafting on the customer's keys + Copy QA Gate rewrites + template fallback
@@ -30,7 +35,8 @@ core/gtm_core/               shared runtime, built once
   meddpicc.py                MEDDPICC scoring and stage-aware gaps
   pipeline.py                deal timing and pipeline math
   profile.py                 shared config/icp.yaml and config/company.yaml
-  api.py                     HTTP intake (leads, meetings, signals) and approvals
+  api.py                     HTTP intake (leads, meetings, signals, replies, engagement, email-events,
+                             enrichment) and approvals
   mcp_server.py              exposes an agent's tools over MCP
   scheduler.py               cron for persistent jobs
   license.py                 offline signed license files with expiry
@@ -50,7 +56,8 @@ CRM (read) ----> sync_accounts ---> accounts
 CSV/JSON inbox -> daily_sweep ingest -> signals (deduped by account+type+source+day)
                      |
                      v
-       score = 0.4 x ICP fit + 0.6 x signal heat
+       ICP   = rule fit blended with judged fit (decision/, by evidence coverage)
+       score = 0.4 x ICP + 0.6 x signal heat x signal relevance
        heat  = squash(sum(weight x strength x decay)) x stacking multiplier
                      |
           +----------+-----------+
@@ -59,7 +66,10 @@ CSV/JSON inbox -> daily_sweep ingest -> signals (deduped by account+type+source+
                                  |
                        human approves -> executor writes CRM
 outcomes ----> weekly_reweight ----> learned weights (bounded 0.25x to 3x base)
+email events -> weekly_reweight ----> judged question multipliers (bounded 0.5x to 2x)
 ```
+
+Judged ICP, the open-rate loop and the value prop picker are described in `docs/ICP-JUDGMENT.md`.
 
 See `docs/AGENTS.md` for the full multi-agent flow, handoffs and conflict rules.
 

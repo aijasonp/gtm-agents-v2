@@ -1,0 +1,17 @@
+Sam Rivera: Thanks for making time, Dana. What prompted you to fill in the form this week?
+Dana Cole: Our reps build account lists by hand every Monday and it takes most of the morning.
+Sam Rivera: That sounds painful. How many reps do that, and what does a lost Monday cost you?
+Dana Cole: Forty reps. We figure it costs about 6 hours per rep per week, and we want to reduce that by 80%.
+Sam Rivera: Walk me through how a rep decides who to call today.
+Dana Cole: Mostly gut feel and stale spreadsheets. Our current process is manual.
+Sam Rivera: What would need to be true for you to change how that works?
+Dana Cole: It must have Salesforce write-back. That is a requirement for us.
+Sam Rivera: Who else is involved in a decision like this, and how do you usually evaluate tools?
+Dana Cole: We run a pilot, then a committee review. Our CRO signs off on the budget.
+Sam Rivera: How does the committee review usually run?
+Dana Cole: Two weeks, then the CRO makes the final decision.
+Sam Rivera: Is the CRO already aware of the Monday problem?
+Dana Cole: Yes, she raised it last quarter.
+Sam Rivera: Makes sense. Could we set up time next Tuesday at 2pm with you and your RevOps lead to scope a pilot?
+Dana Cole: Tuesday works. Send the invite.
+Sam Rivera: Great, I'll send the invite today with a short agenda.
