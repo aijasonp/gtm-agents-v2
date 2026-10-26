@@ -151,7 +151,11 @@ def rep_accounts(ctx, owner: str) -> list[dict]:
 # ---------- signals and angles ----------
 def _fill(say_it: str, acct: dict, sig: dict) -> str | None:
     payload = sig.get("payload") or {}
-    vals = {"company": acct.get("name", ""), "team": "sales", "topic": payload.get("topic") or ""}
+    vals = {"company": acct.get("name", ""), "team": "sales"}
+    for k in ("topic", "filing", "product", "regulation"):
+        v = payload.get(k)
+        if isinstance(v, str) and v.strip() and len(v) <= 60:
+            vals[k] = v.strip()
     out = say_it
     for k, v in vals.items():
         if v:

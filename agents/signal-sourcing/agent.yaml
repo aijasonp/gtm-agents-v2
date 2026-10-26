@@ -1,0 +1,42 @@
+id: signal-sourcing
+name: Signal Sourcing
+version: 0.1.0
+tier: A
+description: >
+  Finds dated, sourced buying signals from public, structured sources and feeds them to Signal Scout:
+  the latest 10-K or 10-Q (Risk Factors, MD&A, Business) quoting a matching priority or risk, 8-K officer
+  appointments, initiatives, funding and appointments from the company newsroom or trusted press, and
+  buyer-team hiring on public job boards. No signal, no send: the dispatch batch holds only accounts with a
+  valid sourced signal and every required field. Excludes investors, agencies, staffing, lead-gen and parked
+  domains, competitors and suppressed domains. Discovers new companies from SEC full-text search.
+editions: [dropin, persistent]
+skill: skill/SKILL.md
+references:
+  - skill/references/sourcing-method.md
+  - ../../config/signals.yaml
+  - ../../config/icp.yaml
+library:  # licensed playbooks bundled into the drop-in package (see THIRD_PARTY_NOTICES.md)
+  - library/sales-skills/skills/sales-intent
+  - library/sales-skills/skills/sales-prospect-list
+tools:
+  - scan_account
+  - scan_due
+  - dispatch_batch
+  - discover_companies
+  - add_company
+  - sourcing_report
+connectors_required: []
+connectors_optional: [slack, sec_edgar, news, job_boards]
+jobs:
+  - {name: daily_scan, cron: "0 5 * * 1-5", model_class: none}
+  - {name: weekly_discovery, cron: "0 4 * * 1", model_class: none}
+budgets: {daily_tokens: 0, monthly_usd: 0}
+evals: evals/golden.yaml
+config:
+  signals: ../../config/signals.yaml
+  icp: ../../config/icp.yaml
+  company: ../../config/company.yaml
+  taxonomy: ../signal-scout/skill/references/signal-taxonomy.yaml
+  icp_floor: 30
+  scan_limit: 50
+  per_host_rps: 4

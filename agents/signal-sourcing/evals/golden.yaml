@@ -1,0 +1,29 @@
+# Golden cases on recorded responses (sample/fixtures): fictional companies, fake CIKs, no network.
+now: "2026-10-20T12:00:00+00:00"
+accounts: sample/accounts.json
+fixtures: sample/fixtures
+expect:
+  rejected:
+    fabrikamcapital.example: investor
+    hcpleads.example: lead-gen
+  sources:
+    northwind.example: [exec_change, filing, hiring, initiative]
+  filing:
+    northwind.example: {confidence: High, date: "2026-08-05", form: 10-Q, contains: "artificial intelligence tools"}
+    adatum.example: {confidence: Medium, date: "2026-03-01", form: 10-K, contains: "sales force effectiveness"}
+  boilerplate_never_quoted: "forward-looking statements"
+  exec_change_once: northwind.example
+  hiring_roles:
+    northwind.example: ["Director of Revenue Operations", "VP of Sales, Central"]
+  initiative_amount:
+    northwind.example: "$12M"
+  notes:
+    contoso.example: no sentence matching
+    tailspin.example: no CIK match
+  dispatch: [northwind.example]
+  dispatch_excluded:
+    adatum.example: placeholder
+  rescan_stores: 0
+  discovery: [Litware Manufacturing Corp]
+  say_it:
+    northwind.example: "Your latest 10-Q calls out sales productivity"

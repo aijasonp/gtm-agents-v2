@@ -171,9 +171,16 @@ def pick_contacts(ctx, acct: dict) -> list[dict]:
 
 
 # ---------- angle ----------
-def _fill(say_it: str, acct: dict, title: str = "") -> str | None:
+def _fill(say_it: str, acct: dict, title: str = "", payload: dict | None = None) -> str | None:
+    """Fill a say_it line. Placeholders come from the account, the contact's team, and the signal's own
+    sourced payload (topic, filing, product, regulation). Any placeholder left unfilled means the line
+    is not used."""
     fn = personas.function(title) if title else "sales"
     vals = {"company": acct.get("name", ""), "team": {"revops": "RevOps", "marketing": "marketing"}.get(fn, "sales")}
+    for k in ("topic", "filing", "product", "regulation"):
+        v = (payload or {}).get(k)
+        if isinstance(v, str) and v.strip() and len(v) <= 60:
+            vals[k] = v.strip()
     out = say_it
     for k, v in vals.items():
         out = out.replace("{" + k + "}", v)
@@ -213,7 +220,7 @@ def angle(ctx, acct: dict, now: datetime | None = None, title: str = "", name: s
             continue
         if st.type in PERSON_SIGNALS and not account_view and not about_contact(s, name, title):
             continue  # about someone else at the account; never congratulate the wrong person
-        line = _fill(st.say_it, acct, title)
+        line = _fill(st.say_it, acct, title, s.get("payload"))
         if line and (best is None or v > best["value"]):
             best = {"signal_type": st.type, "signal": st.name, "observed_at": s["observed_at"][:10],
                     "say_it": line, "value": round(v, 3)}

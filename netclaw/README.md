@@ -1,6 +1,6 @@
 # NetClaw front end (optional)
 
-The runtime in this repo already schedules every agent, holds memory, takes intake over HTTP and serves a chat assistant. This folder adds an optional conversational layer on [NetClaw](https://netclaw.dev) (open source, Apache 2.0, self-hosted): three Slack bots that talk to AEs and leaders and call the 24 runtime agents' tools over MCP.
+The runtime in this repo already schedules every agent, holds memory, takes intake over HTTP and serves a chat assistant. This folder adds an optional conversational layer on [NetClaw](https://netclaw.dev) (open source, Apache 2.0, self-hosted): three Slack bots that talk to AEs and leaders and call the 25 runtime agents' tools over MCP.
 
 Use it when the team wants to work in Slack with separate workspaces for pipeline, deals and forecasting. Skip it and the runtime still runs end to end.
 
@@ -17,7 +17,7 @@ LEAD IN ─► PIPELINE ──────────────────�
 
 | Instance | Subagents | Runtime agents it calls | Skills |
 | --- | --- | --- | --- |
-| pipeline | inbound-router, signal-scout, prospecting-writer, copy-qa-gate, events-content | lead-triage, reply-desk, enrichment, signal-scout, social-signals, rep-brief, icp-outbound, copy-qa-gate, event-campaigns, content-studio | 47 |
+| pipeline | inbound-router, signal-scout, prospecting-writer, copy-qa-gate, events-content | lead-triage, reply-desk, enrichment, signal-scout, signal-sourcing, social-signals, rep-brief, icp-outbound, copy-qa-gate, event-campaigns, content-studio | 47 |
 | deals | meeting-prep, call-intel, deal-manager, proposal-close, call-coach | sales-execution, meeting-intelligence, seller-follow-up, deal-inspection, product-marketing, copy-qa-gate, proposal-builder, call-coach | 34 |
 | revops | forecast-hygiene, win-loss-learning, system-quality | forecast-prep, revenue-pulse, ops-monitor, product-marketing, signal-scout, stack-audit, crm-hygiene, quality-monitor, rep-feedback, icp-outbound | 18 |
 

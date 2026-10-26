@@ -15,6 +15,9 @@ core/gtm_core/               shared runtime, built once
   scoring/                   taxonomy, decay, stacking, ICP fit, account score, weekly reweight
   decision/                  judged ICP: typed questions answered by rules, model or a remote decision
                              service; evidence-checked, cached, shadow mode, weekly learning from opens
+  sources/                   signal sourcing from SEC EDGAR (10-K, 10-Q, 8-K, full-text search), newsroom
+                             feeds and trusted press, and public job board APIs; polite client, account
+                             and payload gates, recorded fixtures for tests
   engagement.py              email events (sent, open, reply, bounce...), machine-open filter, rates,
                              value prop picker; unsubscribes and bounces suppress locally
   copy_gate.py               deterministic copy checks
@@ -53,6 +56,7 @@ evals/runner.py              runs every agent's golden cases
 
 ```
 CRM (read) ----> sync_accounts ---> accounts
+Signal Sourcing (SEC, newsrooms, job boards) -> signals (05:00, before the sweep)
 CSV/JSON inbox -> daily_sweep ingest -> signals (deduped by account+type+source+day)
                      |
                      v

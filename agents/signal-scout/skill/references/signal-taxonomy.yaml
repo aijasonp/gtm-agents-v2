@@ -56,6 +56,15 @@ categories:
       - {type: new_market_entry, name: Entered a new market or region, base_weight: 0.5, half_life_days: 90}
       - {type: new_office, name: Opened an office, base_weight: 0.3}
       - {type: partnership_announced, name: Announced a partnership, base_weight: 0.3}
+      - {type: strategic_initiative, name: Announced an initiative in our area, base_weight: 0.9, half_life_days: 120,
+         say_it: "Saw the announcement on {topic}"}
+
+  - id: filings
+    name: Public filings
+    half_life_days: 180
+    signals:
+      - {type: filing_priority_mention, name: Annual or quarterly filing names a matching priority or risk, base_weight: 0.8,
+         half_life_days: 200, say_it: "Your latest {filing} calls out {topic}"}
 
   - id: intent
     name: Engagement and intent

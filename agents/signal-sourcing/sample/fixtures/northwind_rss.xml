@@ -1,0 +1,9 @@
+<?xml version="1.0"?><rss version="2.0"><channel><title>Northwind News</title>
+<item><title>Northwind Logistics launches AI sales assistant program with $12 million investment</title>
+<link>https://northwind.example/news/ai-sales-program</link><pubDate>Tue, 06 Oct 2026 13:00:00 GMT</pubDate>
+<description>The multi-year program rolls out automation for every account executive across sales and revenue teams.</description></item>
+<item><title>Northwind Logistics opens new cross-dock in Memphis</title><link>https://northwind.example/news/memphis</link>
+<pubDate>Mon, 14 Sep 2026 13:00:00 GMT</pubDate><description>The facility adds 200 jobs.</description></item>
+<item><title>Northwind Logistics names Dana Cole Chief Revenue Officer</title><link>https://northwind.example/news/cro</link>
+<pubDate>Wed, 16 Sep 2026 13:00:00 GMT</pubDate><description>Cole joins from a regional carrier.</description></item>
+</channel></rss>

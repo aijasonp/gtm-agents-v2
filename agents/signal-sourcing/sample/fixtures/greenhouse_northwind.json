@@ -1,0 +1,36 @@
+{
+ "jobs": [
+  {
+   "title": "Director of Revenue Operations",
+   "first_published": "2026-10-10T14:00:00Z",
+   "absolute_url": "https://boards.example/northwind/1",
+   "location": {
+    "name": "Chicago"
+   }
+  },
+  {
+   "title": "Warehouse Associate",
+   "first_published": "2026-10-15T14:00:00Z",
+   "absolute_url": "https://boards.example/northwind/2",
+   "location": {
+    "name": "Gary"
+   }
+  },
+  {
+   "title": "VP of Sales, Central",
+   "first_published": "2026-10-01T14:00:00Z",
+   "absolute_url": "https://boards.example/northwind/3",
+   "location": {
+    "name": "Chicago"
+   }
+  },
+  {
+   "title": "Sales Enablement Manager",
+   "first_published": "2026-07-01T14:00:00Z",
+   "absolute_url": "https://boards.example/northwind/4",
+   "location": {
+    "name": "Remote"
+   }
+  }
+ ]
+}

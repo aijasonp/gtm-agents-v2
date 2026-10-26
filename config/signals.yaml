@@ -1,0 +1,101 @@
+# Signal sourcing rules (Signal Sourcing agent). Edit once per customer, like icp.yaml.
+# No signal = no send: an account reaches the dispatch batch only with at least one dated, sourced
+# signal from the sources below. Sources are public and structured: SEC EDGAR, the company's own
+# newsroom feed (or trusted press through an optional news API), and public job board APIs.
+#
+# The sample below fits the sample company in company.yaml (revenue agents for sales teams).
+# A worked example for a network automation seller is at the bottom, commented out.
+
+# ---- 1. Annual and quarterly filings (10-K, 10-Q): Risk Factors, MD&A, Business ----
+filings:
+  enabled: true
+  forms: [10-K, 10-Q]
+  max_age_days: 400
+  topics:                      # a sentence must hit at least one `required` topic to count
+    - id: sales_productivity
+      say: sales productivity
+      required: true
+      weight: 3
+      terms: [sales productivity, sales force effectiveness, sales efficiency, go-to-market efficiency,
+              customer acquisition cost, sales capacity, quota attainment]
+    - id: revenue_data
+      say: revenue data quality
+      weight: 2
+      terms: [crm, customer relationship management, pipeline visibility, forecast accuracy, data quality]
+    - id: ai_automation
+      say: AI and automation
+      weight: 2
+      terms: [artificial intelligence, generative ai, machine learning, automation, ai-driven]
+  high_needs: [sales_productivity, ai_automation]   # both in one sentence = High confidence
+  specificity: [invest, investing, implement, deploy, adopt, initiative, program, transformation, headcount, reduce]
+
+# ---- 2. Initiatives, appointments and funding from newsrooms and trusted press ----
+news:
+  enabled: true
+  initiative_days: 180
+  exec_days: 180
+  funding_days: 180
+  initiative_terms: [launches, launched, announces, invest, investing, investment, partnership, partners with,
+                     rollout, rolls out, program, initiative, expands, deploys, selects, standardizes on]
+  initiative_topics: [sales, revenue, go-to-market, customer acquisition, crm, sales enablement, ai, automation]
+  trusted_press: [reuters.com, bloomberg.com, wsj.com, cnbc.com, businesswire.com, prnewswire.com, globenewswire.com]
+
+# ---- 3. Hiring into the buying team (public job boards) ----
+hiring:
+  enabled: true
+  max_age_days: 30
+  # matched against job titles, case-insensitive, whole words
+  buyer_roles: [chief revenue officer, vp of sales, vice president of sales, head of sales, sales operations,
+                revenue operations, revops, sales enablement, head of growth, director of sales development]
+
+# ---- 4. Executive appointments: 8-K item 5.02 and newsroom announcements ----
+exec_change:
+  enabled: true
+  max_age_days: 180
+  buyer_roles: [chief revenue officer, chief sales officer, chief commercial officer, vp of sales,
+                vice president of sales, head of revenue operations, chief growth officer]
+  csuite_roles: [chief executive officer, chief financial officer, chief operating officer, chief technology officer,
+                 chief information officer, president]
+
+# ---- Who never gets sourced or sent ----
+exclusions:
+  min_employees: 200                 # unless publicly traded
+  suppression: []                    # domains that must never be sent (add over time)
+  excluded_types:                    # by company name or industry; competitors and partners go here
+    competitor: [acme intel, globex signals]
+  thin_tlds: [dev, tech, ai, io, app, xyz, me]
+
+# ---- Dispatch ----
+dispatch:
+  max_accounts: 25                   # a clean 8 beats a padded 25: never filled with weak rows
+  target_personas: [Chief Revenue Officer, VP of Sales, Head of Revenue Operations]
+  rescan_days: 7                     # how often each account is re-scanned
+
+# ---- Discovery: new companies from SEC full-text search ----
+discovery:
+  enabled: true
+  forms: 10-K,10-Q
+  lookback_days: 120
+  phrases: [sales productivity, go-to-market efficiency, sales force effectiveness]
+  max_per_phrase: 50
+
+# ---------------------------------------------------------------------------------------------
+# Example: a network automation seller (replace the sections above; keep the structure)
+#
+# filings:
+#   topics:
+#     - {id: network_automation, say: network automation, required: true, weight: 3,
+#        terms: [network automation, infrastructure automation, network orchestration, intent-based networking]}
+#     - {id: hybrid_cloud, say: hybrid cloud operations, weight: 2,
+#        terms: [hybrid cloud, multi-cloud, cloud migration, data center modernization]}
+#     - {id: network_risk, say: network reliability risk, weight: 2,
+#        terms: [network outage, service disruption, configuration error, change management, downtime]}
+#   high_needs: [network_automation, network_risk]
+# news:
+#   initiative_topics: [network automation, netdevops, infrastructure as code, hybrid cloud, network modernization]
+# hiring:
+#   buyer_roles: [network automation engineer, netdevops, network engineering manager, director of network engineering,
+#                 vp of infrastructure, head of infrastructure, cloud network architect]
+# exec_change:
+#   buyer_roles: [chief information officer, vp of infrastructure, vp of network engineering, head of infrastructure,
+#                 chief technology officer]

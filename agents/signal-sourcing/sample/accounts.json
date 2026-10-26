@@ -1,0 +1,14 @@
+[
+ {"id": "northwind.example", "name": "Northwind Logistics", "domain": "northwind.example", "industry": "Logistics",
+  "employees": 600, "country": "US", "revenue": 120000000, "ticker": "NWLX",
+  "newsroom_rss": "https://northwind.example/newsroom/rss.xml"},
+ {"id": "contoso.example", "name": "Contoso Health", "domain": "contoso.example", "industry": "Healthcare Technology",
+  "employees": 900, "country": "US", "revenue": 200000000},
+ {"id": "adatum.example", "name": "Adatum", "domain": "adatum.example", "industry": "Technology", "employees": 450,
+  "country": "US", "revenue": 60000000, "ticker": "ADTM"},
+ {"id": "tailspin.example", "name": "Tailspin Software", "domain": "tailspin.example", "industry": "Software",
+  "employees": 300, "country": "US", "revenue": 40000000},
+ {"id": "fabrikamcapital.example", "name": "Fabrikam Capital Partners", "domain": "fabrikamcapital.example",
+  "industry": "Investment Management", "employees": 250, "country": "US"},
+ {"id": "hcpleads.example", "name": "HCP Leads", "domain": "hcpleads.example", "industry": "Marketing", "employees": 20}
+]

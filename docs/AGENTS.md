@@ -1,6 +1,6 @@
 # Agent guide
 
-How the twenty-four agents work together, what each one reads and writes, and which licensed playbooks each bundles.
+How the twenty-five agents work together, what each one reads and writes, and which licensed playbooks each bundles.
 
 ## The flow
 
@@ -105,6 +105,7 @@ Agents share one database and pass work through `handoffs` (deduplicated, consum
 | Content Studio | insights, company.yaml | drafts (posts, scripts) | social_post | linkedin_post, publish_post, video_script, captions, frame_qa | weekly_content_ideas | social-content, content-strategy, copywriting, sales-content |
 | Proposal Builder | config/pricebook.yaml, deals, MEDDPICC, company.yaml | quotes, proposal documents and drafts | discount_approval, proposal_send | list_products, build_quote, check_discount, render_proposal, send_proposal, get_quote | expiring_quotes | sales-proposal-template, sales-proposal-page, hundred-million-offers |
 | Call Coach | meetings, insights, scenarios | none | none | list_scenarios, start_roleplay, score_roleplay, drill_plan | weekly_drills | sales-coaching, sales-call-review, influence-psychology |
+| Signal Sourcing | accounts, SEC EDGAR, newsroom feeds, job boards, config/signals.yaml | signals (source `sourcing:<tier>`), account ATS board, discovery candidates | none | scan_account, scan_due, dispatch_batch, discover_companies, add_company, sourcing_report | daily_scan, weekly_discovery | sales-intent, sales-prospect-list |
 
 ## Selling agents separately
 

@@ -1,0 +1,45 @@
+{
+ "hits": {
+  "hits": [
+   {
+    "_id": "0009990001-26-000012:nw-10k.htm",
+    "_source": {
+     "ciks": [
+      "0009990001"
+     ],
+     "display_names": [
+      "Northwind Logistics, Inc.  (NWLX)  (CIK 0009990001)"
+     ],
+     "form": "10-K",
+     "file_date": "2026-02-20"
+    }
+   },
+   {
+    "_id": "0009990009-26-000005:lw-10q.htm",
+    "_source": {
+     "ciks": [
+      "0009990009"
+     ],
+     "display_names": [
+      "Litware Manufacturing Corp  (LWMC)  (CIK 0009990009)"
+     ],
+     "form": "10-Q",
+     "file_date": "2026-08-12"
+    }
+   },
+   {
+    "_id": "0009990010-26-000002:wg-10k.htm",
+    "_source": {
+     "ciks": [
+      "0009990010"
+     ],
+     "display_names": [
+      "Woodgrove Capital Management LLC  (CIK 0009990010)"
+     ],
+     "form": "10-K",
+     "file_date": "2026-03-15"
+    }
+   }
+  ]
+ }
+}

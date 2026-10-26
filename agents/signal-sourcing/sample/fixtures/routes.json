@@ -1,0 +1,14 @@
+{
+ "https://www.sec.gov/files/company_tickers.json": "company_tickers.json",
+ "https://data.sec.gov/submissions/CIK0009990001.json": "sub_9990001.json",
+ "https://data.sec.gov/submissions/CIK0009990002.json": "sub_9990002.json",
+ "https://data.sec.gov/submissions/CIK0009990003.json": "sub_9990003.json",
+ "https://www.sec.gov/Archives/edgar/data/9990001/000999000126000031/nw-10q.htm": "nw-10q.htm",
+ "https://www.sec.gov/Archives/edgar/data/9990001/000999000126000040/nw-8k.htm": "nw-8k.htm",
+ "https://www.sec.gov/Archives/edgar/data/9990002/000999000226000020/ct-10q.htm": "ct-10q.htm",
+ "https://www.sec.gov/Archives/edgar/data/9990003/000999000326000010/ad-10k.htm": "ad-10k.htm",
+ "https://boards-api.greenhouse.io/v1/boards/northwind/jobs": "greenhouse_northwind.json",
+ "https://api.lever.co/v0/postings/tailspin": "lever_tailspin.json",
+ "https://northwind.example/newsroom/rss.xml": "northwind_rss.xml",
+ "https://efts.sec.gov/LATEST/search-index": "efts_sales_productivity.json"
+}
