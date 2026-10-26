@@ -46,7 +46,8 @@ How they hand work to each other, what each one reads and writes, and which play
 ## Guarantees built into the runtime
 
 - **Opt-outs win everywhere.** One suppression list, checked by every agent and again by the sequence and dialer executors at send time; stops run at once.
-- **Nothing is written or sent without a human.** CRM writes, notes, tasks and sequence enrollments are queued in the approval queue. Approve from the CLI, Slack or the HTTP API.
+- **Nothing is written or sent without a human.** CRM writes, notes, tasks and sequence enrollments are queued in the approval queue. Approve from the CLI, Slack or the HTTP API. RevOps sets how far each motion runs alone in `config/autonomy.yaml` (off, approve, auto); auto is only for routine CRM writes such as tasks and notes, never for a send to a buyer, and every auto approval is still recorded in the queue.
+- **One STOP switch.** `gtm stop`, POST /v1/stop (any approver), a `data/STOP` file or `GTM_STOP=1` holds every send, CRM write and scheduled job at once, or only some motions (`--scope outbound`). Approved actions wait and run after `gtm autonomy resume`, which is console only. Opt-out sequence stops keep running. Ops Monitor warns on every health check while STOP is on.
 - **Sends need a named person.** A buyer-facing send is approved by someone on the team (never `operator` or a shared token), pipeline emails by their owner, and the check runs again at send time. Approvers can edit the copy first; the edit is recorded.
 - **Numbers come from code.** Scores, risk, routing, SLAs, coverage and every pipeline metric are deterministic Python with golden-case evals. Models only draft and summarize, from facts handed to them.
 - **No invented facts.** Drafts use only the facts given plus `config/company.yaml`. Proof points and competitor claims come from that file or field evidence; everything else is marked "to verify".
@@ -91,6 +92,7 @@ Full steps: [docs/INSTALL.md](docs/INSTALL.md). How it fits together: [docs/ARCH
 | `gtm run <agent> <job>` | Run a job now |
 | `gtm schedule` | Run every agent's jobs on their cron |
 | `gtm approvals <agent> list\|approve\|reject\|execute` | Human approval queue (`--all-agents` for everything) |
+| `gtm stop --reason "..."` / `gtm autonomy status\|stop\|resume` | STOP switch and autonomy levels per motion |
 | `gtm drafts [--agent X] [--full]` | Review drafted emails, recaps, battlecards |
 | `gtm handoffs [--all]` | Work passed between agents |
 | `gtm call <agent> <tool> --args '{...}'` | Call any tool from the shell |

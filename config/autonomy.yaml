@@ -1,0 +1,55 @@
+# Autonomy: how far each motion runs without a person, and the STOP switch that halts it all.
+#
+# RevOps owns this file. Levels, per action request:
+#   off      the request is recorded and closed at once (rejected by autonomy:off). Nothing runs.
+#   approve  a person approves each one (the default). Sends to a buyer always follow config/approvals.yaml.
+#   auto     approved by autonomy:auto with no person, then runs on the next execute. Only for actions in
+#            `auto_allowed`. Sends to a buyer (approvals.yaml send_actions) can never be auto.
+# The most specific setting wins: agent, then action, then motion, then default.
+
+default: approve
+
+motions:
+  outbound: approve       # cold first touches and sequences (ICP Outbound, Daily Book)
+  pipeline: approve       # pipeline follow-ups the AE confirms (Follow-Through, Seller Follow-Up)
+  event: approve
+  inbound: approve
+  social: approve
+  crm: approve            # CRM field updates, tasks, notes
+
+actions: {}               # e.g. {crm_task: auto, dialer_enqueue: off}
+agents: {}                # e.g. {social-signals: off}
+
+# Which motion an agent's requests belong to (payload `motion` wins when set).
+agent_motion:
+  icp-outbound: outbound
+  daily-book: outbound
+  signal-sourcing: outbound
+  follow-through: pipeline
+  seller-follow-up: pipeline
+  proposal-builder: pipeline
+  deal-inspection: pipeline
+  event-campaigns: event
+  lead-triage: inbound
+  reply-desk: inbound
+  social-signals: social
+  content-studio: social
+  crm-hygiene: crm
+  enrichment: crm
+  signal-scout: crm
+
+# The only actions that may run at `auto`. Keep this to writes a person would rubber-stamp.
+auto_allowed: [crm_task, crm_note, deal_note, crm_update, contact_update]
+
+# ---- STOP ----
+# Any of these halts every send and CRM write, and pauses scheduled jobs:
+#   the file below exists (its lines may list scopes: motions, actions or agents; empty = everything)
+#   GTM_STOP is set (1 or all, or a comma-separated list of scopes)
+#   `gtm stop` or POST /v1/stop (any approver token). Resume only with `gtm resume` at the console.
+# Approved requests stay approved and run after resume. Nothing is lost or re-sent.
+stop:
+  file: data/STOP
+  # Actions that only reduce contact keep running during STOP (an opt-out must still stop a sequence).
+  always_allowed: [sequence_stop]
+  # Jobs that keep running during a full STOP: health, telemetry export, quality checks (read only).
+  jobs_allowed: ["ops-monitor.*", "quality-monitor.daily_quality"]

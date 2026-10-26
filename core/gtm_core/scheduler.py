@@ -12,11 +12,21 @@ from .budgets import BudgetExceeded
 from .config import Settings
 
 
-def run_job(settings: Settings, m: Manifest, job: str, **kw) -> dict:
+def run_job(settings: Settings, m: Manifest, job: str, force: bool = False, **kw) -> dict:
+    """Run one job. STOP skips it (unless listed in autonomy.yaml stop.jobs_allowed or force=True)."""
     mod = load_module(m, "jobs")
     if mod is None or not hasattr(mod, job):
         raise KeyError(f"{m.id} has no job '{job}'")
     ctx = Context.build(settings, m, **kw)
+    if not force:
+        from .autonomy import current
+        try:
+            held = current().stopped(ctx.store, agent=m.id, job=job)
+        except Exception as e:
+            held = f"STOP state unreadable: {str(e)[:120]}"
+        if held:
+            ctx.audit.log("job.held", job=job, why=held)
+            return {"skipped": held}
     ctx.audit.log("job.start", job=job, run_id=ctx.run_id)
     with ctx.store.run(ctx.run_id, m.id, job) as stats:
         result = getattr(mod, job)(ctx) or {}

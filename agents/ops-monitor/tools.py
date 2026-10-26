@@ -39,4 +39,15 @@ def export_traces(ctx) -> dict:
     return telemetry.export_langfuse(ctx.store)
 
 
-TOOLS = {f.__name__: f for f in [health_report, job_status, stuck_items, spend_report, export_traces]}
+def autonomy_status(ctx) -> dict:
+    """Is STOP on (who, why, since when, which scopes), and how far each motion runs alone: off, approve or auto.
+    Also counts approved actions waiting to run. Read only: STOP and resume are `gtm autonomy stop|resume`."""
+    from gtm_core import autonomy
+    au = autonomy.current()
+    waiting = ctx.store.one("SELECT COUNT(*) AS n FROM approvals WHERE status='approved'")["n"]
+    return {"stop": au.stop_state(ctx.store), "approved_waiting": waiting, "default": au.rules.get("default"),
+            "motions": {m: au.level("", "", {"motion": m})[0] for m in (au.rules.get("motions") or {})},
+            "actions": au.rules.get("actions") or {}, "agents": au.rules.get("agents") or {}}
+
+
+TOOLS = {f.__name__: f for f in [health_report, job_status, stuck_items, spend_report, export_traces, autonomy_status]}

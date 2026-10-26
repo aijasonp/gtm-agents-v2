@@ -58,4 +58,15 @@ def evaluate(m, spec, make_ctx) -> list[dict]:
     tri = next(j for j in js["jobs"] if j["job"] == "triage_inbox")
     add("job status shows failures and next run", tri["consecutive_failures"] == 3 and tri["next_run"].startswith("2026-11-02T10:15"), tri)
     add("unknown agent in job status", "error" in eng.job_status(ctx, "nope", now, ms), "")
+    from gtm_core import autonomy
+    autonomy.stop(st, "Sam Rivera", "wrong segment")
+    stopped = eng.changes(ctx, eng.report(ctx, now, ms, spec["discovery_errors"]))
+    add("STOP on is alerted with who and why", [c["id"] for c in stopped["new"]] == ["autonomy:stop"] and
+        "Sam Rivera: wrong segment" in stopped["new"][0]["detail"], stopped)
+    tools = load_module(m, "tools")
+    add("autonomy status shows STOP and each motion's level", tools.autonomy_status(ctx)["stop"]["reason"] == "wrong segment"
+        and tools.autonomy_status(ctx)["motions"].get("outbound") == "approve", tools.autonomy_status(ctx))
+    autonomy.resume(st, "Sam Rivera")
+    back = eng.changes(ctx, eng.report(ctx, now, ms, spec["discovery_errors"]))
+    add("resume reported once as a recovery", back["recovered"] == ["autonomy:stop"], back)
     return out

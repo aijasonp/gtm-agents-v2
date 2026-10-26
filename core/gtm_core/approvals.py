@@ -2,7 +2,8 @@
 
 Sends to a buyer (config/approvals.yaml `send_actions`) need a named person on the team, and pipeline emails
 need their owner. The check runs when the decision is made and again right before the send executes.
-An approver may edit the subject or body before approving; the edit is applied to the payload and kept in
+How far each motion runs without a person is set in config/autonomy.yaml (off, approve, auto), and STOP
+holds every execute until resumed (core/gtm_core/autonomy.py). An approver may edit the subject or body before approving; the edit is applied to the payload and kept in
 `approval_edits` (before and after), which is what the drafters learn from.
 """
 from __future__ import annotations
@@ -43,6 +44,7 @@ class Approvals:
         self.agent = agent
         self.audit = Audit(store, agent)
         self._policy = policy
+        self._autonomy = None
         if not getattr(store, "_edit_schema", False):
             autoid = "INTEGER PRIMARY KEY AUTOINCREMENT" if store.kind == "sqlite" else "BIGSERIAL PRIMARY KEY"
             store.execute(EDIT_SCHEMA.replace("{AUTOID}", autoid))
@@ -54,12 +56,45 @@ class Approvals:
             self._policy = Policy.load()
         return self._policy
 
+    @property
+    def autonomy(self):
+        if self._autonomy is None:
+            from .autonomy import current
+            self._autonomy = current()
+        return self._autonomy
+
     def request(self, action: str, payload: dict) -> int:
+        """Queue a request. The autonomy level for this motion (config/autonomy.yaml) decides what happens next:
+        off closes it at once, approve waits for a person, auto approves it for actions allowed to run alone."""
         rid = self.store.insert(
             "INSERT INTO approvals (agent, action, payload, status, requested_at) VALUES (?,?,?,?,?)",
             (self.agent, action, json.dumps(payload, default=str), PENDING, now_iso()))
         self.audit.log("approval.requested", id=rid, action=action)
+        try:
+            level, where = self.autonomy.level(action, self.agent, payload)
+        except Exception as e:  # a broken autonomy file never auto-approves anything: fall back to a person
+            self.audit.log("autonomy.error", error=str(e)[:200])
+            level, where = "approve", "error"
+        if level == "off":
+            self.store.execute("UPDATE approvals SET status=?, decided_at=?, decided_by=?, result=? WHERE id=? AND status=?",
+                               (REJECTED, now_iso(), "autonomy:off", json.dumps({"closed": f"autonomy off ({where})"}),
+                                rid, PENDING))
+            self.store.execute("UPDATE drafts SET status=? WHERE approval_id=? AND status IN ('queued','draft')",
+                               (REJECTED, rid))
+            self.audit.log("autonomy.closed", id=rid, action=action, where=where)
+        elif level == "auto":
+            self.store.execute("UPDATE approvals SET status=?, decided_at=?, decided_by=? WHERE id=? AND status=?",
+                               (APPROVED, now_iso(), "autonomy:auto", rid, PENDING))
+            self.audit.log("autonomy.auto_approved", id=rid, action=action, where=where)
         return rid
+
+    def _held(self, row: dict) -> str | None:
+        """STOP reason for this row, or None. Held rows stay approved and run after resume."""
+        try:
+            payload = row["payload"] if isinstance(row["payload"], dict) else json.loads(row["payload"] or "{}")
+            return self.autonomy.stopped(self.store, row["action"], row.get("agent"), payload)
+        except Exception as e:  # if STOP cannot be read, hold rather than send
+            return f"STOP state unreadable: {str(e)[:120]}"
 
     def list(self, status: str | None = PENDING, all_agents: bool = False) -> list[dict]:
         sql, params = "SELECT * FROM approvals WHERE 1=1", []
@@ -123,6 +158,10 @@ class Approvals:
     def execute_one(self, rid: int) -> dict:
         """Execute a single approved action now (used for safety actions that only reduce contact)."""
         row = self.store.one("SELECT * FROM approvals WHERE id=? AND status=?", (rid, APPROVED))
+        held = self._held(row) if row else None
+        if held:
+            self.audit.log("approval.held", id=rid, action=row["action"], why=held)
+            return {"id": rid, "held": held}
         if not row or not self.store.execute("UPDATE approvals SET status=? WHERE id=? AND status=?",
                                              (EXECUTING, rid, APPROVED)):
             return {"id": rid, "skipped": "not approved or already taken"}
@@ -154,6 +193,10 @@ class Approvals:
             fn = _EXECUTORS.get(row["action"])
             if fn is None:
                 results.append({"id": row["id"], "error": f"no executor for {row['action']}"})
+                continue
+            held = self._held(row)
+            if held:
+                results.append({"id": row["id"], "held": held, "action": row["action"]})
                 continue
             if dry_run:
                 results.append({"id": row["id"], "dry_run": True, "action": row["action"]})

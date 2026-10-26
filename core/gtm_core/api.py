@@ -14,6 +14,9 @@ Lets the customer's existing tools push work in and lets approvers act without a
   POST /v1/approvals/<id>/reject
   POST /v1/approvals/execute          run every approved action
   GET  /v1/health
+  POST /v1/stop                       STOP every send, CRM write and scheduled job (approver token);
+                                      body {"reason": ..., "scopes": [...]} optional. GET /v1/stop shows it.
+                                      Resume is console only: `gtm autonomy resume`.
 
 Two tokens, two roles:
   GTM_API_TOKEN           intake only (leads, meetings, signals, health). Safe to give web forms,
@@ -314,6 +317,20 @@ class Api:
                 return intake[path](body)
             except BadRequest as e:
                 return 400, {"error": str(e)}
+        if path == "/v1/stop":
+            # Any approver may pull the cord. Resuming is console only (`gtm autonomy resume`), on purpose.
+            if not (role or "").startswith("approver"):
+                return 403, {"error": "STOP needs an approver token"}
+            from . import autonomy
+            if method == "GET":
+                return 200, {"stop": autonomy.current().stop_state(self.store)}
+            if method == "POST":
+                b = body if isinstance(body, dict) else {}
+                who = role.split(":", 1)[1] if ":" in role else self.approver_name or "approver token"
+                scopes = b.get("scopes")
+                if scopes is not None and not (isinstance(scopes, list) and all(isinstance(x, str) for x in scopes)):
+                    return 400, {"error": "scopes must be a list of motion, action or agent names"}
+                return 201, {"stop": autonomy.stop(self.store, who, str(b.get("reason") or "")[:300], scopes)}
         if path.startswith("/v1/approvals"):
             if not (role or "").startswith("approver"):
                 return 403, {"error": "approvals need the approver token (GTM_API_APPROVER_TOKEN)"}

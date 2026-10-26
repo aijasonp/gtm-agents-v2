@@ -20,6 +20,7 @@ The full list and thresholds are in `references/checks.md`. What to do about eac
 | "What is stuck?" | `stuck_items` |
 | "What are we spending?" | `spend_report` (days) |
 | "Send traces to Langfuse now" | `export_traces` (Langfuse keys required; also every 5 minutes) |
+| "Are we stopped?" or "What runs on its own?" | `autonomy_status` (read only; STOP and resume are `gtm autonomy stop` and `gtm autonomy resume`) |
 
 Lead with the worst problem, then the runbook step for it. Quote times and counts from the tools.
 

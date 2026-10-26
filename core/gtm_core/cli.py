@@ -37,7 +37,7 @@ def cmd_agents(s, a):
 
 def cmd_run(s, a):
     from .scheduler import run_job
-    res = run_job(s, _manifest(s, a.agent), a.job)
+    res = run_job(s, _manifest(s, a.agent), a.job, force=a.force)
     print(json.dumps({k: v for k, v in res.items() if k != "ranked"}, indent=2, default=str))
 
 
@@ -112,6 +112,31 @@ def cmd_mcp(s, a):
             print(json.dumps(cfg.server(a.name).call(a.tool, json.loads(a.args or "{}")), indent=2, default=str))
     except McpError as e:
         raise SystemExit(str(e))
+
+
+def cmd_autonomy(s, a):
+    import os
+    from . import autonomy
+    from .store import Store
+    st = Store(s.database_url)
+    st.init()
+    au = autonomy.current()
+    by = a.by or os.environ.get("GTM_APPROVER") or os.environ.get("USER") or "console"
+    if a.action == "stop":
+        out = autonomy.stop(st, by, a.reason or "", [x for x in (a.scope or "").split(",") if x] or None)
+    elif a.action == "resume":
+        out = autonomy.resume(st, by)
+    else:
+        levels = {m: au.level("", "", {"motion": m})[0] for m in (au.rules.get("motions") or {})}
+        out = {"stop": au.stop_state(st), "default": au.rules.get("default"), "motions": levels,
+               "actions": au.rules.get("actions") or {}, "agents": au.rules.get("agents") or {},
+               "auto_allowed": au.rules.get("auto_allowed") or []}
+    print(json.dumps(out, indent=2, default=str))
+
+
+def cmd_stop(s, a):
+    a.action = "stop"
+    cmd_autonomy(s, a)
 
 
 def cmd_telemetry(s, a):
@@ -252,7 +277,15 @@ def main(argv=None):
     sub = p.add_subparsers(dest="cmd", required=True)
     sub.add_parser("init").set_defaults(fn=cmd_init)
     sub.add_parser("agents").set_defaults(fn=cmd_agents)
-    r = sub.add_parser("run"); r.add_argument("agent"); r.add_argument("job"); r.set_defaults(fn=cmd_run)
+    r = sub.add_parser("run"); r.add_argument("agent"); r.add_argument("job")
+    r.add_argument("--force", action="store_true", help="run even while STOP is on"); r.set_defaults(fn=cmd_run)
+    au = sub.add_parser("autonomy", help="autonomy levels and the STOP switch")
+    au.add_argument("action", choices=["status", "stop", "resume"])
+    au.add_argument("--reason", default=""); au.add_argument("--scope", default="", help="motions, actions or agents")
+    au.add_argument("--by", default=""); au.set_defaults(fn=cmd_autonomy)
+    sp = sub.add_parser("stop", help="STOP every send, CRM write and scheduled job now")
+    sp.add_argument("--reason", default=""); sp.add_argument("--scope", default=""); sp.add_argument("--by", default="")
+    sp.set_defaults(fn=cmd_stop)
     sc = sub.add_parser("schedule"); sc.add_argument("--tick", type=int, default=30); sc.set_defaults(fn=cmd_schedule)
     t = sub.add_parser("tools"); t.add_argument("agent"); t.set_defaults(fn=cmd_tools)
     c = sub.add_parser("call"); c.add_argument("agent"); c.add_argument("tool"); c.add_argument("--args", default="{}")

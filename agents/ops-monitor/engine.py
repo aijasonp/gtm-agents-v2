@@ -225,6 +225,22 @@ def gate_checks(ctx, now: datetime) -> list[dict]:
     return out
 
 
+def stop_checks(ctx) -> list[dict]:
+    """STOP on is a warning on every health check until someone resumes, so it is never forgotten."""
+    from gtm_core import autonomy
+    try:
+        st = autonomy.current().stop_state(ctx.store)
+    except Exception as e:
+        return [_check("autonomy:stop", "STOP switch", "fail", f"autonomy config unreadable: {str(e)[:200]}")]
+    if not st:
+        return [_check("autonomy:stop", "STOP switch", "ok", "running")]
+    waiting = ctx.store.one("SELECT COUNT(*) AS n FROM approvals WHERE status='approved'")["n"]
+    who = f" by {st['by']}" if st.get("by") else ""
+    why = f": {st['reason']}" if st.get("reason") else ""
+    return [_check("autonomy:stop", "STOP switch", "warn",
+                   f"STOP on ({', '.join(st['scopes'])}) from {st['source']}{who}{why}; {waiting} approved actions waiting")]
+
+
 def discovery_checks(errors: dict) -> list[dict]:
     return [_check(f"load:{a}", "agent load errors", "fail", f"{a}: {e[:200]}", a) for a, e in sorted(errors.items())] or \
         [_check("load:all", "agent load errors", "ok", "all agents loaded")]
@@ -246,7 +262,7 @@ def report(ctx, now: datetime | None = None, manifests: dict | None = None, disc
                 checks.append(_check(f"job:{m.id}:{j.get('name')}:cron", "job cadence", "fail", f"bad cron {j.get('cron')!r}: {e}", m.id))
     checks += approval_checks(ctx, now) + handoff_checks(ctx, now) + reply_checks(ctx, now) + pause_checks(ctx) \
         + spend_checks(ctx, ms, now) \
-        + gate_checks(ctx, now) + discovery_checks(errors)
+        + gate_checks(ctx, now) + stop_checks(ctx) + discovery_checks(errors)
     worst = max((RANK[c["status"]] for c in checks), default=0)
     status = {v: k for k, v in RANK.items()}[worst]
     counts = {s: sum(1 for c in checks if c["status"] == s) for s in RANK}

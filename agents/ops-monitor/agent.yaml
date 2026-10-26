@@ -20,6 +20,7 @@ tools:
   - stuck_items
   - spend_report
   - export_traces
+  - autonomy_status
 connectors_required: []
 connectors_optional: [slack]
 jobs:
