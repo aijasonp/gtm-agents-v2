@@ -20,6 +20,9 @@ Follow `references/monitoring-method.md`.
 | "Is any agent getting worse?" | `regression_check` |
 | "Why did draft 42 fail?" | `draft_scorecard` |
 | "Which agent's drafts do AEs rewrite most?" | `ae_feedback` |
+| "Teach the drafter from what AEs approved" | `build_exemplars` |
+| "What do AEs keep cutting?" | `edit_patterns` |
+| "Try DSPy on the follow-up drafts" | `optimize_drafter` |
 
 ## Without tools (drop-in edition)
 

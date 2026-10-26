@@ -123,6 +123,12 @@ def cmd_telemetry(s, a):
         print(json.dumps(telemetry.export_langfuse(st), indent=2))
     elif a.action == "feedback":
         print(json.dumps(telemetry.feedback_summary(st, a.days), indent=2))
+    elif a.action == "exemplars":
+        from . import copy_gate, exemplars
+        print(json.dumps(exemplars.build(st, banned=copy_gate.load_banned(None)), indent=2))
+    elif a.action == "patterns":
+        from . import exemplars
+        print(json.dumps(exemplars.edit_patterns(st), indent=2))
     else:
         telemetry.ensure(st)
         rows = st.query("SELECT agent, kind, COUNT(*) AS n, SUM(input_tokens) AS tin, SUM(output_tokens) AS tout, "
@@ -266,7 +272,7 @@ def main(argv=None):
     mc = sub.add_parser("mcp"); mc.add_argument("action", choices=["servers", "tools", "call"])
     mc.add_argument("name", nargs="?"); mc.add_argument("tool", nargs="?"); mc.add_argument("--args", default="{}")
     mc.add_argument("--schema", action="store_true"); mc.set_defaults(fn=cmd_mcp)
-    tm = sub.add_parser("telemetry"); tm.add_argument("action", choices=["stats", "feedback", "export"])
+    tm = sub.add_parser("telemetry"); tm.add_argument("action", choices=["stats", "feedback", "export", "exemplars", "patterns"])
     tm.add_argument("--days", type=int, default=28); tm.set_defaults(fn=cmd_telemetry)
     im = sub.add_parser("import"); im.add_argument("agent"); im.add_argument("kind", choices=["accounts", "signals", "outcomes", "contacts", "leads", "deals", "tasks", "meetings"])
     im.add_argument("path"); im.set_defaults(fn=cmd_import)

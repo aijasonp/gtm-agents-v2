@@ -21,3 +21,21 @@ expect:
   excluded_agent: product-marketing
   unsourced_in_bad: ["300%", "customers like Globex Bank"]
   sourced_ok: "6 hours"
+exemplars:   # AE approvals recorded through telemetry (fictional people)
+  kind: follow-up email
+  approved:
+    - {facts: {title: VP Sales, industry: Software},
+       drafted: "Hi Ana,\n\nFollowing up as promised on our call. You said finance signs off by the 30th. I can send the two page summary. Want it by Friday?\n\nSam",
+       sent: "Hi Ana,\n\nYou said finance signs off by the 30th. I can send the two page summary. Want it by Friday?\n\nSam"}
+    - {facts: {title: Chief Revenue Officer, industry: Logistics},
+       drafted: "Hi Ben,\n\nFollowing up as promised on our call. Your team wants the routing data first. I can share the pilot plan. Is Thursday good?\n\nSam",
+       sent: "Hi Ben,\n\nYour team wants the routing data first. I can share the pilot plan. Is Thursday good?\n\nSam"}
+    - {facts: {title: Director of Sales, industry: Healthcare},
+       drafted: "Hi Cy,\n\nFollowing up as promised on our call. You need a security review before the pilot. I can send our answers. Does Monday work?\n\nSam",
+       sent: "Hi Cy,\n\nYou need a security review before the pilot. I can send our answers. Does Monday work?\n\nSam"}
+    - {facts: {title: VP Sales, industry: Retail},
+       drafted: "Hi Di,\n\nWe unlock seamless synergy for teams like yours. Want a call?\n\nSam",
+       sent: "Hi Di,\n\nWe unlock seamless synergy for teams like yours. Want a call?\n\nSam"}
+  expect_kept: 3
+  never_example: synergy
+  expect_patterns: [following up as promised on our call]

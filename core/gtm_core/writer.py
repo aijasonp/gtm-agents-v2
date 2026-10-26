@@ -1,8 +1,9 @@
 """Drafting and extraction on the customer's model keys, with a deterministic floor.
 
 write()    -> outbound copy (email, LinkedIn, recap). Frontier model drafts from the
-              facts given, the Copy QA Gate scores it, and failures go back for up to
-              `max_rewrites` rewrites. With no model key configured, the agent's own
+              facts given, with up to `exemplars` (config, default 3) approved emails of the
+              same kind as style examples and the phrases AEs usually cut, the Copy QA Gate
+              scores it, and failures go back for up to `max_rewrites` rewrites. With no model key configured, the agent's own
               template is used so every agent still runs (demo, evals, air-gapped).
 extract()  -> structured JSON from text (cheap model). Returns None when no key is
               configured or the reply is not valid JSON; callers keep their
@@ -35,6 +36,7 @@ class Draft:
     source: str  # "model" or "template"
     attempts: int = 1
     fix: list[str] = field(default_factory=list)
+    exemplars: list[str] = field(default_factory=list)  # ids of the approved examples shown to the model
 
     def as_dict(self) -> dict:
         return {"subject": self.subject, "body": self.body, "gate_score": self.score, "gate_passed": self.passed,
@@ -84,10 +86,22 @@ def write(ctx, kind: str, facts: dict, instructions: str, fallback: str, max_wor
     try:
         from . import telemetry
         telemetry.draft_span(ctx.store, ctx.manifest.id, kind, facts, instructions, d.subject, d.body, d.score,
-                             d.passed, d.source, d.attempts)
+                             d.passed, d.source, d.attempts, exemplars=d.exemplars)
     except Exception:  # minimal contexts in tests, or a store without telemetry tables
         pass
     return d
+
+
+def _exemplars(ctx, kind: str, facts: dict) -> tuple[str, list[str]]:
+    """Few-shot block from AE-approved sends (core/gtm_core/exemplars.py). Empty until `build` has run."""
+    k = int(ctx.manifest.config.get("exemplars", 3) or 0)
+    if k <= 0:
+        return "", []
+    try:
+        from . import exemplars
+        return exemplars.prompt_block(ctx.store, kind, facts, k)
+    except Exception:  # minimal contexts, or a store without telemetry tables
+        return "", []
 
 
 def _write(ctx, kind: str, facts: dict, instructions: str, fallback: str, max_words: int = 120,
@@ -98,7 +112,9 @@ def _write(ctx, kind: str, facts: dict, instructions: str, fallback: str, max_wo
         return Draft(subj or subject_fallback, body, g.score, g.passed, "template", 0, g.failures())
 
     system = "\n\n".join([_skill_text(ctx), FACTS_RULE, STYLE_RULE])
+    shots, used = _exemplars(ctx, kind, facts)
     prompt = (f"Task: write a {kind}.\n{instructions}\n\nFacts (JSON):\n{json.dumps(facts, default=str, indent=1)}\n\n"
+              + (shots + "\n\n" if shots else "") +
               f"Keep the body under {max_words} words. If it is an email, put 'Subject: ...' on the first line. "
               "Return only the message.")
     attempts, last = 0, None
@@ -108,7 +124,7 @@ def _write(ctx, kind: str, facts: dict, instructions: str, fallback: str, max_wo
             out = ctx.gateway.complete(prompt, system=system, model_class="frontier", max_tokens=700).text
             subj, body = split_subject(out)
             g = _gate(ctx, body, max_words)
-            last = Draft(subj or subject_fallback, body, g.score, g.passed, "model", attempts, g.failures())
+            last = Draft(subj or subject_fallback, body, g.score, g.passed, "model", attempts, g.failures(), used)
             if g.passed:
                 return last
             prompt = (f"Rewrite this {kind} so it passes these checks. Fix every item, keep the facts.\n"

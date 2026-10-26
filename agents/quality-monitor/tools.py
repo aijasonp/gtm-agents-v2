@@ -1,4 +1,4 @@
-"""Quality Monitor MCP tools. Read only."""
+"""Quality Monitor MCP tools. Read only, except the exemplar rebuild, which writes the drafter's example set."""
 from __future__ import annotations
 
 from gtm_core.agents import load_module
@@ -46,4 +46,37 @@ def ae_feedback(ctx, days: int = 28) -> dict:
     return {"days": days, "by_agent_kind": by, "most_rewritten": worst[:5]}
 
 
-TOOLS = {f.__name__: f for f in [sample_drafts, quality_report, regression_check, draft_scorecard, ae_feedback]}
+def _gate_cfg(ctx) -> dict:
+    from gtm_core import copy_gate
+    path = ctx.manifest.config.get("banned_file")
+    return {"banned": copy_gate.load_banned(ctx.manifest.path(path) if path else None),
+            "max_words": int(ctx.manifest.config.get("exemplar_max_words", 150)),
+            "pass_mark": int(ctx.manifest.config.get("pass_mark", 32))}
+
+
+def build_exemplars(ctx, kind: str = "", per_kind: int = 8) -> dict:
+    """Rebuild the drafter's few-shot examples from emails AEs approved, per draft kind: gate-checked, varied,
+    versioned. The writer shows the closest 3 to the model on every new draft of that kind."""
+    from gtm_core import exemplars
+    return exemplars.build(ctx.store, [kind] if kind else None, int(per_kind), **_gate_cfg(ctx))
+
+
+def edit_patterns(ctx, kind: str = "", min_count: int = 3) -> dict:
+    """Words and phrases AEs keep cutting from drafts (seen in at least min_count separate edits)."""
+    from gtm_core import exemplars
+    return {"kind": kind or "all", "patterns": exemplars.edit_patterns(ctx.store, kind or None, int(min_count))}
+
+
+def optimize_drafter(ctx, kind: str) -> dict:
+    """Optional DSPy pass (GTM_DSPY_MODEL, e.g. anthropic/claude-sonnet-4-5): search approved examples for
+    better few-shot demos; they replace the current set only if they score higher on a held-out split."""
+    import os
+    from gtm_core import exemplars
+    model = os.environ.get("GTM_DSPY_MODEL")
+    if not model:
+        return {"skipped": "set GTM_DSPY_MODEL to a LiteLLM model name to run the DSPy pass"}
+    return exemplars.optimize_dspy(ctx.store, kind, model, **_gate_cfg(ctx))
+
+
+TOOLS = {f.__name__: f for f in [sample_drafts, quality_report, regression_check, draft_scorecard, ae_feedback,
+                                 build_exemplars, edit_patterns, optimize_drafter]}

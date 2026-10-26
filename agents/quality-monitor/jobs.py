@@ -22,3 +22,14 @@ def daily_quality(ctx, now: datetime | None = None) -> dict:
         ctx.slack.post(eng.format_alert(alerts))
     return {"sampled": rep["sampled"], "agents": len(rep["agents"]), "alerts": len(alerts),
             "regressed": [r["agent"] for r in alerts]}
+
+
+def weekly_exemplars(ctx, now: datetime | None = None) -> dict:
+    """Mondays: rebuild the drafter's few-shot examples from last week's AE approvals and edits."""
+    from gtm_core import exemplars
+    tools = load_module(ctx.manifest, "tools")
+    rep = exemplars.build(ctx.store, None, 8, now=now, **tools._gate_cfg(ctx))
+    built = {k: v for k, v in rep.items() if v.get("kept")}
+    if built:
+        ctx.slack.post("*Drafter examples rebuilt*: " + ", ".join(f"{k} {v['kept']} ({v['version']})" for k, v in built.items()))
+    return {"kinds": len(rep), "built": len(built)}

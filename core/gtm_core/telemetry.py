@@ -79,7 +79,7 @@ def generation(store: Store, agent: str, model: str, model_class: str, input_tok
 
 
 def draft_span(store: Store, agent: str, kind: str, facts: dict, instructions: str, subject: str, body: str,
-               gate_score: int, passed: bool, source: str, attempts: int) -> str:
+               gate_score: int, passed: bool, source: str, attempts: int, exemplars: list | None = None) -> str:
     """The finished draft with the facts it came from. Matched to the stored draft by its body text."""
     ensure(store)
     sid = uuid.uuid4().hex
@@ -87,7 +87,8 @@ def draft_span(store: Store, agent: str, kind: str, facts: dict, instructions: s
                   "started_at, ended_at, exported) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,0)",
                   (sid, current(), agent, "draft", kind, source, "passed" if passed else "failed", body_hash(body),
                    json.dumps(facts, default=str)[:20000], json.dumps({"subject": subject, "body": body}),
-                   json.dumps({"instructions": instructions[:2000], "gate_score": gate_score, "attempts": attempts}),
+                   json.dumps({"instructions": instructions[:2000], "gate_score": gate_score, "attempts": attempts,
+                               "exemplars": exemplars or []}),
                    now_iso(), now_iso()))
     return sid
 
@@ -167,18 +168,23 @@ def feedback_summary(store: Store, days: int = 28, now: datetime | None = None) 
     return out
 
 
-def examples(store: Store, kind: str | None = None, min_similarity: float = 0.0, limit: int = 500) -> list[dict]:
-    """Approved drafts with the facts they were written from and the text the AE approved (the gold answer)."""
+def examples(store: Store, kind: str | None = None, min_similarity: float = 0.0, limit: int = 500,
+             writer_kind: str | None = None) -> list[dict]:
+    """Approved drafts with the facts they were written from and the text the AE approved (the gold answer).
+    `kind` filters on the stored draft kind, `writer_kind` on the kind the writer was asked for."""
     ensure(store)
-    sql = ("SELECT f.after, f.value, f.kind, f.agent, s.facts, s.meta, s.output FROM feedback f JOIN spans s ON s.id=f.span_id "
-           "WHERE f.name='ae_edit_similarity' AND f.value>=?")
+    sql = ("SELECT f.after, f.value, f.kind, f.agent, s.name, s.facts, s.meta, s.output FROM feedback f "
+           "JOIN spans s ON s.id=f.span_id WHERE f.name='ae_edit_similarity' AND f.value>=?")
     p: list = [min_similarity]
     if kind:
         sql += " AND f.kind=?"
         p.append(kind)
+    if writer_kind:
+        sql += " AND s.name=?"
+        p.append(writer_kind)
     out = []
-    for r in store.query(sql + " ORDER BY f.created_at DESC LIMIT ?", (*p, limit)):
-        out.append({"agent": r["agent"], "kind": r["kind"], "similarity": r["value"], "facts": json.loads(r["facts"] or "{}"),
+    for r in store.query(sql + " ORDER BY f.created_at DESC, f.id LIMIT ?", (*p, limit)):
+        out.append({"agent": r["agent"], "kind": r["kind"], "writer_kind": r["name"], "similarity": r["value"], "facts": json.loads(r["facts"] or "{}"),
                     "instructions": json.loads(r["meta"] or "{}").get("instructions", ""),
                     "drafted": json.loads(r["output"] or "{}"), "approved": json.loads(r["after"] or "{}")})
     return out
