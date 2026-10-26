@@ -92,9 +92,12 @@ def test_hogql_poll_builds_query_and_maps_rows():
                                                       "/pricing", "avery@litware.example", None, None, None, "d1"]]})
 
     q = ph.PostHogQuery("https://ph.example/", "42", "phx", httpx.Client(transport=httpx.MockTransport(handler)))
-    rows = q.events(datetime(2026, 10, 13, tzinfo=timezone.utc), ["$pageview", "o'brien"])
+    import pytest
+    with pytest.raises(ValueError):
+        q.events(datetime(2026, 10, 13, tzinfo=timezone.utc), ["$pageview", "x') OR 1=1 --\\"])
+    rows = q.events(datetime(2026, 10, 13, tzinfo=timezone.utc), ["$pageview", "trial_started"])
     assert seen["auth"] == "Bearer phx" and seen["body"]["query"]["kind"] == "HogQLQuery"
-    assert "event IN ('$pageview', 'obrien')" in seen["body"]["query"]["query"]
+    assert "event IN ('$pageview', 'trial_started')" in seen["body"]["query"]["query"]
     assert rows[0]["person"]["properties"]["email"] == "avery@litware.example"
     assert ph.normalize(rows[0])["path"] == "/pricing"
 
@@ -110,7 +113,7 @@ def test_poll_job_uses_a_cursor_and_dedupes(ctx_for):
     class Fake:
         calls = []
 
-        def events(self, since, names):
+        def events(self, since, names, limit=10000):
             self.calls.append(since)
             return [page]
 
@@ -140,3 +143,34 @@ def test_web_events_route_stores_signals_and_runs_triggers(settings):
     assert out["triggers"] == [{"email": "avery@litware.example", "rule": "opened_then_key_page", "action": "tee_up"}]
     code, out = api.route("POST", "/v1/web-events", {}, body)
     assert code == 200 and out["duplicates"] == 1 and "triggers" not in out
+
+
+def test_a_second_person_joins_the_days_signal(ctx_for):
+    ctx = ctx_for("signal-sourcing")
+    ctx.store.upsert_account({"id": "litware.example", "name": "Litware", "domain": "litware.example",
+                              "industry": "Software", "employees": 900, "country": "US"})
+    for cid, e in (("c1", "ana@litware.example"), ("c2", "bo@litware.example")):
+        ctx.store.upsert("contacts", {"id": cid, "account_id": "litware.example", "name": cid, "email": e})
+    eng = load_module(ctx.manifest, "engine")
+    first = eng.web_events(ctx, [ev("$pageview", 19, "ana@litware.example", "/pricing")], NOW)
+    second = eng.web_events(ctx, [ev("$pageview", 19, "bo@litware.example", "/pricing")], NOW)
+    assert first["stored"] and second["stored"] == first["stored"]  # same signal, updated, reported again
+    p = ctx.store.signals_for("litware.example")[0]["payload"]
+    assert [x["contact_id"] for x in p["people"]] == ["c1", "c2"] and p["count"] == 2 and p["contact_id"] is None
+
+
+def test_a_full_page_resumes_from_the_newest_event(ctx_for):
+    ctx = ctx_for("signal-sourcing")
+    eng = load_module(ctx.manifest, "engine")
+
+    class Full:
+        def events(self, since, names, limit=10000):
+            return [ev("$pageview", 15, None, "/x"), ev("$pageview", 16, None, "/x")]
+
+    fp = eng.rules(ctx).setdefault("first_party", {})
+    fp["poll_limit"] = 2
+    try:
+        res = eng.poll_posthog(ctx, NOW, Full())
+    finally:
+        fp.pop("poll_limit")
+    assert res["more"] and ctx.store.get_state("sourcing:posthog_cursor").startswith("2026-10-16T15:00")

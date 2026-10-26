@@ -393,9 +393,31 @@ def _store_first_party(ctx, sigs: list[dict]) -> list[str]:
         try:
             if ctx.store.add_signal({**s, "category": st.category}):
                 added.append(s["id"])
+            elif _merge_people(ctx, s):
+                added.append(s["id"])  # a new person joined today's signal: triggers and Daily Book see them
         except ValueError as e:
             ctx.audit.log("sourcing.bad_signal", account=s["account_id"], error=str(e)[:200])
     return added
+
+
+def _merge_people(ctx, s: dict) -> bool:
+    """Same account, kind and day already stored: add any new people and the higher count. True if it changed."""
+    import json
+    row = ctx.store.one("SELECT payload, strength FROM signals WHERE id=?", (s["id"],))
+    if not row:
+        return False
+    old = json.loads(row["payload"] or "{}")
+    have = {p["email"] for p in old.get("people") or []}
+    new = [p for p in s["payload"].get("people") or [] if p["email"] not in have]
+    count = max(int(old.get("count") or 0), int(s["payload"].get("count") or 0))
+    if not new and count == old.get("count"):
+        return False
+    people = (old.get("people") or []) + new
+    old.update(people=people[:25], count=count,
+               contact_id=people[0]["contact_id"] if len(people) == 1 else None)
+    ctx.store.execute("UPDATE signals SET payload=?, strength=? WHERE id=?",
+                      (json.dumps(old), max(float(row["strength"] or 0), float(s.get("strength") or 0)), s["id"]))
+    return bool(new)
 
 
 def web_events(ctx, body, now: datetime | None = None) -> dict:
@@ -414,6 +436,11 @@ def web_events(ctx, body, now: datetime | None = None) -> dict:
     return {**rec, "stored": stored}
 
 
+def pipeline_dt(value):
+    from gtm_core.pipeline import parse_dt
+    return parse_dt(value)
+
+
 def poll_posthog(ctx, now: datetime | None = None, client=None) -> dict:
     """Read new events from the PostHog query API since the last poll (when configured)."""
     from gtm_core.sources import posthog as ph
@@ -429,7 +456,14 @@ def poll_posthog(ctx, now: datetime | None = None, client=None) -> dict:
     since = datetime.fromisoformat(cur) if cur else now - timedelta(days=int(fp.get("lookback_days", 7)))
     names = ["$pageview", *(fp.get("signup_events") or []), *(fp.get("content_events") or []),
              *((fp.get("product_qualified") or {}).get("events") or [])]
-    events = pc.events(since - timedelta(minutes=10), names)  # overlap; stored events are deduplicated
+    limit = int(fp.get("poll_limit", 10000))
+    events = pc.events(since - timedelta(hours=1), names, limit)  # an hour of overlap for ingestion lag; deduplicated
     res = web_events(ctx, events, now)
-    ctx.store.set_state("sourcing:posthog_cursor", now.isoformat())
+    if len(events) >= limit:  # a full page: resume from the newest event read, never skip past unread ones
+        newest = max((ph.normalize(e)["at"] for e in events), default="")
+        nxt = pipeline_dt(newest) or now
+        res["more"] = True
+    else:
+        nxt = now
+    ctx.store.set_state("sourcing:posthog_cursor", nxt.isoformat())
     return {"events": len(events), **res}

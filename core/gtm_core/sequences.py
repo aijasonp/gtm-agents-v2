@@ -64,7 +64,15 @@ def mark(store: Store, hid: str, status: str, reason: str = "", approval_id: int
 
 
 def cancel_for(store: Store, email: str, reason: str) -> int:
-    """Cancel every held step for a person (reply, opt-out, handed to an AE)."""
+    """Cancel every held or queued step for a person (reply, opt-out, handed to an AE). A queued step's pending
+    approval is closed too; one already approved is refused at send time because its step is cancelled."""
     ensure(store)
-    return store.execute("UPDATE held_steps SET status=?, reason=?, updated_at=? WHERE email=? AND status=?",
-                         (CANCELLED, reason, now_iso(), email.lower(), HELD))
+    rows = store.query("SELECT id, approval_id FROM held_steps WHERE email=? AND status IN (?,?)",
+                       (email.lower(), HELD, QUEUED))
+    for r in rows:
+        store.execute("UPDATE held_steps SET status=?, reason=?, updated_at=? WHERE id=? AND status IN (?,?)",
+                      (CANCELLED, reason, now_iso(), r["id"], HELD, QUEUED))
+        if r["approval_id"]:
+            store.execute("UPDATE approvals SET status='rejected', decided_at=?, decided_by=? WHERE id=? AND status='pending'",
+                          (now_iso(), "auto:sequence_stopped", r["approval_id"]))
+    return len(rows)

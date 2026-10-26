@@ -166,7 +166,7 @@ class Approvals:
                                              (EXECUTING, rid, APPROVED)):
             return {"id": rid, "skipped": "not approved or already taken"}
         fn = _EXECUTORS.get(row["action"])
-        guard = self.policy.send_guard(row["action"], row.get("decided_by"))
+        guard = self.policy.send_guard(row["action"], row.get("decided_by"), json.loads(row["payload"] or "{}"))
         if guard:
             self.store.execute("UPDATE approvals SET status=?, result=? WHERE id=?",
                                (FAILED, json.dumps({"error": guard}), rid))
@@ -206,7 +206,7 @@ class Approvals:
             if not self.store.execute("UPDATE approvals SET status=? WHERE id=? AND status=?",
                                       (EXECUTING, row["id"], APPROVED)):
                 continue
-            guard = self.policy.send_guard(row["action"], row.get("decided_by"))
+            guard = self.policy.send_guard(row["action"], row.get("decided_by"), row["payload"])
             if guard:
                 self.store.execute("UPDATE approvals SET status=?, result=? WHERE id=?",
                                    (FAILED, json.dumps({"error": guard}), row["id"]))

@@ -111,23 +111,25 @@ class Waits:
         return r
 
     # ---- the tick ----
-    def due(self, now: datetime | None = None) -> list[dict]:
+    def due(self, now: datetime | None = None, skip_kinds: set | None = None) -> list[dict]:
         """Claim every wait whose next escalation time has passed. Each returned item is one ladder level,
         handed out once: the claim moves next_check_at forward (or marks the ladder exhausted) atomically."""
         now = now or datetime.now(timezone.utc)
         out = []
         for _ in range(20):  # catch up every overdue level (a scheduler that was down for a day)
-            got = self._claim(now)
+            got = self._claim(now, skip_kinds or set())
             if not got:
                 break
             out += got
         return out
 
-    def _claim(self, now: datetime) -> list[dict]:
+    def _claim(self, now: datetime, skip_kinds: set = frozenset()) -> list[dict]:
         out = []
         rows = self.store.query("SELECT * FROM workflow_waits WHERE status=? AND next_check_at<=? ORDER BY next_check_at",
                                 (WAITING, _iso(now)))
         for r in rows:
+            if r["kind"] in skip_kinds:
+                continue
             w = self._decode(r)
             lvl = int(w["level"] or 0)
             ladder = w["ladder"]
@@ -188,7 +190,9 @@ class DbosWaits(Waits):
         return ok
 
     def due(self, now=None) -> list[dict]:
-        return []
+        """Kinds with a registered on_escalation handler are escalated by the DBOS workflow; every other kind is
+        claimed here by the regular sweep, so nothing is dropped when no handler is registered."""
+        return super().due(now, set(_HANDLERS))
 
 
 _WF = {}
@@ -206,13 +210,15 @@ def _dbos_workflow():
         if not r or r["status"] != WAITING or int(r["level"] or 0) != level:
             return False
         w = Waits._decode(r)
-        last = level + 1 >= len(w["ladder"])
-        st.execute("UPDATE workflow_waits SET level=?, status=?, updated_at=? WHERE id=? AND level=?",
-                   (level + 1, EXHAUSTED if last else WAITING, now_iso(), wid, level))
         fn = _HANDLERS.get(w["kind"])
-        if fn:
-            fn({**w, "escalation_level": level, "notify": w["ladder"][level].get("notify", "owner"),
-                "step": w["ladder"][level]})
+        if fn is None:
+            return False  # no handler: the sweep claims this level through Waits.due()
+        last = level + 1 >= len(w["ladder"])
+        if not st.execute("UPDATE workflow_waits SET level=?, status=?, updated_at=? WHERE id=? AND level=? AND status=?",
+                          (level + 1, EXHAUSTED if last else WAITING, now_iso(), wid, level, WAITING)):
+            return False  # claimed elsewhere
+        fn({**w, "escalation_level": level, "notify": w["ladder"][level].get("notify", "owner"),
+            "step": w["ladder"][level]})
         return True
 
     @DBOS.workflow()

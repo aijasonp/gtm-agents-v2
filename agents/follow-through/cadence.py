@@ -233,7 +233,20 @@ def discover(ctx, now: datetime | None = None) -> list[str]:
 
 
 # ---------- 2. stop ----------
+def _close_pending(ctx, row: dict, why: str) -> None:
+    """The step's email is no longer wanted: close its approval if nobody decided it yet (an approved one is
+    refused at send time because the cadence moved on)."""
+    if row.get("approval_id"):
+        n = ctx.store.execute("UPDATE approvals SET status='rejected', decided_at=?, decided_by=?, result=? "
+                              "WHERE id=? AND status='pending'",
+                              (now_iso(), "follow-through:cadence", json.dumps({"closed": why}), row["approval_id"]))
+        if n and row.get("draft_id"):
+            ctx.store.execute("UPDATE drafts SET status='rejected' WHERE id=? AND status IN ('queued','draft')",
+                              (row["draft_id"],))
+
+
 def _stop(ctx, row: dict, why: str, status: str = STOPPED, now: datetime | None = None) -> None:
+    _close_pending(ctx, row, why)
     row["status"], row["stop_reason"] = status, why
     row["history"].append({"at": _iso(_now(now)), "event": status, "why": why})
     _save(ctx, row)
@@ -288,37 +301,38 @@ def log_touch(ctx, email: str, kind: str = "manual", note: str = "", by: str = "
 
 
 def evidence(ctx, row: dict, step: dict) -> tuple[str, str] | None:
-    """(touched_at, how) for the first sign this step's touch happened after it opened, else None."""
-    since, email = row["step_opened_at"], row["email"]
+    """(touched_at, how) for the first sign this step's touch happened strictly after it opened, else None.
+    Strictly after: the touch that advanced the previous step opened this one at that same instant."""
+    since, email = _iso(_dt(row["step_opened_at"])), row["email"]
     hits = []
-    e = ctx.store.one("SELECT occurred_at FROM email_events WHERE email=? AND event='sent' AND occurred_at>=? "
+    e = ctx.store.one("SELECT occurred_at FROM email_events WHERE email=? AND event='sent' AND occurred_at>? "
                       "ORDER BY occurred_at LIMIT 1", (email, since))
     if e:
         hits.append((e["occurred_at"], "email sent"))
-    t = ctx.store.one("SELECT touched_at, kind FROM cadence_touches WHERE email=? AND touched_at>=? ORDER BY touched_at "
+    t = ctx.store.one("SELECT touched_at, kind FROM cadence_touches WHERE email=? AND touched_at>? ORDER BY touched_at "
                       "LIMIT 1", (email, since))
     if t:
         hits.append((t["touched_at"], f"logged ({t['kind']})"))
     if row.get("contact_id"):
-        d = ctx.store.one("SELECT created_at FROM drafts WHERE contact_id=? AND status='sent' AND created_at>=? "
+        d = ctx.store.one("SELECT created_at FROM drafts WHERE contact_id=? AND status='sent' AND created_at>? "
                           "ORDER BY created_at LIMIT 1", (row["contact_id"], since))
         if d:
             hits.append((d["created_at"], "draft sent"))
         tk = next((x for x in ctx.store.select("tasks", "contact_id=? AND status='done'", (row["contact_id"],))
-                   if (x.get("updated_at") or "") >= since), None)
+                   if x.get("updated_at") and _iso(_dt(x["updated_at"])) > since), None)
         if tk:
             hits.append((tk["updated_at"], "task done"))
     if step.get("kind") and step.get("drafter") not in ("follow-through", "ae"):
         # a peer agent's draft for this step: the AE confirming it (approval) is the touch
         q = ("SELECT d.id, a.decided_at FROM drafts d JOIN approvals a ON a.id=d.approval_id WHERE d.kind=? AND "
-             "a.status IN ('approved','executing','executed') AND a.decided_at>=? AND (d.contact_id=? OR d.meta LIKE ?)")
+             "a.status IN ('approved','executing','executed') AND a.decided_at>? AND (d.contact_id=? OR d.meta LIKE ?)")
         r = ctx.store.one(q, (step["kind"], since, row.get("contact_id") or "", f"%{email}%"))
         if r:
             hits.append((r["decided_at"], f"{step['kind']} confirmed"))
     if row.get("deal_id") and row["motion"] in ("post_meeting", "proposal_out"):
         d = ctx.store.get("deals", row["deal_id"])
-        if d and d.get("last_activity_at") and d["last_activity_at"] > since:
-            hits.append((pipeline.parse_dt(d["last_activity_at"]).isoformat(), "deal activity"))
+        if d and d.get("last_activity_at") and _iso(_dt(d["last_activity_at"])) > since:
+            hits.append((_iso(_dt(d["last_activity_at"])), "deal activity"))
     return min(hits) if hits else None
 
 
@@ -327,6 +341,7 @@ def _advance(ctx, row: dict, touched_at: str, how: str) -> None:
     w = _waits(ctx)
     w.resolve("touch", wkey(row), how)
     w.resolve("approval", wkey(row), how)
+    _close_pending(ctx, row, f"step already touched: {how}")
     row["history"].append({"at": touched_at, "event": "touched", "step": row["step_id"], "how": how})
     row["last_touch_at"], row["last_touch_kind"] = touched_at, how
     nxt = int(row["step_index"]) + 1
@@ -410,7 +425,7 @@ def draft_step(ctx, row: dict, step: dict, now: datetime | None = None) -> dict:
     rid = ctx.request_approval("pipeline_email", {
         "contact": {"email": row["email"], "name": c.get("name"), "company": (a or {}).get("name")},
         "subject": d.subject, "body": d.body, "draft_id": did, "owner": row.get("owner"), "approver": row.get("owner"),
-        "cadence_id": row["id"], "motion": row["motion"], "step": step["id"]},
+        "cadence_id": row["id"], "cadence": row["motion"], "motion": "pipeline", "step": step["id"]},
         summary=f"{row.get('owner') or 'unassigned'}: confirm {step['id']} to {c.get('name') or row['email']} "
                 f"(due {row['next_touch_at'][:16].replace('T', ' ')} UTC, gate {d.score}/40)")
     ctx.store.execute("UPDATE drafts SET status=?, approval_id=? WHERE id=?", ("queued", rid, did))
@@ -483,7 +498,7 @@ def release_held(ctx, now: datetime | None = None) -> dict:
         rid = ctx.request_approval("sequence_step", {
             "held_id": h["id"], "contact": h["contact"], "subject": h["subject"], "body": h["body"],
             "draft_id": h["draft_id"], "owner": h["owner"], "approver": h["owner"], "step": f"step_{h['step_index'] + 1}",
-            "campaign": h["meta"].get("campaign")},
+            "campaign": h["meta"].get("campaign"), "motion": "outbound"},
             summary=f"{h['owner'] or 'unassigned'}: confirm step {h['step_index'] + 1} to {h['contact'].get('name') or email}")
         sequences.mark(ctx.store, h["id"], sequences.QUEUED, approval_id=rid)
         _waits(ctx).open("approval", f"held:{h['id']}", add_business_hours(now, float(cfg.get("approval_sla_hours", 4)),

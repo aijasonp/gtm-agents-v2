@@ -16,13 +16,14 @@ weights: {industry: 0.35, employees: 0.30, country: 0.10, revenue: 0.10, tech: 0
 # opens and replies. Edit questions for the buyer during install; change `version` to re-judge.
 judgment:
   enabled: true
-  backend: auto            # auto (clef, then remote, then model, then rules) | rules | clef | model | remote | shadow
+  backend: auto            # auto (clef if enabled, then remote, then model, then rules) | rules | clef | model | remote | shadow
   blend: 0.5
   cache_days: 30
   remote: {url_env: GTM_DECISION_URL, token_env: GTM_DECISION_TOKEN, timeout: 20}
   # Cloudflare Workers AI Clef (typed decisions, probabilities per option). Answers below min_confidence
   # fall back to the rules. clef-flash is the low-latency variant.
-  clef: {account_env: CLOUDFLARE_ACCOUNT_ID, token_env: CLOUDFLARE_AUTH_TOKEN, model: clef, min_confidence: 0.7}
+  clef: {enabled: false, account_env: CLOUDFLARE_ACCOUNT_ID, token_env: CLOUDFLARE_AUTH_TOKEN, model: clef,
+         min_confidence: 0.7}
   shadow: {primary: rules, candidate: model}
   learning: {window_days: 120, min_per_side: 20, weights: {open: 0.4, reply: 0.6}}
   models:

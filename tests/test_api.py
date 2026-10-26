@@ -50,7 +50,7 @@ def test_api_auth_and_lead_flow(server):
         if p is not send:  # CRM writes: the shared approver token is fine
             assert call(base, "POST", f"/v1/approvals/{p['id']}/approve", {"by": "someone-else"}, token=A)[0] == 200
     code, out = call(base, "POST", f"/v1/approvals/{send['id']}/approve", token=A)
-    assert code == 403 and "named approver" in out["error"]  # a send needs a person, not a shared token
+    assert code == 403 and "personal token" in out["error"]  # a send needs a person, not a shared token
     edited = {"subject": "Quick question, Omar", "body": "Hi Omar, saw the demo request. Does Tuesday work?"}
     assert call(base, "POST", f"/v1/approvals/{send['id']}/approve", {"edits": edited}, token="sam-secret")[0] == 200
     assert call(base, "POST", f"/v1/approvals/{pending[0]['id']}/approve", token=A)[0] == 409

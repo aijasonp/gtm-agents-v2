@@ -35,6 +35,43 @@ from .suppression import reason as suppressed_reason
 _CTX: dict = {}
 
 
+REPLY_EVENTS = ("reply", "reply_positive", "reply_negative")
+
+
+def _stale(store, p: dict, email: str) -> str | None:
+    """Why an approved single email must not go out now, or None. Checked right before the send, because a
+    person can reply, be handed to an AE, or have the cadence move on while the email waits for approval."""
+    from .approvals import CURRENT
+    rid = CURRENT.get()
+    row = store.one("SELECT requested_at FROM approvals WHERE id=?", (rid,)) if rid else None
+    since = (row or {}).get("requested_at")
+    email = email.lower()
+    if since:
+        q = ",".join("?" * len(REPLY_EVENTS))
+        if store.one(f"SELECT id FROM email_events WHERE email=? AND event IN ({q}) AND occurred_at>=?",
+                     (email, *REPLY_EVENTS, since)):
+            return "replied after this email was drafted: Reply Desk owns the response"
+        try:
+            if store.one("SELECT id FROM teeups WHERE email=? AND created_at>=? AND status IN ('open','actioned')",
+                         (email, since)):
+                return "handed to the AE after this email was drafted"
+        except Exception:  # no teeups table: Follow-Through not installed
+            pass
+    if p.get("held_id"):
+        h = store.one("SELECT status FROM held_steps WHERE id=?", (p["held_id"],))
+        if h and h["status"] != "queued":
+            return f"sequence step is {h['status']}"
+    if p.get("cadence_id"):
+        try:
+            c = store.one("SELECT status, step_id, approval_id FROM cadence WHERE id=?", (p["cadence_id"],))
+        except Exception:
+            c = None
+        if c and (c["status"] not in ("active", "awaiting_ae") or (p.get("step") and c["step_id"] != p["step"])
+                  or (rid and c["approval_id"] and int(c["approval_id"]) != int(rid))):
+            return f"cadence moved on (status {c['status']}, step {c['step_id']})"
+    return None
+
+
 def register_core_executors(ctx) -> None:
     _CTX["ctx"] = ctx
 
@@ -101,10 +138,12 @@ def register_core_executors(ctx) -> None:
         if not email:
             raise ValueError(f"{kind} needs contact.email")
         why = suppressed_reason(ctx.store, email)
+        why = f"suppressed: {why}" if why else _stale(ctx.store, p, email)
         if why:
             if p.get("draft_id"):
                 ctx.store.execute("UPDATE drafts SET status=? WHERE id=?", ("rejected", p["draft_id"]))
-            return {"ok": False, "skipped": f"suppressed: {why}"}
+            ctx.audit.log(f"{kind}.not_sent", email=email, why=why)
+            return {"ok": False, "skipped": why}
         res = ctx.sequencer.send_one(p["contact"], {"subject": p.get("subject", ""), "body": p.get("body", "")},
                                      {"kind": kind, "owner": p.get("owner"), "draft_id": p.get("draft_id"),
                                       "cadence_id": p.get("cadence_id"), "campaign": p.get("campaign")})

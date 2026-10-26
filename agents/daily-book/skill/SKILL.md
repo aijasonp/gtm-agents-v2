@@ -1,6 +1,6 @@
 ---
 name: daily-book
-description: Build each account executive's daily book of 25 to 50 people to work today, warm from the CRM and engagement, cold from owned buying signals, with the reason and next action for each. Use when someone asks who to reach out to today, for my book, to fill an AE's day, why someone is on the list, or why a book came up short.
+description: Build each account executive's daily book of 25 to 50 people to work today, warm from the CRM and engagement, cold from owned buying signals, with the reason and next action for each. Use when someone asks who to contact today, for my book, to fill an AE's day, why someone is on the list, or why a book came up short.
 ---
 
 # Daily Book
@@ -35,5 +35,5 @@ Ask for the AE's accounts with scores and signals, open deals with last activity
 - Page visits are timing too. Never say "I saw you on our pricing page". A trial signup or a content download may be mentioned, because the person chose it.
 - Opens and clicks only decide timing. Never tell the AE to mention them; the action for engaged people is a call or LinkedIn, or an email with a new reason.
 - Nobody already teed up or in a follow-up cadence goes in a book: Follow-Through owns them.
-- Never pad a short book with people below the ICP floor or with no reason to reach out.
+- Never pad a short book with people below the ICP floor or with no reason to contact them.
 - At most `max_per_account` people from one account.

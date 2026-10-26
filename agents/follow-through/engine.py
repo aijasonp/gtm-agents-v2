@@ -213,6 +213,12 @@ def act(ctx, facts: dict, decision: dict, now: datetime | None = None) -> dict:
     owner = owner_for(ctx, a, d)
     b = brief(ctx, facts, decision, owner)
     if action == "notify_owner":
+        key = f"follow_through:fyi:{facts['email']}"
+        cooldown = (now - timedelta(days=int(trigger_config(ctx)[0].get("cooldown_days", 14)))).isoformat()
+        last = ctx.store.get_state(key)
+        if last and last >= cooldown:
+            return {"action": "none", "skipped": "owner already told inside the cooldown"}
+        ctx.store.set_state(key, now.isoformat())
         ctx.slack.post(_format(b, None))
         ctx.audit.log("follow_through.notified", email=facts["email"], rule=decision.get("rule"), owner=owner)
         return {"action": "notify_owner", "owner": owner, "brief": b}
@@ -270,7 +276,7 @@ def evaluate_recent(ctx, now: datetime | None = None, apply: bool = True) -> dic
                    if p.get("contact_id") and p.get("email")]
     results = [evaluate_email(ctx, e, now, apply) for e in sorted(set(emails))]
     if apply:
-        ctx.store.set_state("follow_through:last_sweep", now.isoformat())
+        ctx.store.set_state("follow_through:last_sweep", now.replace(microsecond=0).isoformat())
     acted = [r for r in results if (r.get("result") or {}).get("action", "none") != "none"]
     return {"checked": len(results), "teed_up": sum(1 for r in acted if r["result"]["action"] == "tee_up"),
             "notified": sum(1 for r in acted if r["result"]["action"] == "notify_owner"), "results": results}

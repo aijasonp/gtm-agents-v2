@@ -20,7 +20,14 @@ motions:
 actions: {}               # e.g. {crm_task: auto, dialer_enqueue: off}
 agents: {}                # e.g. {social-signals: off}
 
-# Which motion an agent's requests belong to (payload `motion` wins when set).
+# Which motion a request belongs to: payload `motion` (when it names a motion above), then the action, then
+# the agent.
+action_motion:
+  sequence_enroll: outbound
+  sequence_step: outbound
+  pipeline_email: pipeline
+  proposal_send: pipeline
+  social_post: social
 agent_motion:
   icp-outbound: outbound
   daily-book: outbound
@@ -45,7 +52,7 @@ auto_allowed: [crm_task, crm_note, deal_note, crm_update, contact_update]
 # Any of these halts every send and CRM write, and pauses scheduled jobs:
 #   the file below exists (its lines may list scopes: motions, actions or agents; empty = everything)
 #   GTM_STOP is set (1 or all, or a comma-separated list of scopes)
-#   `gtm stop` or POST /v1/stop (any approver token). Resume only with `gtm resume` at the console.
+#   `gtm stop` or POST /v1/stop (any approver token). Resume only with `gtm autonomy resume` at the console.
 # Approved requests stay approved and run after resume. Nothing is lost or re-sent.
 stop:
   file: data/STOP

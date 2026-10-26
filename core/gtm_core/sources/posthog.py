@@ -223,7 +223,11 @@ class PostHogQuery:
         return cls(h, p, k) if h and p and k else None
 
     def events(self, since: datetime, names: list[str], limit: int = 10000) -> list[dict]:
-        names_sql = ", ".join("'" + n.replace("'", "") + "'" for n in names)
+        import re
+        safe = [n for n in names if re.fullmatch(r"[$A-Za-z0-9_.: -]{1,100}", n or "")]
+        if len(safe) != len(names):
+            raise ValueError("PostHog event names may use letters, digits, $ _ . : - and spaces only")
+        names_sql = ", ".join(f"'{n}'" for n in safe)
         q = ("SELECT event, timestamp, properties.$current_url, properties.$pathname, person.properties.email, "
              "properties.company_domain, properties.domain, properties.asset, distinct_id FROM events "
              f"WHERE timestamp >= toDateTime('{since.strftime('%Y-%m-%d %H:%M:%S')}') AND event IN ({names_sql}) "

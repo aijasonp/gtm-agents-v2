@@ -267,6 +267,12 @@ class Api:
         from .approvals import Approvals
         if edits is not None and not isinstance(edits, dict):
             return 400, {"error": "edits must be an object of field: new value"}
+        if approve and by is None:  # the shared token is not a person: sends to a buyer need a personal token
+            from .approval_policy import Policy
+            row = self.store.one("SELECT action FROM approvals WHERE id=?", (rid,))
+            if row and Policy.load().is_send(row["action"]):
+                return 403, {"error": f"{row['action']} sends to a buyer: approve it with your personal token "
+                                      "(GTM_API_APPROVERS), not the shared approver token"}
         try:
             Approvals(self.store, "core").decide(rid, approve, by=by or self.approver_name, edits=edits)
         except KeyError as e:

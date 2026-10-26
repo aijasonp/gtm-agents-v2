@@ -108,10 +108,15 @@ class Policy:
                     return (why if self.mode == "required" else None), who
         return None, who
 
-    def send_guard(self, action: str, decided_by: str | None) -> str | None:
-        """Refusal reason at send time, or None. The recorded approver must still resolve to a person."""
+    def send_guard(self, action: str, decided_by: str | None, payload: dict | None = None) -> str | None:
+        """Refusal reason at send time, or None. The recorded approver must still resolve to a person, and with
+        the payload the full check (owner, delegate or manager) runs again."""
         if not self.is_send(action) or self.mode != "required":
             return None
-        if self.person(decided_by):
-            return None
-        return f"send refused: {action} has no named approver on record (decided_by={decided_by!r})"
+        if not self.person(decided_by):
+            return f"send refused: {action} has no named approver on record (decided_by={decided_by!r})"
+        if payload is not None:
+            why, _ = self.check(action, payload, decided_by)
+            if why:
+                return f"send refused: {why}"
+        return None

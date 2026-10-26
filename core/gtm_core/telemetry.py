@@ -7,7 +7,8 @@ Everything is written to the customer's own database first. Nothing leaves it un
   feedback  one row per AE decision on a drafted send: ae_decision (1 approved, 0 rejected) and
             ae_edit_similarity (1.0 = sent as written, lower = the AE rewrote it), with the before and after.
 
-Prompts and model outputs are not stored on generation spans unless GTM_TRACE_CONTENT=1.
+Prompts and model outputs are not stored on generation spans unless GTM_TRACE_CONTENT=1. Draft spans keep their
+facts and text locally (they are the training examples) but send them to Langfuse only with GTM_TRACE_CONTENT=1.
 
 Langfuse (optional): set LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY and LANGFUSE_HOST (default
 https://cloud.langfuse.com, or your self-hosted URL). `export_langfuse()` sends traces, generations and
@@ -233,7 +234,10 @@ def export_langfuse(store: Store, client=None, batch_size: int = 200) -> dict:
                 body.update({"input": meta["prompt"], "output": meta.get("output")})
             batch.append(_event("generation-create", body, s["started_at"]))
         else:
-            body.update({"input": json.loads(s.get("facts") or "{}"), "output": json.loads(s.get("output") or "{}")})
+            meta = json.loads(s.get("meta") or "{}")
+            if os.environ.get("GTM_TRACE_CONTENT") == "1":  # buyer facts and email text leave only on opt-in
+                body.update({"input": json.loads(s.get("facts") or "{}"), "output": json.loads(s.get("output") or "{}")})
+            body["metadata"] = {k: meta.get(k) for k in ("gate_score", "attempts", "exemplars")}
             batch.append(_event("span-create", body, s["started_at"]))
     for f in fb:
         batch.append(_event("score-create", {"id": f["id"], "traceId": f["trace_id"], "observationId": f["span_id"],

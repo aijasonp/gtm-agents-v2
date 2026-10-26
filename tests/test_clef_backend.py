@@ -65,6 +65,8 @@ def test_low_confidence_and_errors_fall_back_to_rules(monkeypatch):
     monkeypatch.setenv("CLOUDFLARE_ACCOUNT_ID", "a")
     monkeypatch.setenv("CLOUDFLARE_AUTH_TOKEN", "t")
     cfg = {"backend": "auto", "clef": {"min_confidence": 0.7}}
+    assert resolve_backend(ctx, cfg) != "clef"  # credentials alone never switch auto to Clef
+    cfg["clef"]["enabled"] = True
     assert resolve_backend(ctx, cfg) == "clef"
     answers, used = _run(ctx, cfg, "clef", MODEL, {"account": {"name": "Northwind", "industry": "bank"}})
     assert used == "clef" and answers["regulated"].source == "rules" and answers["regulated"].value is True

@@ -21,7 +21,7 @@ from .store import Store, now_iso
 
 LEVELS = ("off", "approve", "auto")
 STATE_KEY = "autonomy:stop"
-DEFAULTS = {"default": "approve", "motions": {}, "actions": {}, "agents": {}, "agent_motion": {},
+DEFAULTS = {"default": "approve", "motions": {}, "actions": {}, "agents": {}, "agent_motion": {}, "action_motion": {},
             "auto_allowed": [], "stop": {"file": "data/STOP", "always_allowed": ["sequence_stop"],
                                          "jobs_allowed": ["ops-monitor.*"]}}
 
@@ -58,7 +58,12 @@ class Autonomy:
         return cls(rules, set(pol.rules.get("send_actions") or []), base)
 
     def motion(self, action: str, agent: str, payload: dict | None = None) -> str:
-        return str((payload or {}).get("motion") or (self.rules.get("agent_motion") or {}).get(agent) or "other")
+        """Payload `motion` when it names a configured motion, else the action's motion, else the agent's."""
+        m = (payload or {}).get("motion")
+        if m and m in (self.rules.get("motions") or {}):
+            return str(m)
+        return str((self.rules.get("action_motion") or {}).get(action)
+                   or (self.rules.get("agent_motion") or {}).get(agent) or "other")
 
     def level(self, action: str, agent: str, payload: dict | None = None) -> tuple[str, str]:
         """(level, where it came from). An `auto` that is not allowed for this action falls back to approve."""

@@ -374,7 +374,7 @@ def _action(r: dict) -> str:
             "social": "engage on their content, then a short note",
             "recycle": "check whether timing changed since the loss",
             "sourced_signal": "first touch on the sourced signal",
-            "signal_scout": "first touch on the account's best signal"}.get(r["source"], "reach out")
+            "signal_scout": "first touch on the account's best signal"}.get(r["source"], "contact with a clear reason")
 
 
 def predraft(ctx, book: dict, now: datetime | None = None) -> dict:

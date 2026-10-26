@@ -3,7 +3,8 @@
 Config lives in the `judgment` section of config/icp.yaml:
 
   backend: auto | rules | clef | model | remote | shadow
-      auto   = remote when GTM_DECISION_URL is set, else model when a key is set, else rules
+      auto   = clef when judgment.clef.enabled is true and its credentials are set, else remote when
+               GTM_DECISION_URL is set, else model when a key is set, else rules
   shadow: {primary: rules, candidate: model}
       returns the primary verdict and stores the candidate's answers and agreement next to it,
       so a new backend can be measured on live accounts before it decides anything
@@ -66,8 +67,8 @@ def resolve_backend(ctx, cfg: dict) -> str:
     name = cfg.get("backend", "auto")
     if name != "auto":
         return name
-    if _backend(ctx, "clef", cfg).available():
-        return "clef"
+    if (cfg.get("clef") or {}).get("enabled") and _backend(ctx, "clef", cfg).available():
+        return "clef"  # opt-in: Clef answers carry no evidence, so auto never picks it on credentials alone
     if _backend(ctx, "remote", cfg).available():
         return "remote"
     if ModelBackend(ctx).available():
