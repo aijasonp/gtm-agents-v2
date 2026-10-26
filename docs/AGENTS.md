@@ -1,6 +1,6 @@
 # Agent guide
 
-How the twenty-six agents work together, what each one reads and writes, and which licensed playbooks each bundles.
+How the twenty-seven agents work together, what each one reads and writes, and which licensed playbooks each bundles.
 
 ## The flow
 
@@ -111,6 +111,7 @@ Sends to a buyer (`send_actions` in config/approvals.yaml) need a named person o
 | Call Coach | meetings, insights, scenarios | none | none | list_scenarios, start_roleplay, score_roleplay, drill_plan | weekly_drills | sales-coaching, sales-call-review, influence-psychology |
 | Signal Sourcing | accounts, SEC EDGAR, newsroom feeds, job boards, config/signals.yaml | signals (source `sourcing:<tier>`), account ATS board, discovery candidates | none | scan_account, scan_due, dispatch_batch, discover_companies, add_company, sourcing_report | daily_scan, weekly_discovery | sales-intent, sales-prospect-list |
 | Follow-Through | email events, contacts, drafts, approvals, meetings, event leads, deals, Signal Scout tiers, config/triggers.yaml, config/cadences.yaml | teeups, cadence ledger, workflow waits, AE tasks (local), sequence stops (at once), crm_task and pipeline_email (approval), Slack briefs and escalations | none | check_engagement, run_triggers, tee_ups, resolve_tee_up, explain_rules, next_touches, cadence_status, log_touch, follow_up_coverage, start_motion | evaluate_triggers, sweep_cadence, coverage_report | sales-cadence |
+| Daily Book | accounts, scores, signals, contacts, deals, leads, email events, insights, Signal Sourcing send list, Follow-Through tee-ups and cadences | daily_book rows, sequence_enroll for cold rows (approval, via ICP Outbound), local contacts from MCP people search (opt-in) | none | my_book, build_books, book_status, mark_done | daily_books | sales-prospect-list |
 
 ## Selling agents separately
 

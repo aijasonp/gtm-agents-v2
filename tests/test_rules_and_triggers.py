@@ -82,3 +82,9 @@ def test_follow_through_tools_bind_over_mcp(ctx_for):
     from gtm_core.mcp_server import bind_tools
     tools = bind_tools(ctx_for("follow-through"))
     assert set(tools) == set(ctx_for("follow-through").manifest.tools)
+
+
+def test_daily_book_tools_bind_over_mcp(ctx_for):
+    from gtm_core.mcp_server import bind_tools
+    ctx = ctx_for("daily-book")
+    assert set(bind_tools(ctx)) == set(ctx.manifest.tools)

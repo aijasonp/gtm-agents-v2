@@ -1,7 +1,7 @@
 # GTM fleet on NetClaw: the single source of truth for the NetClaw build.
 #
 # 3 NetClaw instances, 13 subagents, lead in to closed deal out, AE-only team.
-# Each subagent is a conversational front end over the 26 runtime agents in agents/:
+# Each subagent is a conversational front end over the 27 runtime agents in agents/:
 # the runtime computes (scores, routing, risk, forecast math) and queues every write
 # for approval; NetClaw talks to AEs in Slack and calls those tools over MCP.
 #
@@ -43,13 +43,14 @@ mcp_servers:
   call-coach:           {port: 8124}
   signal-sourcing:      {port: 8125}
   follow-through:       {port: 8126}
+  daily-book:           {port: 8127}
 
 instances:
 
   pipeline:
     purpose: "Lead in and prospecting: inbound leads and replies, account ranking, sequences, copy gate."
     slack_channel: gtm-pipeline
-    mcp: [lead-triage, reply-desk, follow-through, enrichment, signal-scout, signal-sourcing, social-signals, rep-brief, icp-outbound, copy-qa-gate, event-campaigns, content-studio]
+    mcp: [lead-triage, reply-desk, follow-through, daily-book, enrichment, signal-scout, signal-sourcing, social-signals, rep-brief, icp-outbound, copy-qa-gate, event-campaigns, content-studio]
     agents:
       inbound-router:
         stage: Lead in
@@ -59,8 +60,8 @@ instances:
       signal-scout:
         stage: Prospecting
         job: "Source dated signals from SEC filings, newsrooms and job boards, rank each AE's accounts daily on ICP fit plus buying signals (including social engagement), explain every score, and deliver each AE's morning brief."
-        tools: [signal-sourcing, signal-scout, social-signals, rep-brief]
-        skills: [agents/signal-sourcing/skill, agents/signal-scout/skill, agents/social-signals/skill, agents/rep-brief/skill, lib:sales-intent, lib:sales-account-map, lib:sales-prospect-list, lib:sales-trigify, lib:sales-rb2b, lib:sales-social-listening, lib:research-processes, lib:icp-persona]
+        tools: [signal-sourcing, signal-scout, social-signals, rep-brief, daily-book]
+        skills: [agents/signal-sourcing/skill, agents/daily-book/skill, agents/signal-scout/skill, agents/social-signals/skill, agents/rep-brief/skill, lib:sales-intent, lib:sales-account-map, lib:sales-prospect-list, lib:sales-trigify, lib:sales-rb2b, lib:sales-social-listening, lib:research-processes, lib:icp-persona]
       prospecting-writer:
         stage: Prospecting
         job: "Build the weekly target list and draft signal-led sequences for the top accounts, in the AE's voice, queued for the AE's approval."

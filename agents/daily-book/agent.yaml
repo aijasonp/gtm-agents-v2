@@ -1,0 +1,43 @@
+id: daily-book
+name: Daily Book
+version: 0.1.0
+tier: A
+description: >
+  Gives every AE a full, ranked list of 25 to 50 people to work today, every business day. Warm people come
+  from the CRM and engagement (engaged contacts, quiet deals, champions who moved, unworked inbound, event
+  attendees, social engagement, closed-lost recycle); cold people come from owned signals (Signal Sourcing's
+  send list first, then Signal Scout). The split is a config value per rep; a short pool is backfilled from the
+  other, and a real shortfall is reported, never padded. Cold first touches are drafted and wait for the AE.
+editions: [dropin, persistent]
+skill: skill/SKILL.md
+references:
+  - skill/references/book-rules.md
+  - ../../config/company.yaml
+  - ../../config/icp.yaml
+library:  # licensed playbooks bundled into the drop-in package (see THIRD_PARTY_NOTICES.md)
+  - library/sales-skills/skills/sales-prospect-list
+tools:
+  - my_book
+  - build_books
+  - book_status
+  - mark_done
+connectors_required: []
+connectors_optional: [crm, slack, sequencer, mcp]
+jobs:
+  - {name: daily_books, cron: "45 6 * * 1-5", model_class: frontier}
+budgets: {daily_tokens: 1500000, monthly_usd: 120}
+evals: evals/golden.yaml
+config:
+  company: ../../config/company.yaml
+  icp: ../../config/icp.yaml
+  slots: 40                # per rep; held to 25..50. Override per rep with team.owners[].book.slots
+  warm_ratio: 0.5          # share of slots for warm people; override per rep with book.warm_ratio
+  max_per_account: 3
+  icp_floor: 30
+  engaged_days: 14
+  inbound_days: 3          # an inbound lead not worked after this many days joins the warm pool
+  recycle_days: 90         # closed-lost deals older than this are worth a timing check
+  warm_order: [engaged, quiet_deal, champion_moved, inbound, event, social, recycle]
+  predraft_cold: true      # draft cold first touches through ICP Outbound, each waiting for AE approval
+  fill_contacts: false     # true: accounts with no buyer on file use config/mcp.yaml people_search
+  search_titles: [VP Sales, Head of Sales, Chief Revenue Officer, VP Revenue Operations]

@@ -1,0 +1,77 @@
+# Golden cases: three AEs, fictional accounts, people, deals, leads and engagement. No network.
+now: "2026-10-20T12:00:00+00:00"
+config: {allow_small_books: true, slots: 6, warm_ratio: 0.5, max_per_account: 3}
+accounts:   # owner set on the account (CRM owner)
+  - {id: northwind.example, name: Northwind Traders, domain: northwind.example, industry: Software, employees: 900, country: US, owner: Sam Rivera}
+  - {id: quietco.example, name: Quiet Co, domain: quietco.example, industry: Software, employees: 400, country: US, owner: Sam Rivera}
+  - {id: leadco.example, name: Lead Co, domain: leadco.example, industry: Software, employees: 300, country: US, owner: Sam Rivera}
+  - {id: eventco.example, name: Event Co, domain: eventco.example, industry: Software, employees: 350, country: US, owner: Sam Rivera}
+  - {id: recycleco.example, name: Recycle Co, domain: recycleco.example, industry: Software, employees: 500, country: US, owner: Sam Rivera}
+  - {id: sourced.example, name: Sourced Inc, domain: sourced.example, industry: Software, employees: 800, country: US, owner: Sam Rivera}
+  - {id: alpha.example, name: Alpha Corp, domain: alpha.example, industry: Software, employees: 700, country: US, owner: Sam Rivera}
+  - {id: beta.example, name: Beta LLC, domain: beta.example, industry: Software, employees: 600, country: US, owner: Sam Rivera}
+  - {id: xray.example, name: Xray Ltd, domain: xray.example, industry: Software, employees: 600, country: US, owner: Sam Rivera}
+  - {id: dealco.example, name: Deal Co, domain: dealco.example, industry: Software, employees: 600, country: US, owner: Sam Rivera}
+  - {id: ent1.example, name: Enterprise One, domain: ent1.example, industry: Software, employees: 1400, country: US, owner: Lee Park}
+  - {id: ent2.example, name: Enterprise Two, domain: ent2.example, industry: Software, employees: 1300, country: US, owner: Lee Park}
+  - {id: leeinbound.example, name: Lee Inbound Co, domain: leeinbound.example, industry: Software, employees: 1200, country: US, owner: Lee Park}
+scores: {northwind.example: B, alpha.example: A, beta.example: B, xray.example: X, dealco.example: A, ent1.example: A, ent2.example: B}
+score_values: {northwind.example: 55, alpha.example: 80, beta.example: 60, xray.example: 10, dealco.example: 85, ent1.example: 78, ent2.example: 61}
+contacts:
+  - {id: ana, account_id: northwind.example, name: Ana Lopez, email: ana@northwind.example, title: VP Sales}
+  - {id: tia, account_id: northwind.example, name: Tia Moss, email: tia@northwind.example, title: Director of Sales}
+  - {id: uma, account_id: northwind.example, name: Uma Cole, email: uma@northwind.example, title: Head of Sales, unsubscribed: true}
+  - {id: quinn, account_id: quietco.example, name: Quinn Bell, email: quinn@quietco.example, title: VP Sales}
+  - {id: lia, account_id: leadco.example, name: Lia Gray, email: lia@leadco.example, title: Director of Sales}
+  - {id: eli, account_id: eventco.example, name: Eli Fox, email: eli@eventco.example, title: VP Revenue Operations}
+  - {id: rex, account_id: recycleco.example, name: Rex Hart, email: rex@recycleco.example, title: VP Sales}
+  - {id: sid, account_id: sourced.example, name: Sid Park, email: sid@sourced.example, title: Chief Revenue Officer}
+  - {id: a1, account_id: alpha.example, name: Ava One, email: a1@alpha.example, title: VP Sales}
+  - {id: a2, account_id: alpha.example, name: Ari Two, email: a2@alpha.example, title: Director of Revenue Operations}
+  - {id: a3, account_id: alpha.example, name: Abe Three, email: a3@alpha.example, title: Head of Sales}
+  - {id: a4, account_id: alpha.example, name: Amy Four, email: a4@alpha.example, title: Director of Sales}
+  - {id: b1, account_id: beta.example, name: Bo One, email: b1@beta.example, title: VP Sales}
+  - {id: b2, account_id: beta.example, name: Bea Office, email: b2@beta.example, title: Office Manager}
+  - {id: x1, account_id: xray.example, name: Xia One, email: x1@xray.example, title: VP Sales}
+  - {id: d1, account_id: dealco.example, name: Dee One, email: d1@dealco.example, title: VP Sales}
+  - {id: e11, account_id: ent1.example, name: Ed One, email: e11@ent1.example, title: VP Sales}
+  - {id: e12, account_id: ent1.example, name: Em Two, email: e12@ent1.example, title: Head of Revenue Operations}
+  - {id: e13, account_id: ent1.example, name: Eve Three, email: e13@ent1.example, title: Director of Sales}
+  - {id: e14, account_id: ent1.example, name: Ezra Four, email: e14@ent1.example, title: Director of Sales Operations}
+  - {id: e21, account_id: ent2.example, name: Fay One, email: e21@ent2.example, title: Chief Revenue Officer}
+  - {id: e22, account_id: ent2.example, name: Fin Two, email: e22@ent2.example, title: VP Sales}
+  - {id: li1, account_id: leeinbound.example, name: Lou Inbound, email: lou@leeinbound.example, title: VP Sales}
+deals:
+  - {id: d-quiet, account_id: quietco.example, name: Quiet Co pilot, owner: Sam Rivera, stage: evaluation, status: open,
+     amount: 30000, last_activity_at: "2026-09-20T12:00:00+00:00", contact_id: quinn}
+  - {id: d-lost, account_id: recycleco.example, name: Recycle Co platform, owner: Sam Rivera, stage: closed lost, status: lost,
+     amount: 50000, close_date: "2026-05-01"}
+  - {id: d-open, account_id: dealco.example, name: Deal Co expansion, owner: Sam Rivera, stage: proposal, status: open,
+     amount: 90000, last_activity_at: "2026-10-19T12:00:00+00:00", contact_id: d1}
+leads:
+  - {id: l1, email: lia@leadco.example, name: Lia Gray, source: demo_request, status: new, received_at: "2026-10-10T12:00:00+00:00",
+     owner: Sam Rivera, account_id: leadco.example, contact_id: lia}
+  - {id: l2, email: eli@eventco.example, name: Eli Fox, source: event, event: dinner-oct, attended: true, registered: true,
+     status: new, received_at: "2026-10-12T23:00:00+00:00", owner: Sam Rivera, account_id: eventco.example, contact_id: eli}
+  - {id: l3, email: lou@leeinbound.example, name: Lou Inbound, source: demo_request, status: new,
+     received_at: "2026-10-08T12:00:00+00:00", owner: Lee Park, account_id: leeinbound.example, contact_id: li1}
+engaged: {ana@northwind.example: 2, tia@northwind.example: 3, uma@northwind.example: 4}
+teed_up: [tia@northwind.example]
+sourced_signal: {account_id: sourced.example, signal_type: filing_priority_mention, url: "https://sec.example/sourced-10q",
+                 observed_at: "2026-09-30", title: "Our 10-Q calls out sales productivity as a 2027 priority"}
+expect:
+  Sam Rivera:
+    filled: 6
+    warm: [ana@northwind.example, quinn@quietco.example, lia@leadco.example]
+    cold: [sid@sourced.example, a1@alpha.example, a3@alpha.example]   # Rep Brief ranks by seniority: Head above Director
+    sources: {ana@northwind.example: engaged, quinn@quietco.example: quiet_deal, lia@leadco.example: inbound,
+              sid@sourced.example: sourced_signal}
+    never: [tia@northwind.example, uma@northwind.example, x1@xray.example, d1@dealco.example, b2@beta.example]
+  Lee Park:
+    filled: 6
+    warm_count: 1
+    backfill_warm_from_cold: 2
+    max_from_ent1: 3
+  Priya Shah:
+    filled: 0
+    shortfall: 6

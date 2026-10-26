@@ -1,6 +1,6 @@
 # gtm-agents
 
-A full-stack GTM agent pack a mid-market sales team installs in its own environment and runs on the model keys it already pays for, frontier or open-weight. Twenty-six agents cover the revenue motion from first signal and event to signed proposal and the board forecast, on one runtime with a chat assistant (terminal and Slack), approvals for every write, and a licensed library of 716 sales and marketing playbooks. No agent host is required: see [docs/RUNNING.md](docs/RUNNING.md).
+A full-stack GTM agent pack a mid-market sales team installs in its own environment and runs on the model keys it already pays for, frontier or open-weight. Twenty-seven agents cover the revenue motion from first signal and event to signed proposal and the board forecast, on one runtime with a chat assistant (terminal and Slack), approvals for every write, and a licensed library of 716 sales and marketing playbooks. No agent host is required: see [docs/RUNNING.md](docs/RUNNING.md).
 
 Every agent ships in two editions from one source:
 
@@ -39,6 +39,7 @@ Every agent ships in two editions from one source:
 | 24 | **Call Coach** | B | AE roleplays with the model as the buyer, 100-point scoring of any roleplay or real call, weekly drills from each AE's own calls | weekly |
 | 25 | **Signal Sourcing** | A | Finds dated, sourced signals: 10-K and 10-Q quotes (Risk Factors, MD&A), 8-K officer changes, newsroom initiatives and funding, buyer-team hiring on public job boards, or job search sites for enterprises with no public board; changedetection.io page changes (careers, leadership, trust, newsroom, pricing, scripts); no signal, no send; discovers new companies from SEC full-text search | weekdays 5am, weekly discovery |
 | 26 | **Follow-Through** | A | Engagement triggers from a RevOps decision table (3 human opens, a click, 2 opens on tier A) pause automation and tee up the AE with a business-hours SLA; a cadence ledger gives every contact after a meeting, event, tee-up or proposal one next touch, drafts the gaps for the AE to confirm one email at a time, escalates anything missed to the owner then the manager, and reports any deal with no follow-up | every 10 and 15 min, weekdays 8am |
+| 27 | **Daily Book** | A | A full, ranked book of 25 to 50 people per AE every weekday: warm from the CRM and engagement (engaged, quiet deals, champions who moved, unworked inbound, events, social, closed-lost recycle), cold from owned signals (today's sourced accounts first); per-rep warm/cold split, backfill between pools, shortfall reported never padded; cold first touches drafted for approval | weekdays 6:45am |
 
 How they hand work to each other, what each one reads and writes, and which playbooks each bundles: [docs/AGENTS.md](docs/AGENTS.md).
 
@@ -56,7 +57,7 @@ How they hand work to each other, what each one reads and writes, and which play
 
 ## Optional: Slack front end on NetClaw
 
-`netclaw/` adds three Slack bots (pipeline, deals, revops) with 13 conversational subagents for an AE-only team. They call these 26 agents' tools over MCP; the runtime still does every calculation and holds every write for approval. See [netclaw/README.md](netclaw/README.md).
+`netclaw/` adds three Slack bots (pipeline, deals, revops) with 13 conversational subagents for an AE-only team. They call these 27 agents' tools over MCP; the runtime still does every calculation and holds every write for approval. See [netclaw/README.md](netclaw/README.md).
 
 ## Quick start (development)
 
