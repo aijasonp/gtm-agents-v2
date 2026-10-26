@@ -1,0 +1,50 @@
+# Golden cases: fictional accounts and people, engagement events at fixed times, no network.
+now: "2026-10-20T15:00:00+00:00"   # a Tuesday
+accounts:
+  - {id: northwind.example, name: Northwind Traders, domain: northwind.example, industry: Software, employees: 900, country: US}
+  - {id: contoso.example, name: Contoso Ltd, domain: contoso.example, industry: Software, employees: 400, country: US}
+  - {id: adatum.example, name: Adatum Corp, domain: adatum.example, industry: Software, employees: 1500, country: US}
+  - {id: fabrikam.example, name: Fabrikam Inc, domain: fabrikam.example, industry: Software, employees: 600, country: US}
+scores: {northwind.example: A, contoso.example: C, adatum.example: B, fabrikam.example: B}
+open_deals: [adatum.example]
+contacts:
+  - {id: c-ana, account_id: northwind.example, name: Ana Lopez, email: ana@northwind.example, title: VP Sales}
+  - {id: c-ben, account_id: contoso.example, name: Ben Ito, email: ben@contoso.example, title: VP Revenue Operations}
+  - {id: c-cara, account_id: contoso.example, name: Cara Diaz, email: cara@contoso.example, title: Director of Sales}
+  - {id: c-dan, account_id: contoso.example, name: Dan Moss, email: dan@contoso.example, title: Head of Sales}
+  - {id: c-eve, account_id: adatum.example, name: Eve Kim, email: eve@adatum.example, title: CRO}
+  - {id: c-fay, account_id: fabrikam.example, name: Fay Roy, email: fay@fabrikam.example, title: VP Sales, unsubscribed: true}
+  - {id: c-gus, account_id: contoso.example, name: Gus Hale, email: gus@contoso.example, title: VP Sales}
+  - {id: c-hal, account_id: contoso.example, name: Hal Ng, email: hal@contoso.example, title: VP Sales}
+sent_at: "2026-10-19T14:00:00+00:00"
+events:   # email: list of [event, iso time, machine?]
+  ana@northwind.example: [[open, "2026-10-19T16:00:00+00:00"], [open, "2026-10-20T09:00:00+00:00"]]
+  ben@contoso.example: [[open, "2026-10-19T14:00:02+00:00"], [open, "2026-10-19T17:00:00+00:00"],
+                        [open, "2026-10-20T08:00:00+00:00"], [open, "2026-10-20T11:00:00+00:00"]]
+  cara@contoso.example: [[open, "2026-10-19T14:00:01+00:00"], [open, "2026-10-19T18:00:00+00:00"],
+                         [open, "2026-10-20T10:00:00+00:00"]]
+  dan@contoso.example: [[click, "2026-10-20T13:00:00+00:00"]]
+  eve@adatum.example: [[open, "2026-10-19T19:00:00+00:00"], [open, "2026-10-20T12:00:00+00:00"]]
+  fay@fabrikam.example: [[open, "2026-10-19T15:00:00+00:00"], [open, "2026-10-19T16:00:00+00:00"],
+                         [open, "2026-10-19T17:00:00+00:00"], [click, "2026-10-19T17:05:00+00:00"]]
+  gus@contoso.example: [[open, "2026-10-19T15:00:00+00:00"], [open, "2026-10-19T16:00:00+00:00"],
+                        [open, "2026-10-19T17:00:00+00:00"], [reply, "2026-10-20T09:00:00+00:00"]]
+  hal@contoso.example: [[open, "2026-10-08T15:00:00+00:00"], [open, "2026-10-08T16:00:00+00:00"],
+                        [open, "2026-10-09T17:00:00+00:00"]]
+expect:
+  decisions:
+    ana@northwind.example: {rule: two_opens_top_tier, action: tee_up}
+    ben@contoso.example: {rule: three_opens, action: tee_up}
+    cara@contoso.example: {rule: default, action: none}
+    dan@contoso.example: {rule: clicked, action: tee_up}
+    eve@adatum.example: {rule: open_deal_owner_fyi, action: notify_owner}
+    fay@fabrikam.example: {rule: never_suppressed, action: none}
+    gus@contoso.example: {rule: reply_desk_owns_replies, action: none}
+    hal@contoso.example: {rule: default, action: none}
+  human_opens: {ben@contoso.example: 3, cara@contoso.example: 2}
+  owner: Sam Rivera
+  due:   # business hours from 15:00 UTC Tuesday in America/Chicago (10:00 local), 9 to 17
+    dan@contoso.example: "2026-10-20T19:00:00+00:00"     # 4h
+    ben@contoso.example: "2026-10-21T15:00:00+00:00"     # 8h: 7h today, 1h Wednesday
+  second_run_rule: already_teed_up
+  jdm: sample/engagement.jdm.json

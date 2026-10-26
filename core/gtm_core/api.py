@@ -156,6 +156,7 @@ class Api:
         from . import engagement
         added = dupes = 0
         errors = []
+        touched: set[str] = set()
         for r in _rows(body):
             try:
                 res = engagement.record(self.store, _str(r.get("email")), _str(r.get("event") or r.get("type")),
@@ -166,7 +167,29 @@ class Api:
                 continue
             added += res["added"]
             dupes += res["duplicate"]
-        return (201 if added else 200 if dupes else 400), {"added": added, "duplicates": dupes, "errors": errors}
+            if res["added"] and res.get("event") in ("open", "click", "reply", "reply_positive", "reply_negative"):
+                touched.add(_str(r.get("email")).lower())
+        body = {"added": added, "duplicates": dupes, "errors": errors}
+        if touched and "follow-through" in self.manifests:
+            body["triggers"] = self._run_triggers(sorted(touched))
+        return (201 if added else 200 if dupes else 400), body
+
+    def _run_triggers(self, emails: list[str]) -> list[dict]:
+        """Follow-Through decides on each new engagement event right away; the 10-minute sweep backs this up."""
+        from .agents import load_module
+        from .executors import register_core_executors
+        ctx = self.ctx("follow-through")
+        register_core_executors(ctx)
+        eng, out = load_module(ctx.manifest, "engine"), []
+        for e in emails:
+            try:
+                r = eng.evaluate_email(ctx, e)
+                out.append({"email": e, "rule": r["decision"]["output"].get("rule"),
+                            "action": (r.get("result") or {}).get("action")})
+            except Exception as ex:  # a trigger failure never loses the event; the sweep retries
+                ctx.audit.log("follow_through.error", email=e, error=str(ex)[:300])
+                out.append({"email": e, "error": str(ex)[:200]})
+        return out
 
     def to_inbox(self, agent: str, key: str, body, required: tuple[str, ...]) -> tuple[int, dict]:
         """Drop rows into an agent's inbox folder; its scheduled job ingests and archives them."""

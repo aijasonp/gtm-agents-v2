@@ -1,7 +1,7 @@
 # GTM fleet on NetClaw: the single source of truth for the NetClaw build.
 #
 # 3 NetClaw instances, 13 subagents, lead in to closed deal out, AE-only team.
-# Each subagent is a conversational front end over the 25 runtime agents in agents/:
+# Each subagent is a conversational front end over the 26 runtime agents in agents/:
 # the runtime computes (scores, routing, risk, forecast math) and queues every write
 # for approval; NetClaw talks to AEs in Slack and calls those tools over MCP.
 #
@@ -42,19 +42,20 @@ mcp_servers:
   proposal-builder:     {port: 8123}
   call-coach:           {port: 8124}
   signal-sourcing:      {port: 8125}
+  follow-through:       {port: 8126}
 
 instances:
 
   pipeline:
     purpose: "Lead in and prospecting: inbound leads and replies, account ranking, sequences, copy gate."
     slack_channel: gtm-pipeline
-    mcp: [lead-triage, reply-desk, enrichment, signal-scout, signal-sourcing, social-signals, rep-brief, icp-outbound, copy-qa-gate, event-campaigns, content-studio]
+    mcp: [lead-triage, reply-desk, follow-through, enrichment, signal-scout, signal-sourcing, social-signals, rep-brief, icp-outbound, copy-qa-gate, event-campaigns, content-studio]
     agents:
       inbound-router:
         stage: Lead in
-        job: "Every inbound lead and every reply: match, enrich, score, route to the right AE within the SLA, and draft the first response."
-        tools: [lead-triage, reply-desk, enrichment, signal-scout/score_account, copy-qa-gate]
-        skills: [agents/lead-triage/skill, agents/reply-desk/skill, agents/enrichment/skill, lib:sales-lead-routing, lib:sales-lead-score, lib:sales-enrich, lib:sales-data-hygiene, lib:sales-meeting-scheduler, lib:clay-gtm-outbound, lib:sales-apollo, lib:sales-zoominfo]
+        job: "Every inbound lead, every reply and every engagement trigger: match, enrich, score, route to the right AE within the SLA, hand engaged prospects to the AE, and draft the first response."
+        tools: [lead-triage, reply-desk, follow-through, enrichment, signal-scout/score_account, copy-qa-gate]
+        skills: [agents/lead-triage/skill, agents/reply-desk/skill, agents/follow-through/skill, agents/enrichment/skill, lib:sales-lead-routing, lib:sales-lead-score, lib:sales-enrich, lib:sales-data-hygiene, lib:sales-meeting-scheduler, lib:clay-gtm-outbound, lib:sales-apollo, lib:sales-zoominfo]
       signal-scout:
         stage: Prospecting
         job: "Source dated signals from SEC filings, newsrooms and job boards, rank each AE's accounts daily on ICP fit plus buying signals (including social engagement), explain every score, and deliver each AE's morning brief."

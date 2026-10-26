@@ -1,0 +1,129 @@
+{
+ "nodes": [
+  {
+   "id": "in",
+   "type": "inputNode",
+   "name": "Engagement facts",
+   "position": {
+    "x": 0,
+    "y": 0
+   }
+  },
+  {
+   "id": "table",
+   "type": "decisionTableNode",
+   "name": "Tee-up",
+   "position": {
+    "x": 300,
+    "y": 0
+   },
+   "content": {
+    "hitPolicy": "first",
+    "inputs": [
+     {
+      "id": "suppressed",
+      "name": "Suppressed",
+      "field": "suppressed"
+     },
+     {
+      "id": "replied",
+      "name": "Replied",
+      "field": "replied"
+     },
+     {
+      "id": "clicks",
+      "name": "Clicks",
+      "field": "clicks"
+     },
+     {
+      "id": "opens",
+      "name": "Human opens",
+      "field": "human_opens"
+     }
+    ],
+    "outputs": [
+     {
+      "id": "action",
+      "name": "Action",
+      "field": "action"
+     },
+     {
+      "id": "rule",
+      "name": "Rule",
+      "field": "rule"
+     }
+    ],
+    "rules": [
+     {
+      "_id": "r1",
+      "suppressed": "true",
+      "replied": "",
+      "clicks": "",
+      "opens": "",
+      "action": "\"none\"",
+      "rule": "\"never_suppressed\""
+     },
+     {
+      "_id": "r2",
+      "suppressed": "",
+      "replied": "true",
+      "clicks": "",
+      "opens": "",
+      "action": "\"none\"",
+      "rule": "\"reply_desk_owns_replies\""
+     },
+     {
+      "_id": "r3",
+      "suppressed": "",
+      "replied": "",
+      "clicks": ">= 1",
+      "opens": "",
+      "action": "\"tee_up\"",
+      "rule": "\"clicked\""
+     },
+     {
+      "_id": "r4",
+      "suppressed": "",
+      "replied": "",
+      "clicks": "",
+      "opens": ">= 3",
+      "action": "\"tee_up\"",
+      "rule": "\"three_opens\""
+     },
+     {
+      "_id": "r5",
+      "suppressed": "",
+      "replied": "",
+      "clicks": "",
+      "opens": "",
+      "action": "\"none\"",
+      "rule": "\"default\""
+     }
+    ]
+   }
+  },
+  {
+   "id": "out",
+   "type": "outputNode",
+   "name": "Decision",
+   "position": {
+    "x": 600,
+    "y": 0
+   }
+  }
+ ],
+ "edges": [
+  {
+   "id": "e1",
+   "sourceId": "in",
+   "targetId": "table",
+   "type": "edge"
+  },
+  {
+   "id": "e2",
+   "sourceId": "table",
+   "targetId": "out",
+   "type": "edge"
+  }
+ ]
+}

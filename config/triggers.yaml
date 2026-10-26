@@ -1,0 +1,52 @@
+# Engagement triggers: when a prospect's behavior hands them to the AE.
+#
+# RevOps owns this file. Each table is read top to bottom and the first matching rule wins.
+# Cells use the GoRules (zen) unary syntax: ">= 3", "[1..3]", "a, b", true, false, "-" (any).
+# A table can instead point at a decision exported from the GoRules editor: {jdm: rules/x.json}.
+#
+# Facts every rule can test (computed in code from the email events, never by a model):
+#   human_opens      opens in the window after the machine-open filter (privacy proxies removed)
+#   clicks           link clicks in the window
+#   replied          any reply in the window (Reply Desk owns the response)
+#   steps_sent       sequence steps sent to this person in the window
+#   days_since_send  days since the last step was sent
+#   motion           outbound | event | inbound | pipeline | push_button | other
+#   tier             Signal Scout tier of the account (A to D, X)
+#   has_open_deal    the account has an open deal
+#   suppressed       opted out, bounced or on do-not-contact
+#   teed_up          already handed to the AE inside the cooldown
+#
+# Actions: tee_up (task + brief for the AE, automation paused), notify_owner (FYI only), none.
+# Opens are a timing signal only. No copy ever mentions that someone opened an email.
+
+window_days: 7
+cooldown_days: 14
+
+tables:
+  engagement:
+    description: Hand an engaged prospect to the account executive.
+    hit_policy: first
+    rules:
+      - id: never_suppressed
+        when: {suppressed: true}
+        then: {action: none, reason: "opted out, bounced or do-not-contact"}
+      - id: reply_desk_owns_replies
+        when: {replied: true}
+        then: {action: none, reason: "Reply Desk handles the reply"}
+      - id: already_teed_up
+        when: {teed_up: true}
+        then: {action: none, reason: "already with the AE"}
+      - id: open_deal_owner_fyi
+        when: {has_open_deal: true, human_opens: ">= 2"}
+        then: {action: notify_owner, pause: false, priority: normal, sla_hours: 24,
+               reason: "engaged contact on an account with an open deal"}
+      - id: clicked
+        when: {clicks: ">= 1"}
+        then: {action: tee_up, pause: true, priority: high, sla_hours: 4, reason: "clicked a link"}
+      - id: three_opens
+        when: {human_opens: ">= 3"}
+        then: {action: tee_up, pause: true, priority: high, sla_hours: 8, reason: "3 or more human opens"}
+      - id: two_opens_top_tier
+        when: {human_opens: ">= 2", tier: "A"}
+        then: {action: tee_up, pause: true, priority: normal, sla_hours: 24, reason: "2 opens on a tier A account"}
+    default: {action: none, reason: "no trigger matched"}
