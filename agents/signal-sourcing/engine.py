@@ -379,3 +379,57 @@ def watch_plan(ctx, limit: int = 25) -> dict:
     accts = [a for a in due_accounts(ctx, limit=None)][:limit] or ctx.store.accounts()[:limit]
     rows = pw.watch_plan(accts, (rules(ctx).get("page_changes") or {}).get("page_kinds"))
     return {"accounts": len(accts), "watches": rows, "notification_body": pw.NOTIFICATION_TEMPLATE}
+
+
+# ---------- first-party web and product events (PostHog) ----------
+def _store_first_party(ctx, sigs: list[dict]) -> list[str]:
+    tax = taxonomy(ctx)
+    added = []
+    for s in sigs:
+        st = tax.types.get(s["signal_type"])
+        if not st:
+            ctx.audit.log("sourcing.unknown_type", type=s["signal_type"])
+            continue
+        try:
+            if ctx.store.add_signal({**s, "category": st.category}):
+                added.append(s["id"])
+        except ValueError as e:
+            ctx.audit.log("sourcing.bad_signal", account=s["account_id"], error=str(e)[:200])
+    return added
+
+
+def web_events(ctx, body, now: datetime | None = None) -> dict:
+    """PostHog events (one, a list, or {events: [...]}) -> stored events -> first-party signals for those accounts."""
+    from gtm_core.sources import posthog as ph
+    r = rules(ctx)
+    if not (r.get("first_party") or {}).get("enabled", True):
+        return {"skipped": "first_party disabled in config/signals.yaml"}
+    events = body.get("events") if isinstance(body, dict) and "events" in body else body
+    events = events if isinstance(events, list) else [events]
+    if not all(isinstance(e, dict) for e in events):
+        raise ValueError("web events must be JSON objects")
+    now = now or datetime.now(timezone.utc)
+    rec = ph.record(ctx.store, events, r)
+    stored = _store_first_party(ctx, ph.roll_up(ctx.store, r, now, rec["accounts"])) if rec["accounts"] else []
+    return {**rec, "stored": stored}
+
+
+def poll_posthog(ctx, now: datetime | None = None, client=None) -> dict:
+    """Read new events from the PostHog query API since the last poll (when configured)."""
+    from gtm_core.sources import posthog as ph
+    r = rules(ctx)
+    fp = r.get("first_party") or {}
+    if not fp.get("enabled", True):
+        return {"skipped": "first_party disabled in config/signals.yaml"}
+    pc = client or ph.PostHogQuery.from_env()
+    if pc is None:
+        return {"skipped": "POSTHOG_HOST, POSTHOG_PROJECT_ID and POSTHOG_PERSONAL_API_KEY not set"}
+    now = now or datetime.now(timezone.utc)
+    cur = ctx.store.get_state("sourcing:posthog_cursor")
+    since = datetime.fromisoformat(cur) if cur else now - timedelta(days=int(fp.get("lookback_days", 7)))
+    names = ["$pageview", *(fp.get("signup_events") or []), *(fp.get("content_events") or []),
+             *((fp.get("product_qualified") or {}).get("events") or [])]
+    events = pc.events(since - timedelta(minutes=10), names)  # overlap; stored events are deduplicated
+    res = web_events(ctx, events, now)
+    ctx.store.set_state("sourcing:posthog_cursor", now.isoformat())
+    return {"events": len(events), **res}

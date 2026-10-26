@@ -75,3 +75,9 @@ expect:
   Priya Shah:
     filled: 0
     shortfall: 6
+web_intent:   # first-party PostHog signals (Signal Sourcing stores these), replayed on a fresh copy of the data above
+  signals:
+    - {email: b1@beta.example, type: pricing_page_visit, title: Visited the pricing page, days_ago: 1}
+    - {email: a4@alpha.example, type: high_intent_page_visit, title: Visited /security, days_ago: 20}
+  expect_warm: [ana@northwind.example, b1@beta.example, quinn@quietco.example]
+  stale_email: a4@alpha.example

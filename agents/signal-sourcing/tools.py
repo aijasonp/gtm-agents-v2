@@ -73,5 +73,17 @@ def watch_plan(ctx, limit: int = 25) -> dict:
     return _eng(ctx).watch_plan(ctx, int(limit))
 
 
+def web_events(ctx, events: list) -> dict:
+    """Store first-party PostHog events (pageviews, signups, downloads, product events) and turn them into
+    signals: pricing and high-intent page visits, content downloads, trial signups, repeat visits and
+    product-qualified accounts. Anonymous and free-mail traffic is dropped."""
+    return _eng(ctx).web_events(ctx, events)
+
+
+def poll_posthog(ctx) -> dict:
+    """Pull new events from the PostHog query API since the last poll and store first-party signals."""
+    return _eng(ctx).poll_posthog(ctx)
+
+
 TOOLS = {f.__name__: f for f in [scan_account, scan_due, dispatch_batch, discover_companies, add_company,
-                                 sourcing_report, page_change, watch_plan]}
+                                 sourcing_report, page_change, watch_plan, web_events, poll_posthog]}

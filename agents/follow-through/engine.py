@@ -140,6 +140,12 @@ def facts_for(ctx, email: str, now: datetime | None = None) -> dict:
     cooldown = (now - timedelta(days=int(settings.get("cooldown_days", 14)))).isoformat()
     teed = ctx.store.one("SELECT id FROM teeups WHERE email=? AND created_at>=? AND status IN ('open','actioned')",
                          (email, cooldown))
+    key_pages = 0
+    if contact:
+        for sg in ctx.store.query("SELECT payload FROM signals WHERE source='first_party:posthog' AND signal_type IN "
+                                  "('pricing_page_visit','high_intent_page_visit') AND observed_at>=?", (since[:10],)):
+            people = (json.loads(sg["payload"] or "{}").get("people") or [])
+            key_pages += sum(1 for p in people if p.get("contact_id") == contact["id"])
     return {
         "email": email,
         "human_opens": count["open"],
@@ -152,6 +158,7 @@ def facts_for(ctx, email: str, now: datetime | None = None) -> dict:
         "has_open_deal": open_deal,
         "suppressed": suppression.is_suppressed(ctx.store, email, contact),
         "teed_up": bool(teed),
+        "key_page_visits": key_pages,
         "_contact": contact, "_account": acct, "_draft": draft,
     }
 
@@ -248,7 +255,7 @@ def evaluate_email(ctx, email: str, now: datetime | None = None, apply: bool = T
 
 
 def evaluate_recent(ctx, now: datetime | None = None, apply: bool = True) -> dict:
-    """Everyone with an open, click or reply since the last sweep (at most one window back)."""
+    """Everyone with an open, click or reply, or a new key page visit, since the last sweep (at most one window back)."""
     ensure_schema(ctx)
     settings, _ = trigger_config(ctx)
     now = _now(now)
@@ -257,7 +264,11 @@ def evaluate_recent(ctx, now: datetime | None = None, apply: bool = True) -> dic
     emails = [r["email"] for r in ctx.store.query(
         "SELECT DISTINCT email FROM email_events WHERE created_at>=? AND event IN ('open','click','reply',"
         "'reply_positive','reply_negative')", (since,))]
-    results = [evaluate_email(ctx, e, now, apply) for e in sorted(emails)]
+    for sg in ctx.store.query("SELECT payload FROM signals WHERE source='first_party:posthog' AND signal_type IN "
+                              "('pricing_page_visit','high_intent_page_visit') AND created_at>=?", (since,)):
+        emails += [p["email"] for p in json.loads(sg["payload"] or "{}").get("people") or []
+                   if p.get("contact_id") and p.get("email")]
+    results = [evaluate_email(ctx, e, now, apply) for e in sorted(set(emails))]
     if apply:
         ctx.store.set_state("follow_through:last_sweep", now.isoformat())
     acted = [r for r in results if (r.get("result") or {}).get("action", "none") != "none"]

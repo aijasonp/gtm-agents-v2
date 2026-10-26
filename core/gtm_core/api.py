@@ -212,6 +212,26 @@ class Api:
             raise BadRequest(str(e)) from None
         return (201 if res.get("stored") else 200), res
 
+    def web_events(self, body) -> tuple[int, dict]:
+        """PostHog events from a webhook destination: first-party signals stored right away."""
+        if "signal-sourcing" not in self.manifests:
+            return 400, {"error": "signal-sourcing agent not installed"}
+        from .agents import load_module
+        ctx = self.ctx("signal-sourcing")
+        try:
+            res = load_module(ctx.manifest, "engine").web_events(ctx, body)
+        except ValueError as e:
+            raise BadRequest(str(e)) from None
+        if res.get("stored") and "follow-through" in self.manifests:
+            people = set()
+            for sid in res["stored"]:
+                row = ctx.store.one("SELECT payload FROM signals WHERE id=?", (sid,))
+                people |= {p["email"] for p in json.loads((row or {}).get("payload") or "{}").get("people") or []
+                           if p.get("contact_id")}
+            if people:
+                res["triggers"] = self._run_triggers(sorted(people))
+        return (201 if res.get("stored") else 200), res
+
     def to_inbox(self, agent: str, key: str, body, required: tuple[str, ...]) -> tuple[int, dict]:
         """Drop rows into an agent's inbox folder; its scheduled job ingests and archives them."""
         import uuid
@@ -283,6 +303,7 @@ class Api:
         intake = {"/v1/leads": self.leads, "/v1/meetings": self.meetings, "/v1/signals": self.signals,
                   "/v1/email-events": self.email_events, "/v1/enrichment": self.enrichment,
                   "/v1/page-changes": self.page_changes,
+                  "/v1/web-events": self.web_events,
                   "/v1/replies": lambda b: self.to_inbox("reply-desk", "reply_inbox", b, ("from_email", "body")),
                   "/v1/engagement": lambda b: self.to_inbox("social-signals", "engagement_inbox", b,
                                                             ("engager_name", "engagement_type"))}

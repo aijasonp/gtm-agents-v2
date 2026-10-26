@@ -14,6 +14,7 @@
 | `has_open_deal` | The account has an open deal |
 | `suppressed` | Opted out, bounced or do-not-contact |
 | `teed_up` | Already handed to an AE inside `cooldown_days` |
+| `key_page_visits` | Days this person hit pricing, demo, contact-sales or security pages in the window (PostHog; 0 when not connected) |
 
 ## Cell syntax
 

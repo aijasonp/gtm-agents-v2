@@ -76,6 +76,23 @@ page_changes:
   complementary_tools: [salesforce.com, hubspot.com, gong.io, outreach.io, salesloft.com, clari.com]
   competitor_tools: []      # script domains of competitors: timing only, never in copy
 
+# ---- First-party: your website and product (PostHog) ----
+# Push: a PostHog webhook destination to POST /v1/web-events. Poll: POSTHOG_HOST, POSTHOG_PROJECT_ID and
+# POSTHOG_PERSONAL_API_KEY (query API). Visitors resolve to an account by their identified email's domain or a
+# group property holding the company domain; anonymous traffic is dropped. Visits are timing only in copy;
+# a trial signup may be mentioned.
+first_party:
+  enabled: true
+  pricing_paths: [/pricing, /plans]
+  high_intent_paths: [/demo, /contact-sales, /talk-to-sales, /security, /trust]
+  content_paths: [/resources/, /whitepaper, /ebook, /report]
+  content_events: [content_download, file_downloaded, ebook_download]
+  signup_events: [signed_up, user_signed_up, trial_started]
+  repeat_visits: {days: 7, min_days: 3}
+  product_qualified: {events: [], min_events: 20, days: 7}   # list your key product events
+  group_domain_properties: [company_domain, domain, $group_0]
+  lookback_days: 7
+
 # ---- 4. Executive appointments: 8-K item 5.02 and newsroom announcements ----
 exec_change:
   enabled: true

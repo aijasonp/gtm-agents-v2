@@ -7,6 +7,8 @@ Everything here is code: pools, order, conflicts and the split. No model call.
 
 Warm pool, in priority order (config `warm_order`):
   engaged        human opens or clicks in the last 14 days, no reply, not with an AE yet
+  web_intent     an identified person on the rep's account hit pricing, a demo or security page, downloaded
+                 content, signed up, or came back on several days (first-party PostHog signals, last 7 days)
   quiet_deal     open deal past its stage's stale days: the deal's primary contact
   champion_moved a past champion who joined a new account (champion_joined signal)
   inbound        an inbound lead not yet worked after inbound_days
@@ -35,7 +37,7 @@ SCHEMA = """CREATE TABLE IF NOT EXISTS daily_book (
   id TEXT PRIMARY KEY, book_date TEXT, owner TEXT, rank INTEGER, pool TEXT, source TEXT, reason TEXT,
   contact_id TEXT, email TEXT, name TEXT, title TEXT, account_id TEXT, company TEXT, why_now TEXT, action TEXT,
   status TEXT, approval_id INTEGER, created_at TEXT)"""
-WARM_ORDER = ["engaged", "quiet_deal", "champion_moved", "inbound", "event", "social", "recycle"]
+WARM_ORDER = ["engaged", "web_intent", "quiet_deal", "champion_moved", "inbound", "event", "social", "recycle"]
 
 
 def ensure_schema(ctx) -> None:
@@ -106,7 +108,7 @@ def blocked(ctx, rb, rb_ctx, acct: dict | None, contact: dict, owner: str, now: 
     busy = _busy(ctx, email)
     if busy:
         return busy
-    if row and source != "engaged":
+    if row and source not in ("engaged", "web_intent"):  # they are responding to us: recent touches do not block
         t = rb.touched_recently(rb_ctx, row, (acct or {}).get("id"), now)
         if t:
             return t
@@ -191,6 +193,15 @@ def warm_pool(ctx, rb, rb_ctx, owner: str, now: datetime) -> list[dict]:
         c = ctx.store.get("contacts", v["contact_id"]) if v.get("contact_id") else None
         if c:
             add("social", c, "engaged with company content", i.get("observed_at"))
+    # first-party web and product intent from identified people (PostHog via Signal Sourcing)
+    web_days = int(cfg(ctx, "web_intent_days", 7))
+    for s in ctx.store.query("SELECT * FROM signals WHERE source='first_party:posthog' AND observed_at>=? "
+                             "ORDER BY observed_at DESC, id", (_iso(now - timedelta(days=web_days)),)):
+        p = json.loads(s.get("payload") or "{}")
+        for person in p.get("people") or []:
+            c = ctx.store.get("contacts", person["contact_id"]) if person.get("contact_id") else None
+            if c:
+                add("web_intent", c, f"{p.get('title') or s['signal_type']} ({s['observed_at'][:10]})", s["observed_at"])
     # closed-lost recycle
     rec = _iso(now - timedelta(days=int(cfg(ctx, "recycle_days", 90))))
     for d in ctx.store.select("deals", "owner=?", (owner,)):
@@ -355,6 +366,7 @@ def build(ctx, owner: str, now: datetime | None = None) -> dict:
 
 def _action(r: dict) -> str:
     return {"engaged": "call or LinkedIn; email only with a new reason (never mention the opens)",
+            "web_intent": "call or email with a reason tied to what they looked at (never mention the visit)",
             "quiet_deal": "re-engage with the deal's next step",
             "champion_moved": "congratulate and reconnect",
             "inbound": "respond to the inbound request",

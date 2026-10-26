@@ -93,6 +93,37 @@ def evaluate(m, spec, make_ctx) -> list[dict]:
         "SELECT email FROM daily_book WHERE owner='Sam Rivera'")) == again["filled"], again["filled"])
     msg = eng.format_book(pri)
     add("the shortfall is said plainly in the book", "Short by 6" in msg, msg)
+    out += _web_intent_cases(m, spec, make_ctx, eng, now)
+    return out
+
+
+def _web_intent_cases(m, spec, make_ctx, eng, now) -> list[dict]:
+    """A first-party pricing visit by a known buyer moves them into the warm pool, right after engaged."""
+    out, w = [], spec["web_intent"]
+
+    def add(name, ok, detail=""):
+        out.append({"case": "web intent: " + name, "passed": bool(ok), "detail": str(detail)[:400]})
+
+    ctx = make_ctx(m)
+    ctx.manifest.config.update(spec["config"])
+    seed(ctx, spec)
+    for s in w["signals"]:
+        day = (now - timedelta(days=s["days_ago"])).date().isoformat()
+        c = ctx.store.contact_by_email(s["email"])
+        ctx.store.add_signal({"id": signal_id(c["account_id"], s["type"], "posthog://" + s["email"], day),
+                              "account_id": c["account_id"], "signal_type": s["type"], "category": "intent",
+                              "source": "first_party:posthog", "url": "posthog://" + s["email"], "observed_at": day,
+                              "strength": 0.8, "payload": {"title": s["title"], "people": [
+                                  {"email": s["email"], "contact_id": c["id"]}]}})
+    book = eng.build(ctx, "Sam Rivera", now)
+    warm = [r["email"] for r in book["rows"] if r["pool"] == "warm"]
+    add("a known buyer's pricing visit lands in the warm pool right after engaged", warm == w["expect_warm"], warm)
+    row = next((r for r in book["rows"] if r["email"] == w["expect_warm"][1]), {})
+    add("the row is labeled web_intent and never tells the AE to mention the visit",
+        row.get("source") == "web_intent" and "never mention" in row.get("action", ""), row)
+    every = [r["email"] for r in book["rows"]]
+    add("an old visit outside the window adds nothing", w["stale_email"] not in every or
+        next(r for r in book["rows"] if r["email"] == w["stale_email"])["source"] != "web_intent", every)
     return out
 
 

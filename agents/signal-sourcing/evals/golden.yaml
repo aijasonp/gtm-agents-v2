@@ -51,3 +51,22 @@ page_changes:
   careers: {watch_url: "https://proseware.example/careers", watch_tag: "gtm:careers",
             diff_added: "(added) Director of Sales Development\n(added) Head of Sales, EMEA\n(added) Payroll Specialist"}
   expect_careers_roles: ["Director of Sales Development", "Head of Sales, EMEA"]
+
+# First-party PostHog events (webhook bodies recorded inline, no network).
+first_party:
+  account: {id: litware.example, name: Litware Inc, domain: litware.example, industry: Software, employees: 1800,
+            country: US}
+  contact: {id: c-lw-1, name: Avery Chen, email: avery@litware.example, title: VP Sales, account_id: litware.example}
+  events:
+    - {uuid: e1, event: $pageview, timestamp: "2026-10-16T15:00:00Z", distinct_id: d1,
+       person: {properties: {email: avery@litware.example}}, properties: {$current_url: "https://ours.example/blog/a"}}
+    - {uuid: e2, event: $pageview, timestamp: "2026-10-18T15:00:00Z", distinct_id: d1,
+       person: {properties: {email: avery@litware.example}}, properties: {$current_url: "https://ours.example/pricing"}}
+    - {event: {uuid: e3, event: $pageview, timestamp: "2026-10-19T16:00:00Z", distinct_id: d2,
+               properties: {$current_url: "https://ours.example/security"}},
+       person: {properties: {}}, groups: {company: {properties: {company_domain: litware.example}}}}
+    - {uuid: e4, event: $pageview, timestamp: "2026-10-19T16:00:00Z", distinct_id: d9,
+       person: {properties: {email: someone@gmail.com}}, properties: {$current_url: "https://ours.example/pricing"}}
+    - {uuid: e5, event: $pageview, timestamp: "2026-10-19T17:00:00Z", distinct_id: d8, properties: {$current_url: "https://ours.example/pricing"}}
+  expect_types: [high_intent_page_visit, pricing_page_visit, repeat_site_visits]
+  expect_unmatched: 2

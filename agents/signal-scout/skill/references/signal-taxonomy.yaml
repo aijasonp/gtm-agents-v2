@@ -77,6 +77,12 @@ categories:
          say_it: "Thanks for grabbing the {asset}"}
       - {type: event_attended, name: Attended our event or booth, base_weight: 0.7, half_life_days: 30,
          say_it: "Good to see your team at {event}"}
+      - {type: trial_signup, name: Started a trial or signed up, base_weight: 0.9, half_life_days: 21,
+         say_it: "Saw your team started a trial"}
+      - {type: product_qualified, name: Product usage crossed the qualified threshold, base_weight: 0.85,
+         half_life_days: 14, say_it: ""}
+      - {type: high_intent_page_visit, name: Visited a demo, contact-sales or security page, base_weight: 0.7,
+         half_life_days: 10, say_it: ""}
       - {type: third_party_intent_surge, name: Third-party topic intent surge, base_weight: 0.4, half_life_days: 14, say_it: ""}
       - {type: email_engaged, name: Opened or clicked recent outreach, base_weight: 0.3, half_life_days: 7, say_it: ""}
       - {type: social_engagement, name: Engaged with our social posts, base_weight: 0.4, half_life_days: 14, say_it: ""}

@@ -37,7 +37,8 @@ config:
   engaged_days: 14
   inbound_days: 3          # an inbound lead not worked after this many days joins the warm pool
   recycle_days: 90         # closed-lost deals older than this are worth a timing check
-  warm_order: [engaged, quiet_deal, champion_moved, inbound, event, social, recycle]
+  warm_order: [engaged, web_intent, quiet_deal, champion_moved, inbound, event, social, recycle]
+  web_intent_days: 7
   predraft_cold: true      # draft cold first touches through ICP Outbound, each waiting for AE approval
   fill_contacts: false     # true: accounts with no buyer on file use config/mcp.yaml people_search
   search_titles: [VP Sales, Head of Sales, Chief Revenue Officer, VP Revenue Operations]

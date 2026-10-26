@@ -36,3 +36,8 @@ def weekly_discovery(ctx, now: datetime | None = None) -> dict:
 def poll_page_changes(ctx, now: datetime | None = None) -> dict:
     """Every 30 minutes: read changed watches from changedetection.io (when configured) and store signals."""
     return _eng(ctx).poll_page_changes(ctx, now)
+
+
+def poll_posthog(ctx, now: datetime | None = None) -> dict:
+    """Every 30 minutes: read new PostHog events (when configured) and store first-party signals."""
+    return _eng(ctx).poll_posthog(ctx, now)

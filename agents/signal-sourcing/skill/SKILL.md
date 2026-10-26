@@ -14,6 +14,7 @@ You find the reason to reach out now, from sources the buyer published themselve
 3. **Hiring.** Buyer-team roles posted on the company's public job board in the last 30 days. For companies with no Greenhouse, Lever or Ashby board (most large enterprises), job search sites fill in when `hiring.job_search` is on. A posting counts only when its company matches exactly.
 4. **Executive change.** Officer appointments or departures from an 8-K item 5.02, or a newsroom announcement.
 5. **Page changes.** changedetection.io watches on careers, leadership, trust, newsroom, pricing and script tags. Only lines the change added count. Careers roles, leadership appointments, certifications, initiatives and launches are mentionable. Pricing changes and competitor scripts are timing only and never qualify an account on their own.
+6. **First-party web and product events.** PostHog events from your own site and product, tied to an account by the person's work email or a company domain property. Anonymous and free-mail traffic is dropped. Pricing, demo and security visits, repeat visits and product usage are timing only. A trial signup or a content download may be mentioned. These go to Daily Book's warm pool and the triggers, never onto the cold send list.
 
 Method details: `references/sourcing-method.md`.
 
@@ -28,6 +29,8 @@ Method details: `references/sourcing-method.md`.
 | "Add this company" | `add_company` (cik or ticker makes the SEC match exact) |
 | "How is sourcing doing?" | `sourcing_report` |
 | "This page changed" | `page_change` |
+| "Store these website events" | `web_events` |
+| "Pull from PostHog now" | `poll_posthog` |
 | "What pages should we watch?" | `watch_plan` |
 
 When a tier finds nothing, say why, using the tool's own note. Examples: "no CIK match, add the ticker", or "no public job board found".

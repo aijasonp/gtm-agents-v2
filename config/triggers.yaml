@@ -15,9 +15,12 @@
 #   has_open_deal    the account has an open deal
 #   suppressed       opted out, bounced or on do-not-contact
 #   teed_up          already handed to the AE inside the cooldown
+#   key_page_visits  days this person hit pricing, demo, contact-sales or security pages in the window
+#                    (first-party PostHog signals; 0 when PostHog is not connected)
 #
 # Actions: tee_up (task + brief for the AE, automation paused), notify_owner (FYI only), none.
-# Opens are a timing signal only. No copy ever mentions that someone opened an email.
+# Opens and page visits are timing signals only. No copy ever mentions that someone opened an email or
+# visited a page.
 
 window_days: 7
 cooldown_days: 14
@@ -43,6 +46,10 @@ tables:
       - id: clicked
         when: {clicks: ">= 1"}
         then: {action: tee_up, pause: true, priority: high, sla_hours: 4, reason: "clicked a link"}
+      - id: opened_then_key_page
+        when: {human_opens: ">= 1", key_page_visits: ">= 1"}
+        then: {action: tee_up, pause: true, priority: high, sla_hours: 4,
+               reason: "opened an email and visited pricing, demo or security pages"}
       - id: three_opens
         when: {human_opens: ">= 3"}
         then: {action: tee_up, pause: true, priority: high, sla_hours: 8, reason: "3 or more human opens"}

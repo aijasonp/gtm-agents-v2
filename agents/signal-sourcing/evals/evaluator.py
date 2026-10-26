@@ -74,6 +74,34 @@ def evaluate(m, spec, make_ctx) -> list[dict]:
         out += _job_search_cases(m, spec, make_ctx, eng, now)
     if spec.get("page_changes"):
         out += _page_change_cases(m, spec, make_ctx, eng, now)
+    if spec.get("first_party"):
+        out += _first_party_cases(m, spec, make_ctx, eng, now)
+    return out
+
+
+def _first_party_cases(m, spec, make_ctx, eng, now) -> list[dict]:
+    fp, out = spec["first_party"], []
+
+    def add(name, ok, detail=""):
+        out.append({"case": "first party: " + name, "passed": bool(ok), "detail": str(detail)[:400]})
+
+    ctx = make_ctx(m)
+    ctx.store.upsert_account(fp["account"])
+    ctx.store.upsert("contacts", fp["contact"])
+    aid = fp["account"]["id"]
+    res = eng.web_events(ctx, fp["events"], now)
+    add("anonymous and free-mail traffic is dropped, never guessed", res["unmatched"] == fp["expect_unmatched"], res)
+    sigs = [s for s in ctx.store.signals_for(aid) if s["source"] == "first_party:posthog"]
+    add("pricing, high-intent pages and repeat visits become signals",
+        sorted({s["signal_type"] for s in sigs}) == fp["expect_types"], [s["signal_type"] for s in sigs])
+    pricing = next((s for s in sigs if s["signal_type"] == "pricing_page_visit"), {"payload": {}})
+    add("an identified visit carries the contact for Daily Book and triggers",
+        pricing["payload"].get("contact_id") == fp["contact"]["id"], pricing["payload"])
+    again = eng.web_events(ctx, fp["events"], now)
+    add("the same events twice store nothing new", again["stored"] == [] and again["duplicates"] == 3, again)
+    d = eng.dispatch(ctx, now)
+    add("first-party intent alone never puts an account on the cold send list",
+        aid not in [b["account_id"] for b in d["batch"]], [b["account_id"] for b in d["batch"]])
     return out
 
 
