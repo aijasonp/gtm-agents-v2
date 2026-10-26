@@ -22,6 +22,9 @@ core/gtm_core/               shared runtime, built once
                              value prop picker; unsubscribes and bounces suppress locally
   copy_gate.py               deterministic copy checks
   approvals.py               approval queue + executor registry
+  rules.py                   decision tables RevOps edits (GoRules cell syntax; zen-engine when installed)
+  workflows.py               durable waits with escalation ladders (builtin on the store, or DBOS)
+  worktime.py                business hours and days for SLAs and cadences
   budgets.py                 daily token and monthly spend caps, auto-pause, Slack alert
   gateway.py                 model router on the customer's keys (Anthropic or OpenAI-compatible)
   guardrails.py              hard step limits

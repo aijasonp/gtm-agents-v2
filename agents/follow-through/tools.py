@@ -49,3 +49,45 @@ def explain_rules(ctx) -> dict:
         out["tables"][name] = [{"id": r.id, "when": {k: v or "any" for k, v in r.when.items()},
                                 "then": r.then} for r in t.rules]
     return out
+
+
+def _cad(ctx):
+    return load_module(ctx.manifest, "cadence")
+
+
+def next_touches(ctx, owner: str = "", days: int = 7) -> dict:
+    """Every scheduled next touch in the coming days, soonest first: who, which motion and step, when, and whether
+    a draft is already waiting for the AE to confirm."""
+    rows = _cad(ctx).schedule(ctx, owner or None, int(days))
+    return {"count": len(rows), "touches": rows}
+
+
+def cadence_status(ctx, email: str) -> dict:
+    """Where one person stands: motion, step, next touch, last touch and the history of the cadence."""
+    cad = _cad(ctx)
+    rows = cad.live_for(ctx, email)
+    if rows:
+        return {"email": email, "live": True, "cadence": rows[0]}
+    last = ctx.store.one("SELECT id FROM cadence WHERE email=? ORDER BY updated_at DESC LIMIT 1", ((email or "").lower(),))
+    return {"email": email, "live": False, "last": cad.get(ctx, last["id"]) if last else None}
+
+
+def log_touch(ctx, email: str, kind: str = "call", note: str = "") -> dict:
+    """Record a touch the AE made outside the sequencer (call, LinkedIn, in person). The next sweep advances the
+    cadence to the next step."""
+    return _cad(ctx).log_touch(ctx, email, kind, note)
+
+
+def follow_up_coverage(ctx) -> dict:
+    """The no-gaps check: open deals with nobody in a cadence and no dated next step, and touches past due with no
+    draft waiting on the AE. Empty gaps means every conversation has a next touch."""
+    return _cad(ctx).coverage(ctx)
+
+
+def start_motion(ctx, motion: str, email: str, ref: str = "manual") -> dict:
+    """Put one person into a cadence by hand (motions are listed in config/cadences.yaml)."""
+    from datetime import datetime, timezone
+    c = ctx.store.contact_by_email(email) or {}
+    r = _cad(ctx).start(ctx, motion, email, datetime.now(timezone.utc), ref, c.get("owner"), c.get("id"),
+                        c.get("account_id"))
+    return r or {"error": "already in this motion, or a later motion owns this person"}

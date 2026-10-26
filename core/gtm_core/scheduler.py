@@ -38,8 +38,10 @@ def due_jobs(manifests: dict[str, Manifest], last: datetime, now: datetime) -> l
 
 
 def loop(settings: Settings, manifests: dict[str, Manifest], tick_seconds: int = 30) -> None:  # pragma: no cover
+    from .workflows import launch_backend
     last = datetime.now(timezone.utc)
-    print(f"scheduler started with {sum(len(m.jobs) for m in manifests.values())} jobs")
+    backend = launch_backend(settings)
+    print(f"scheduler started with {sum(len(m.jobs) for m in manifests.values())} jobs, workflows: {backend}")
     while True:
         time.sleep(tick_seconds)
         now = datetime.now(timezone.utc)

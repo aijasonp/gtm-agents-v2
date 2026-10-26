@@ -104,4 +104,110 @@ def evaluate(m, spec, make_ctx) -> list[dict]:
         add("a broken cell is refused at load time", True, str(e))
     add("tee-up facts are stored for the audit trail",
         all(json.loads(r["facts"]) for r in ctx.store.query("SELECT facts FROM teeups")), "")
+    if "cadence" in spec:
+        out += evaluate_cadence(m, spec["cadence"], make_ctx)
+    return out
+
+
+def seed_cadence(ctx, cs: dict) -> None:
+    for a in cs["accounts"]:
+        ctx.store.upsert_account(a)
+    for c in cs["contacts"]:
+        ctx.store.upsert("contacts", c)
+    for d in cs["deals"]:
+        ctx.store.upsert("deals", d)
+    for mt in cs["meetings"]:
+        ctx.store.upsert("meetings", mt)
+    rc = cs["recap_confirmed"]
+    rid = ctx.store.insert("INSERT INTO approvals (agent, action, payload, status, requested_at, decided_at, decided_by) "
+                           "VALUES (?,?,?,?,?,?,?)", ("seller-follow-up", "crm_task", "{}", "approved", rc["at"], rc["at"],
+                                                      "Sam Rivera"))
+    ctx.store.add_draft("seller-follow-up", "meeting_recap", "Recap", status="queued", contact_id=rc["contact"],
+                        approval_id=rid, account_id="northwind.example", deal_id="d-nw")
+    for ld in cs["event_leads"]:
+        ctx.store.upsert("leads", {"id": f"{ld['event']}:{ld['email']}", "source": "event", "registered": True,
+                                   "status": "new", **ld})
+    for email, evs in cs["events"].items():
+        for e in evs:
+            engagement.record(ctx.store, email, e[0], e[1])
+    eng = load_module(ctx.manifest, "engine")
+    eng.ensure_schema(ctx)
+    t = cs["teeup"]
+    ctx.store.execute("INSERT INTO teeups (id, email, contact_id, account_id, owner, rule, status, due_at, created_at) "
+                      "VALUES (?,?,?,?,?,?,?,?,?)", ("t1", t["email"], t["contact_id"], t["account_id"], t["owner"],
+                                                     "clicked", "open", t["due_at"], t["created_at"]))
+
+
+def evaluate_cadence(m, cs, make_ctx) -> list[dict]:
+    from datetime import timedelta
+    out = []
+
+    def add(name, ok, detail=""):
+        out.append({"case": "cadence: " + name, "passed": bool(ok), "detail": str(detail)[:400]})
+
+    now = datetime.fromisoformat(cs["now"])
+    ex = cs["expect"]
+    ctx = make_ctx(m)
+    seed_cadence(ctx, cs)
+    cad = load_module(m, "cadence")
+    stats = cad.sweep(ctx, now)
+
+    def live(email):
+        r = ctx.store.one("SELECT id FROM cadence WHERE email=? ORDER BY updated_at DESC LIMIT 1", (email,))
+        return cad.get(ctx, r["id"]) if r else None
+
+    for email in ("ana@northwind.example", "ben@contoso.example", "cara@contoso.example", "dan@contoso.example",
+                  "eve@adatum.example"):
+        want, r = ex[email], live(email)
+        ok = r and r["status"] == want["status"] and (not want.get("step") or r["step_id"] == want["step"]) \
+            and (not want.get("why") or want["why"] in (r.get("stop_reason") or ""))
+        add(f"{email} {want['status']} at {want.get('step') or want.get('why')}", ok,
+            r and {k: r[k] for k in ("motion", "status", "step_id", "stop_reason", "next_touch_at")})
+    add("recap confirmed by the AE counts as the touch; check-in due 3 business days later",
+        live("ana@northwind.example")["next_touch_at"] == ex["ana_check_in_due"], live("ana@northwind.example")["next_touch_at"])
+    add("event thank-you sent advances to the bump", live("cara@contoso.example")["next_touch_at"] == ex["cara_bump_due"],
+        live("cara@contoso.example")["next_touch_at"])
+    pend = {a["payload"]["contact"]["email"]: a for a in ctx.approvals.list("pending", all_agents=True)
+            if a["action"] == "pipeline_email"}
+    a = pend.get("ana@northwind.example")
+    add("drafted touch waits on its owner as one pipeline email", a and a["payload"]["approver"] ==
+        ex["ana@northwind.example"]["approver"] and a["payload"]["step"] == "check_in", a and a["payload"])
+    add("only steps this agent owns are drafted", set(pend) == {"ana@northwind.example", "cara@contoso.example"}, sorted(pend))
+    bodies = " ".join(x["payload"]["body"].lower() for x in pend.values())
+    import re
+    add("follow-up drafts never mention opens or tracking",
+        not re.search(r"\b(opened|clicked|tracking|open rate|saw you open)\b", bodies), bodies[:200])
+    esc = [e["to"] for e in stats["escalated"] if e["id"].startswith("post_meeting:meeting-m-co")]
+    add("missed recap escalates to the owner, then the manager", esc == ex["ben@contoso.example"]["escalated_to"], esc)
+    cov = cad.coverage(ctx, now)
+    got = {"deal_without_follow_up": sorted(g["deal"] for g in cov["gaps"] if g["type"] == "deal_without_follow_up"),
+           "touch_past_due": sorted(g["email"] for g in cov["gaps"] if g["type"] == "touch_past_due")}
+    add("coverage finds the deal nobody follows and the past-due touch", got == ex["coverage_gaps"], got)
+
+    again = cad.sweep(ctx, now)
+    add("a second sweep drafts nothing new and escalates nothing twice",
+        again["drafted"] == 0 and not again["escalated"] and again["started"] == 0, {k: again[k] for k in ("drafted", "started")})
+    waits = ctx.store.query("SELECT kind, status FROM workflow_waits")
+    add("waits are stored in the database (they survive a restart)", len(waits) >= 3, waits)
+
+    cad.log_touch(ctx, "eve@adatum.example", "call", "left a voicemail", now=now)
+    cad.sweep(ctx, now)
+    add("a logged AE call advances the tee-up cadence", live("eve@adatum.example")["step_id"] == ex["eve_after_call"],
+        live("eve@adatum.example")["step_id"])
+
+    ctx.approvals.decide(pend["ana@northwind.example"]["id"], False, by="Sam Rivera")
+    cad.sweep(ctx, now)
+    r = live("ana@northwind.example")
+    add("a rejected draft hands the step to the AE without redrafting",
+        r["status"] == "active" and r["ae_owns"] == 1 and len([x for x in ctx.approvals.list("pending", all_agents=True)
+                                                               if x["payload"].get("cadence_id") == r["id"]]) == 0, r["status"])
+
+    later = now + timedelta(hours=1)
+    did = pend["cara@contoso.example"]["payload"]["draft_id"]
+    ctx.approvals.decide(pend["cara@contoso.example"]["id"], True, by="Lee Park")
+    ctx.store.execute("UPDATE drafts SET status='sent' WHERE id=?", (did,))
+    engagement.record(ctx.store, "cara@contoso.example", "sent", later.isoformat(), did, "cadence_bump")
+    cad.sweep(ctx, later)
+    add("a confirmed and sent touch advances to the next step", live("cara@contoso.example")["step_id"] ==
+        ex["cara_after_send"], live("cara@contoso.example")["step_id"])
     return out

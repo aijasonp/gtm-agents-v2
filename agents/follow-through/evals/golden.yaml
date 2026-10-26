@@ -48,3 +48,50 @@ expect:
     ben@contoso.example: "2026-10-21T15:00:00+00:00"     # 8h: 7h today, 1h Wednesday
   second_run_rule: already_teed_up
   jdm: sample/engagement.jdm.json
+
+cadence:
+  now: "2026-10-20T15:00:00+00:00"     # Tuesday 10:00 in Chicago
+  accounts:
+    - {id: northwind.example, name: Northwind Traders, domain: northwind.example, industry: Software, employees: 900, country: US}
+    - {id: contoso.example, name: Contoso Ltd, domain: contoso.example, industry: Software, employees: 400, country: US}
+    - {id: adatum.example, name: Adatum Corp, domain: adatum.example, industry: Software, employees: 1500, country: US}
+    - {id: litware.example, name: Litware Inc, domain: litware.example, industry: Software, employees: 700, country: US}
+  contacts:
+    - {id: c-ana, account_id: northwind.example, name: Ana Lopez, email: ana@northwind.example, title: VP Sales}
+    - {id: c-ben, account_id: contoso.example, name: Ben Ito, email: ben@contoso.example, title: VP Revenue Operations}
+    - {id: c-cara, account_id: contoso.example, name: Cara Diaz, email: cara@contoso.example, title: Director of Sales}
+    - {id: c-dan, account_id: contoso.example, name: Dan Moss, email: dan@contoso.example, title: Head of Sales}
+    - {id: c-eve, account_id: adatum.example, name: Eve Kim, email: eve@adatum.example, title: CRO}
+    - {id: c-ivy, account_id: adatum.example, name: Ivy Cole, email: ivy@adatum.example, title: VP Sales}
+  deals:
+    - {id: d-nw, account_id: northwind.example, name: Northwind expansion, owner: Sam Rivera, stage: evaluation, status: open, amount: 80000}
+    - {id: d-co, account_id: contoso.example, name: Contoso platform, owner: Lee Park, stage: discovery, status: open, amount: 40000}
+    - {id: d-ad, account_id: adatum.example, name: Adatum rollout, owner: Priya Shah, stage: proposal, status: open, amount: 120000, contact_id: c-ivy}
+    - {id: d-lw, account_id: litware.example, name: Litware pilot, owner: Sam Rivera, stage: discovery, status: open, amount: 20000, next_step_date: "2026-10-27"}
+  meetings:
+    - {id: m-nw, account_id: northwind.example, deal_id: d-nw, title: Northwind demo, started_at: "2026-10-19T15:00:00+00:00",
+       owner: Sam Rivera, attendees: [Ana Lopez, Sam Rivera]}
+    - {id: m-co, account_id: contoso.example, deal_id: d-co, title: Contoso discovery, started_at: "2026-10-13T15:00:00+00:00",
+       owner: Lee Park, attendees: [Ben Ito, Lee Park]}
+  recap_confirmed: {contact: c-ana, at: "2026-10-19T18:00:00+00:00"}
+  event_leads:
+    - {email: cara@contoso.example, name: Cara Diaz, event: dinner-oct, attended: true, received_at: "2026-10-15T23:00:00+00:00",
+       account_id: contoso.example, contact_id: c-cara, owner: Lee Park}
+    - {email: dan@contoso.example, name: Dan Moss, event: dinner-oct, attended: false, received_at: "2026-10-15T23:00:00+00:00",
+       account_id: contoso.example, contact_id: c-dan, owner: Lee Park}
+  events:   # email: [event, time]
+    cara@contoso.example: [[sent, "2026-10-16T18:00:00+00:00"]]
+    dan@contoso.example: [[reply, "2026-10-19T16:00:00+00:00"]]
+  teeup: {email: eve@adatum.example, owner: Priya Shah, contact_id: c-eve, account_id: adatum.example,
+          created_at: "2026-10-20T14:00:00+00:00", due_at: "2026-10-20T19:00:00+00:00"}
+  expect:
+    ana@northwind.example: {status: awaiting_ae, step: check_in, approver: Sam Rivera}
+    ben@contoso.example: {status: active, step: recap, escalated_to: [Lee Park, Jordan Avery]}
+    cara@contoso.example: {status: awaiting_ae, step: bump}
+    dan@contoso.example: {status: stopped, why: replied}
+    eve@adatum.example: {status: active, step: ae_first_touch}
+    ana_check_in_due: "2026-10-22T14:00:00+00:00"   # 3 business days after the recap was confirmed, 9:00 Chicago
+    cara_bump_due: "2026-10-21T14:00:00+00:00"
+    coverage_gaps: {deal_without_follow_up: [Adatum rollout], touch_past_due: [ben@contoso.example]}
+    eve_after_call: second_touch
+    cara_after_send: last_touch

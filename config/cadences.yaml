@@ -1,0 +1,81 @@
+# Follow-up cadences: the promise that no open conversation goes quiet.
+#
+# RevOps owns this file. Every contact in an active motion always holds one next touch with a due time.
+# A touch counts when the evidence shows it happened: an email sent to them, a draft for them marked
+# sent, a task for them closed, deal activity after the step opened, or an AE logging it.
+#
+# drafter: who writes the touch
+#   follow-through   this agent drafts it and queues it for the AE to confirm (one email, one approval)
+#   <agent id>       that agent already drafts it (recaps, event follow-ups); this agent only checks it happened
+#   ae               the AE does it by hand (a call after a tee-up); this agent only checks it happened
+#
+# due: when the step is due, from the start of the motion (first step) or the last touch (later steps)
+#   {hours: 4}            business hours
+#   {business_days: 3}    working days, at the start of the working day
+#   {from_teeup: true}    the tee-up's own SLA
+#
+# A step past due by `grace_hours` business hours is missed: the escalation ladder runs once per level.
+
+grace_hours: 4
+draft_ahead_hours: 16       # draft the next touch this many business hours early so the AE confirms in time
+approval_sla_hours: 4       # a drafted touch waiting on the AE longer than this escalates
+escalation:
+  - {after_hours: 0, notify: owner}
+  - {after_hours: 8, notify: manager}
+
+motions:
+  post_meeting:
+    description: After an external meeting on an open deal
+    start: meeting
+    stop_on: [reply, meeting, deal_closed, suppressed]
+    steps:
+      - {id: recap, due: {hours: 4}, drafter: seller-follow-up, kind: meeting_recap}
+      - {id: check_in, due: {business_days: 3}, drafter: follow-through,
+         ask: "Check that they have what they need after the recap and confirm the agreed next step."}
+      - {id: value_add, due: {business_days: 5}, drafter: follow-through,
+         ask: "Share one useful, specific item tied to their stated pain. One question, no pressure."}
+      - {id: next_step, due: {business_days: 7}, drafter: follow-through,
+         ask: "Propose the next step from the call with two concrete times."}
+
+  event_attended:
+    description: After someone attended our event
+    start: event_attended
+    stop_on: [reply, meeting, suppressed]
+    steps:
+      - {id: thank_you, due: {business_days: 1}, drafter: event-campaigns, kind: event_followup_attended}
+      - {id: bump, due: {business_days: 3}, drafter: follow-through,
+         ask: "Short note tying one event takeaway to their team. One ask for a 20-minute call."}
+      - {id: last_touch, due: {business_days: 7}, drafter: follow-through,
+         ask: "Last note: leave the door open and offer the session notes."}
+
+  event_missed:
+    description: Registered or invited, did not attend
+    start: event_missed
+    stop_on: [reply, meeting, suppressed]
+    steps:
+      - {id: notes, due: {business_days: 1}, drafter: event-campaigns, kind: event_followup_missed}
+      - {id: bump, due: {business_days: 4}, drafter: follow-through,
+         ask: "Offer the recording or notes and one relevant point. No guilt about missing it."}
+
+  teed_up:
+    description: Handed to the AE by an engagement trigger
+    start: tee_up
+    stop_on: [reply, meeting, suppressed]
+    steps:
+      - {id: ae_first_touch, due: {from_teeup: true}, drafter: ae}
+      - {id: second_touch, due: {business_days: 2}, drafter: follow-through,
+         ask: "Follow the AE's first touch with one new, sayable reason to talk now. One ask."}
+      - {id: third_touch, due: {business_days: 5}, drafter: follow-through,
+         ask: "Short final note with a soft ask. Say you will not keep writing."}
+
+  proposal_out:
+    description: After a proposal is sent
+    start: proposal_sent
+    stop_on: [reply, meeting, deal_closed, suppressed]
+    steps:
+      - {id: confirm_received, due: {business_days: 2}, drafter: follow-through,
+         ask: "Confirm they received the proposal and offer a short walkthrough."}
+      - {id: decision_check, due: {business_days: 5}, drafter: follow-through,
+         ask: "Ask what is left to decide and who else needs to weigh in."}
+      - {id: last_check, due: {business_days: 10}, drafter: follow-through,
+         ask: "Ask plainly whether this is still a priority this quarter."}

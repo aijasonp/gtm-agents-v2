@@ -33,5 +33,6 @@ team:  # used by Lead Triage routing and Revenue Pulse rollups
     - {name: Sam Rivera, email: sam@beacon.example, regions: [US], segments: [mid_market]}
     - {name: Priya Shah, email: priya@beacon.example, regions: [CA, GB], segments: [mid_market, enterprise]}
     - {name: Lee Park, email: lee@beacon.example, regions: [US], segments: [enterprise]}
+  manager: {name: Jordan Avery, email: jordan@beacon.example}   # hears about missed follow-ups after the owner
   rep_names: [Sam Rivera, Priya Shah, Lee Park]   # your side of the call in transcripts
   quarter_quota: 1200000
