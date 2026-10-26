@@ -67,5 +67,17 @@ def import_clay(ctx, file: str) -> dict:
         return {"error": str(e)}
 
 
+def push_to_floqer(ctx, limit: int = 50) -> dict:
+    """Send target contacts missing a phone or email to the Floqer sheet (providers.yaml `floqer`) and run only the
+    rows that are new to the sheet. Results come back through import_floqer (also hourly)."""
+    return _eng(ctx).push_to_floqer(ctx, int(limit))
+
+
+def import_floqer(ctx) -> dict:
+    """Read finished Floqer rows for earlier pushes and fill missing phones and emails (validated, cached, never
+    overwriting a stored value)."""
+    return _eng(ctx).import_floqer(ctx)
+
+
 TOOLS = {f.__name__: f for f in [enrich_contact, enrich_account, waterfall_report, coverage_report, push_to_clay,
-                                 import_clay]}
+                                 import_clay, push_to_floqer, import_floqer]}

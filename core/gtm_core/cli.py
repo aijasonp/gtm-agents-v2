@@ -95,6 +95,25 @@ def cmd_approvals(s, a):
         print(json.dumps(ctx.approvals.execute_approved(dry_run=a.dry_run), indent=2, default=str))
 
 
+def cmd_mcp(s, a):
+    from .connectors.mcp_remote import McpConfig, McpError
+    cfg = McpConfig.load()
+    try:
+        if a.action == "servers":
+            print(json.dumps({n: {"url": v.get("url") or f"${v.get('url_env')}", "token_env": v.get("token_env")}
+                              for n, v in cfg.servers.items()}, indent=2))
+            print(json.dumps({c: (cfg.ready(c) or "ready") for c in cfg.capabilities}, indent=2))
+        elif a.action == "tools":
+            for t in cfg.server(a.name).tools():
+                print(f"{t['name']:<40} {t['description']}")
+                if a.schema:
+                    print(json.dumps(t["input_schema"], indent=2))
+        elif a.action == "call":
+            print(json.dumps(cfg.server(a.name).call(a.tool, json.loads(a.args or "{}")), indent=2, default=str))
+    except McpError as e:
+        raise SystemExit(str(e))
+
+
 def cmd_telemetry(s, a):
     from . import telemetry
     from .store import Store
@@ -244,6 +263,9 @@ def main(argv=None):
     ap.add_argument("--all", action="store_true")
     ap.add_argument("--dry-run", action="store_true"); ap.add_argument("--all-agents", action="store_true")
     ap.set_defaults(fn=cmd_approvals)
+    mc = sub.add_parser("mcp"); mc.add_argument("action", choices=["servers", "tools", "call"])
+    mc.add_argument("name", nargs="?"); mc.add_argument("tool", nargs="?"); mc.add_argument("--args", default="{}")
+    mc.add_argument("--schema", action="store_true"); mc.set_defaults(fn=cmd_mcp)
     tm = sub.add_parser("telemetry"); tm.add_argument("action", choices=["stats", "feedback", "export"])
     tm.add_argument("--days", type=int, default=28); tm.set_defaults(fn=cmd_telemetry)
     im = sub.add_parser("import"); im.add_argument("agent"); im.add_argument("kind", choices=["accounts", "signals", "outcomes", "contacts", "leads", "deals", "tasks", "meetings"])

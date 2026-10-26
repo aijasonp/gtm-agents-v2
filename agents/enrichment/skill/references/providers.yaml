@@ -70,3 +70,28 @@ providers:
 #    outputs: {status: "status"}
 #    accepted: [valid, deliverable]
 #    cost_per_call: 0.008
+
+# ---------------------------------------------------------------------------------------------
+# Hosted MCP providers (MoltSets, Apollo, any MCP server in config/mcp.yaml). Map the capability's tool
+# first (`gtm mcp tools moltsets`), then add the provider to `order`. Unconfigured means skipped, not failed.
+#
+#  moltsets:
+#    type: mcp
+#    capability: contact_lookup           # in config/mcp.yaml
+#    outputs: {email: email, phone: phone}
+#    confidence: 0.85
+#    cost_per_call: 0                     # flat-rate plan: count spend in the plan, not per call
+
+# ---------------------------------------------------------------------------------------------
+# Floqer sheet (push_to_floqer, import_floqer). Keys from .env: FLOQER_API_KEY, FLOQER_WORKFLOW_ID,
+# FLOQER_SHEET_ID. Only rows new to the sheet are pushed and run (each run is a credit).
+# Output paths are action ids from your sheet: `a.field | b.field` tries each in order.
+#
+# floqer:
+#   key: email
+#   inputs: {email: email, firstname: first_name, lastname: last_name, company: company, jobtitle: title,
+#            linkedin_url: linkedin}
+#   outputs:
+#     phone: person_enrich_by_floqer_01lq.phone_number | personal_phone_waterfall_01gg.phone_number
+#     email: person_enrich_by_floqer_01lq.professional_email
+#   confidence: 0.85

@@ -93,3 +93,8 @@ def enrich_queue(ctx, now: datetime | None = None) -> dict:
     if stats["contacts"]:
         ctx.slack.post(eng.format_run(stats))
     return stats
+
+
+def import_floqer(ctx, now: datetime | None = None) -> dict:
+    """Hourly: collect finished Floqer rows from earlier pushes."""
+    return load_module(ctx.manifest, "engine").import_floqer(ctx, now)

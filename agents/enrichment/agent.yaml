@@ -26,10 +26,13 @@ tools:
   - coverage_report
   - push_to_clay
   - import_clay
+  - push_to_floqer
+  - import_floqer
 connectors_required: []
-connectors_optional: [crm, slack, enrichment_providers, dialer]
+connectors_optional: [crm, slack, enrichment_providers, dialer, floqer, mcp]
 jobs:
   - {name: enrich_queue, cron: "15 * * * *", model_class: none}
+  - {name: import_floqer, cron: "45 * * * *", model_class: none}
 budgets: {daily_tokens: 100000, monthly_usd: 10}
 evals: evals/golden.yaml
 config:

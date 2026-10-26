@@ -1,0 +1,40 @@
+# Hosted MCP servers the runtime may call, and which tool does each job.
+#
+# Tool names vary by vendor and version, so they are left blank until you look them up:
+#   gtm mcp tools moltsets        lists the tools the server offers, with their arguments
+# Then fill `tool`, `args` and `result` below. A capability with no tool is skipped, never guessed.
+# Hosted servers that use OAuth need a token you obtain once in their console; put it in .env.
+
+servers:
+  hubspot:
+    url: https://mcp.hubspot.com/
+    token_env: HUBSPOT_MCP_TOKEN
+  apollo:
+    url: https://mcp.apollo.io/mcp
+    token_env: APOLLO_MCP_TOKEN
+  moltsets:
+    url: https://mcp.moltsets.com/mcp
+    token_env: MOLTSETS_MCP_TOKEN
+  floqer:
+    url_env: FLOQER_MCP_URL          # from your Floqer workspace settings
+    token_env: FLOQER_MCP_TOKEN
+
+capabilities:
+  # Email and mobile for a known person (Enrichment waterfall, provider type mcp).
+  contact_lookup:
+    server: moltsets
+    tool:                            # e.g. the LinkedIn-to-email tool
+    args: {linkedin_url: "{linkedin}", email: "{email}"}
+    result: {email: email, phone: mobile}
+  # Buyers at an account for the daily book when the CRM has none (Daily Book, contact fill).
+  people_search:
+    server: apollo
+    tool:
+    args: {domain: "{domain}", titles: "{titles}", limit: "{limit}"}
+    result: {people: people}
+  # Firmographics for an account (Enrichment, account fields).
+  company_lookup:
+    server: moltsets
+    tool:
+    args: {domain: "{domain}"}
+    result: {industry: industry, employees: employee_count, country: country}

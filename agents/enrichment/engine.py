@@ -282,12 +282,33 @@ class HttpProvider(Provider):
         return {f: v for f, path in c.get("outputs", {}).items() if (v := _dig(data, path)) not in (None, "")}
 
 
+class McpProvider(Provider):
+    """A hosted MCP server (MoltSets, Apollo, ...) through a capability in config/mcp.yaml. Not configured yet
+    (no tool name, no token) means skipped with the reason, the same as a missing CSV."""
+    def lookup(self, p: dict) -> dict:
+        from gtm_core.connectors.mcp_remote import McpConfig, McpError
+        cfg = McpConfig.load(self.cfg.get("config"))
+        cap = self.cfg.get("capability", "contact_lookup")
+        why = cfg.ready(cap)
+        if why:
+            raise ProviderSkipped(why)
+        try:
+            out = cfg.run(cap, p, MCP_FACTORY)
+        except McpError as e:
+            if "not found" in str(e).lower() or "no match" in str(e).lower():
+                return {}
+            raise
+        keep = self.cfg.get("outputs") or {"email": "email", "phone": "phone"}
+        return {f: out.get(k) for f, k in keep.items() if out.get(k) not in (None, "")}
+
+
 class ManualProvider(Provider):
     def lookup(self, p: dict) -> dict:
         return {}
 
 
-TYPES = {"csv": CsvProvider, "http": HttpProvider, "manual": ManualProvider}
+TYPES = {"csv": CsvProvider, "http": HttpProvider, "mcp": McpProvider, "manual": ManualProvider}
+MCP_FACTORY = None  # tests inject a fake MCP session factory
 
 
 def build(ctx, cfg: dict) -> dict[str, Provider]:
@@ -689,3 +710,72 @@ def format_run(stats: dict) -> str:
     if stats.get("approvals"):
         lines.append(f"CRM updates queued for approval: {stats['approvals']}. Review: `gtm approvals enrichment list`.")
     return "\n".join(lines)
+
+
+
+# ---------------------------------------------------------------- Floqer sheet (push, run, import)
+def floqer_sheet(ctx, cfg: dict | None = None):
+    from gtm_core.connectors.floqer import FloqerSheet
+    fc = (cfg or providers_cfg(ctx)).get("floqer") or {}
+    return getattr(ctx, "floqer", None) or FloqerSheet.from_env(fc), fc
+
+
+def push_to_floqer(ctx, limit: int = 50, now: datetime | None = None) -> dict:
+    sheet, fc = floqer_sheet(ctx)
+    if sheet is None:
+        return {"error": "set FLOQER_API_KEY, FLOQER_WORKFLOW_ID and FLOQER_SHEET_ID (or floqer.workflow and sheet)"}
+    inputs = fc.get("inputs") or {"email": "email", "firstname": "first_name", "lastname": "last_name",
+                                   "company": "company", "jobtitle": "title", "linkedin_url": "linkedin"}
+    rows, who = [], []
+    for c in ctx.store.select("contacts"):
+        if len(rows) >= limit:
+            break
+        if not c.get("email") or (c.get("phone") and c.get("email_verified")):
+            continue
+        if c.get("email_invalid") or c.get("unsubscribed"):
+            continue
+        a = ctx.store.account(c["account_id"]) if c.get("account_id") else {}
+        first, _, last = (c.get("name") or "").partition(" ")
+        vals = {"email": c["email"], "first_name": first, "last_name": last, "company": (a or {}).get("name"),
+                "title": c.get("title"), "linkedin": c.get("linkedin")}
+        rows.append({col: vals.get(src) or "" for col, src in inputs.items()})
+        who.append(c["email"])
+    if not rows:
+        return {"pushed": 0, "note": "no contacts missing a phone or email"}
+    res = sheet.push(rows, key=fc.get("key", "email"), run=True)
+    pending = set(ctx.store.get_state("enrichment:floqer_pending") or []) | set(res["row_ids"])
+    ctx.store.set_state("enrichment:floqer_pending", sorted(pending, key=str))
+    ctx.audit.log("enrichment.floqer_push", pushed=res["pushed"], ran=res["ran"])
+    return {**res, "contacts": who}
+
+
+def import_floqer(ctx, now: datetime | None = None) -> dict:
+    ensure_schema(ctx)
+    sheet, fc = floqer_sheet(ctx)
+    pending = list(ctx.store.get_state("enrichment:floqer_pending") or [])
+    if sheet is None or not pending:
+        return {"imported": 0, "pending": len(pending)}
+    now = _now(now)
+    outs = fc.get("outputs") or {}
+    got = sheet.results(pending, outs, fc.get("key", "email"))
+    country = providers_cfg(ctx).get("default_country", "US")
+    filled = 0
+    for r in got["done"]:
+        c = ctx.store.contact_by_email(r.get(fc.get("key", "email")) or "")
+        if not c:
+            continue
+        upd = {}
+        for field in ("phone", "email"):
+            v = r.get(field)
+            if v and not c.get(field):
+                ok = validate(field, v, c.get("country") or country)
+                if ok:
+                    upd[field] = ok
+                    cache_put(ctx, person_key(person_from_contact(ctx, c)) or c["id"], field, ok, "floqer",
+                              float(fc.get("confidence", 0.85)), 0.0, now)
+        if upd:
+            ctx.store.upsert("contacts", {"id": c["id"], **upd, "enriched_by": "floqer"})
+            filled += 1
+    still = got["pending"]
+    ctx.store.set_state("enrichment:floqer_pending", still)
+    return {"imported": len(got["done"]), "filled": filled, "pending": len(still)}

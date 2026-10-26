@@ -180,3 +180,36 @@ def test_requests_left_pending_when_run_is_full(ctx_for):
                                                {"email": f"{n}@x.example", "fields": ["phone"]})
     load_module(ctx.manifest, "jobs").enrich_queue(ctx, now=NOW)
     assert len(ctx.handoffs.pending("enrich_request")) == 1
+
+
+def test_mcp_provider_in_the_waterfall(ctx_for, monkeypatch, tmp_path):
+    from contextlib import asynccontextmanager
+    ctx = ctx_for("enrichment")
+    eng = _eng(ctx)
+    (tmp_path / "mcp.yaml").write_text("""
+servers: {moltsets: {url: https://mcp.example/mcp, token_env: MOLT_T}}
+capabilities:
+  contact_lookup: {server: moltsets, tool: find_contact, args: {email: "{email}"}, result: {phone: mobile, email: email}}
+""")
+    calls = []
+
+    class S:
+        async def call_tool(self, name, args):
+            calls.append((name, args))
+            return type("R", (), {"isError": False, "structuredContent": {"mobile": "415 555 0177"}, "content": []})()
+
+    @asynccontextmanager
+    async def fake():
+        yield S()
+    monkeypatch.setattr(eng, "MCP_FACTORY", fake)
+    cfg = {"default_country": "US", "ttl_days": 90, "caps": {"per_run_usd": 10, "monthly_usd": 100},
+           "order": {"phone": ["moltsets"]},
+           "providers": {"moltsets": {"type": "mcp", "config": str(tmp_path / "mcp.yaml"), "capability": "contact_lookup",
+                                      "outputs": {"phone": "phone"}, "confidence": 0.85}}}
+    r = eng.waterfall(ctx, {"email": "ana@nw.example"}, ["phone"], eng.new_run(), cfg, NOW)
+    assert r["phone"]["status"] == "not found"  # token not set: skipped with the reason
+    assert any("MOLT_T is not set" in n["note"] for n in ctx.store.query("SELECT note FROM enrichment_calls"))
+    monkeypatch.setenv("MOLT_T", "tok")
+    r = eng.waterfall(ctx, {"email": "dana@nw.example"}, ["phone"], eng.new_run(), cfg, NOW)
+    assert r["phone"]["value"] == "+14155550177" and r["phone"]["provider"] == "moltsets"
+    assert calls == [("find_contact", {"email": "dana@nw.example"})]

@@ -34,6 +34,8 @@ core/gtm_core/               shared runtime, built once
   guardrails.py              hard step limits
   audit.py                   append-only audit log with secret masking
   connectors/                HubSpot, Salesforce (accounts, contacts, deals, notes, tasks), Slack,
+                             hosted MCP servers by capability (mcp_remote: MoltSets, Apollo, HubSpot, Floqer),
+                             Floqer sheets (push, run only new rows, import),
                              sequencer (webhook, Smartlead or Lemlist), Clay (table push and import),
                              notetakers (Gong, Fireflies, Fathom transcript pull); writes only via approvals
   executors.py               shared executors for approved actions (crm_task, deal_note, sequence_enroll...)
