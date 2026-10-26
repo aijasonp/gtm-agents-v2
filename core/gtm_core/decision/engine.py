@@ -2,7 +2,7 @@
 
 Config lives in the `judgment` section of config/icp.yaml:
 
-  backend: auto | rules | model | remote | shadow
+  backend: auto | rules | clef | model | remote | shadow
       auto   = remote when GTM_DECISION_URL is set, else model when a key is set, else rules
   shadow: {primary: rules, candidate: model}
       returns the primary verdict and stores the candidate's answers and agreement next to it,
@@ -22,7 +22,7 @@ from functools import lru_cache
 from pathlib import Path
 
 from ..store import now_iso
-from .backends import ModelBackend, RemoteBackend, RulesBackend
+from .backends import ClefBackend, ModelBackend, RemoteBackend, RulesBackend
 from .model import Answer, DecisionModel, Verdict, load_judgment
 
 
@@ -57,6 +57,8 @@ def _backend(ctx, name: str, cfg: dict):
         return ModelBackend(ctx)
     if name == "remote":
         return RemoteBackend.from_config(ctx, cfg.get("remote") or {}, getattr(ctx, "decision_client", None))
+    if name == "clef":
+        return ClefBackend.from_config(ctx, cfg.get("clef") or {}, getattr(ctx, "decision_client", None))
     raise ValueError(f"unknown decision backend {name!r}")
 
 
@@ -64,6 +66,8 @@ def resolve_backend(ctx, cfg: dict) -> str:
     name = cfg.get("backend", "auto")
     if name != "auto":
         return name
+    if _backend(ctx, "clef", cfg).available():
+        return "clef"
     if _backend(ctx, "remote", cfg).available():
         return "remote"
     if ModelBackend(ctx).available():

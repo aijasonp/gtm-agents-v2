@@ -247,3 +247,122 @@ class RemoteBackend:
             return {}
         return _validated(model, raw.get("answers", {}) if isinstance(raw, dict) else {}, state, self.name,
                           self.ctx.audit.log)
+
+
+class ClefBackend:
+    """Cloudflare Workers AI Clef: a typed decision model (state plus typed questions in, a probability per
+    option out). Clef does not quote evidence, so an answer is kept only when its confidence clears
+    `min_confidence`; anything below falls back to the rules backend like an unanswered question.
+
+    Question kinds map to Clef's primitives: bool -> noul (probability true), choice -> choice over the
+    options, score -> score over five levels "1".."5". Endpoint:
+    POST https://api.cloudflare.com/client/v4/accounts/{account}/ai/run/@cf/cloudflare/{model}
+    with {"state": ..., "questions": {id: {type, instructions, criteria}}}; the reply is wrapped as
+    {"success": true, "result": {"answers": {...}}}.
+    """
+    name = "clef"
+    BASE = "https://api.cloudflare.com/client/v4/accounts"
+
+    def __init__(self, ctx, account: str | None, token: str | None, model: str = "clef", min_confidence: float = 0.7,
+                 timeout: float = 30, client=None):
+        self.ctx = ctx
+        self.account, self.token = account, token
+        self.model = model if model in ("clef", "clef-flash") else "clef"
+        self.min_confidence = float(min_confidence)
+        self.timeout = timeout
+        self.client = client
+
+    @classmethod
+    def from_config(cls, ctx, cfg: dict, client=None) -> "ClefBackend":
+        return cls(ctx, os.environ.get(cfg.get("account_env", "CLOUDFLARE_ACCOUNT_ID")) or None,
+                   os.environ.get(cfg.get("token_env", "CLOUDFLARE_AUTH_TOKEN")) or None, cfg.get("model", "clef"),
+                   float(cfg.get("min_confidence", 0.7)), float(cfg.get("timeout", 30)), client)
+
+    def available(self) -> bool:
+        return bool(self.account and self.token) and not getattr(self.ctx.settings, "offline", False)
+
+    @staticmethod
+    def question(q: Question) -> dict:
+        if q.kind == "bool":
+            return {"type": "noul", "instructions": q.ask}
+        if q.kind == "choice":
+            return {"type": "choice", "instructions": q.ask, "criteria": sorted(q.options)}
+        return {"type": "score", "instructions": f"{q.ask} Answer on a scale of 1 (lowest) to 5 (highest).",
+                "criteria": ["1", "2", "3", "4", "5"]}
+
+    @staticmethod
+    def _pick(probs) -> tuple[str | None, float | None]:
+        if isinstance(probs, dict) and probs:
+            k = max(probs, key=lambda x: float(probs[x]))
+            return str(k), float(probs[k])
+        if isinstance(probs, list) and probs:
+            i = max(range(len(probs)), key=lambda j: float(probs[j]))
+            return str(i), float(probs[i])
+        return None, None
+
+    def read(self, q: Question, a: dict) -> tuple[object, float | None]:
+        """(value in our kind, confidence) from one Clef answer, or (None, None) when it cannot be read."""
+        conf = a.get("confidence")
+        if q.kind == "bool":
+            p = a.get("noul")
+            if p is None:
+                return None, None
+            p = float(p)
+            return p >= 0.5, float(conf) if conf is not None else max(p, 1 - p)
+        if q.kind == "choice":
+            v = a.get("choice")
+            if v is None:
+                v, pc = self._pick(a.get("probabilities"))
+                conf = conf if conf is not None else pc
+            return v, None if conf is None else float(conf)
+        label, pc = self._pick(a.get("probabilities"))
+        legend = {str(k): str(v) for k, v in (a.get("legend") or {}).items()}
+        if label is not None and legend and label in legend:
+            label = legend[label]  # probabilities keyed by index: the legend names the level
+        elif isinstance(a.get("probabilities"), list) and label is not None:
+            label = str(int(label) + 1)  # index list with no legend: position 0 is level "1"
+        if label is None and a.get("score") is not None:
+            s = a["score"]
+            label = legend.get(str(round(float(s)))) or None
+            if label is None and 1 <= float(s) <= 5:
+                label = str(round(float(s)))
+        conf = conf if conf is not None else pc
+        try:
+            return (int(label) if label is not None else None), None if conf is None else float(conf)
+        except ValueError:
+            return None, None
+
+    def answer(self, model: DecisionModel, state: dict, only: list[str] | None = None) -> dict[str, Answer]:
+        if not self.available():
+            return {}
+        import httpx
+        qs = [q for q in model.questions if only is None or q.id in only]
+        body = {"state": state, "questions": {q.id: self.question(q) for q in qs}}
+        http = self.client or httpx.Client(timeout=self.timeout)
+        url = f"{self.BASE}/{self.account}/ai/run/@cf/cloudflare/{self.model}"
+        try:
+            r = http.post(url, json=body, headers={"authorization": f"Bearer {self.token}"})
+            r.raise_for_status()
+            data = r.json()
+            if isinstance(data, dict) and data.get("success") is False:
+                raise RuntimeError(f"Clef error: {data.get('errors')}")
+            raw = (data.get("result") or data).get("answers") or {}
+        except Exception as e:
+            self.ctx.audit.log("decision.error", backend=self.name, error=str(e)[:300])
+            return {}
+        out: dict[str, Answer] = {}
+        for q in qs:
+            a = raw.get(q.id)
+            if not isinstance(a, dict):
+                continue
+            v, conf = self.read(q, a)
+            try:
+                v = q.validate(v)
+            except ValueError as e:
+                self.ctx.audit.log("decision.invalid", question=q.id, error=str(e)[:200], source=self.name)
+                continue
+            if v is None or conf is None or conf < self.min_confidence:
+                self.ctx.audit.log("decision.low_confidence", question=q.id, confidence=conf, source=self.name)
+                continue
+            out[q.id] = Answer(v, f"clef p={conf:.2f}", self.name, round(conf, 3))
+        return out

@@ -33,10 +33,11 @@ An answer that does not fit its kind is rejected, never coerced. A question with
 | --- | --- | --- |
 | `rules` | offline, tests, evals, and fallback for every other backend | Answers only from evidence terms and numeric bands set in config. Unknown when there is no evidence. |
 | `model` | when a model key is set | The cheap model answers all questions as JSON. Each answer must quote evidence that is found in the account's facts, or it is dropped. |
+| `clef` | when `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_AUTH_TOKEN` are set | Cloudflare Workers AI Clef, a typed decision model: bool, choice and score questions map to its noul, choice and score primitives and come back with a probability per option. Clef quotes no evidence, so an answer is kept only at or above `clef.min_confidence` (default 0.7); the rest fall back to rules. |
 | `remote` | when `GTM_DECISION_URL` is set | Any HTTP decision service, for example one running on Cloudflare Workers AI or a typed-decision runtime. POST `{model, version, state, questions}` and get back `{answers: {id: {value, evidence, confidence}}}`. Validated the same way. |
 | `shadow` | while trialing a new backend | Returns the primary backend's verdict and stores the candidate's answers and agreement rate next to it. |
 
-With `backend: auto`, the order is remote, then model, then rules. If a question goes unanswered, it falls back to rules, so a model outage drops you to the offline answers instead of to nothing.
+With `backend: auto`, the order is clef, then remote, then model, then rules. If a question goes unanswered, it falls back to rules, so a model outage drops you to the offline answers instead of to nothing.
 
 Verdicts are cached in the `decisions` table by state hash and model fingerprint. An unchanged account is not judged again until `cache_days` pass. A new signal, or any edit to a question, triggers a fresh judgment.
 
