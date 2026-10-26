@@ -7,6 +7,8 @@ Lets the customer's existing tools push work in and lets approvers act without a
   POST /v1/signals                    JSON signal or list (account_id, signal_type, observed_at, url?, title?)
   POST /v1/replies                    JSON reply or list (from_email, subject, body, received_at...) -> Reply Desk
   POST /v1/engagement                 JSON engagement row or list (platform, post_url, engager_name...) -> Social Signals
+  POST /v1/page-changes               changedetection.io notification: flat JSON, or Apprise json:// with the
+                                      plain-text template as the message -> Signal Sourcing
   GET  /v1/approvals?status=pending   approval queue across agents
   POST /v1/approvals/<id>/approve     body {"edits": {"subject": ..., "body": ...}} optional
   POST /v1/approvals/<id>/reject
@@ -198,6 +200,18 @@ class Api:
                 out.append({"email": e, "error": str(ex)[:200]})
         return out
 
+    def page_changes(self, body) -> tuple[int, dict]:
+        """A changedetection.io notification: signals stored on the matching account right away."""
+        if "signal-sourcing" not in self.manifests:
+            return 400, {"error": "signal-sourcing agent not installed"}
+        from .agents import load_module
+        ctx = self.ctx("signal-sourcing")
+        try:
+            res = load_module(ctx.manifest, "engine").page_change(ctx, body)
+        except ValueError as e:
+            raise BadRequest(str(e)) from None
+        return (201 if res.get("stored") else 200), res
+
     def to_inbox(self, agent: str, key: str, body, required: tuple[str, ...]) -> tuple[int, dict]:
         """Drop rows into an agent's inbox folder; its scheduled job ingests and archives them."""
         import uuid
@@ -268,6 +282,7 @@ class Api:
             return 200, {"ok": True, "agents": sorted(self.manifests)}
         intake = {"/v1/leads": self.leads, "/v1/meetings": self.meetings, "/v1/signals": self.signals,
                   "/v1/email-events": self.email_events, "/v1/enrichment": self.enrichment,
+                  "/v1/page-changes": self.page_changes,
                   "/v1/replies": lambda b: self.to_inbox("reply-desk", "reply_inbox", b, ("from_email", "body")),
                   "/v1/engagement": lambda b: self.to_inbox("social-signals", "engagement_inbox", b,
                                                             ("engager_name", "engagement_type"))}

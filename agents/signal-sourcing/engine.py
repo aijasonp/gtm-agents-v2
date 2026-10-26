@@ -28,9 +28,9 @@ from gtm_core.sources.http import SourceClient
 from gtm_core.store import now_iso
 
 SOURCE_PREFIX = "sourcing:"
-TIER = {"filing": 1, "initiative": 2, "funding": 2, "hiring": 3, "exec_change": 4}
+TIER = {"filing": 1, "initiative": 2, "funding": 2, "hiring": 3, "exec_change": 4, "page_change": 5}
 LABEL = {"filing": "10-K/10-Q", "initiative": "initiative", "funding": "funding", "hiring": "hiring",
-         "exec_change": "exec_change"}
+         "exec_change": "exec_change", "page_change": "page change"}
 
 
 @lru_cache(maxsize=8)
@@ -216,7 +216,9 @@ def dispatch(ctx, now: datetime | None = None, limit: int | None = None) -> dict
                "initiative": int((r.get("news") or {}).get("initiative_days", 180)),
                "funding": int((r.get("news") or {}).get("funding_days", 180)),
                "hiring": int((r.get("hiring") or {}).get("max_age_days", 30)),
-               "exec_change": int((r.get("exec_change") or {}).get("max_age_days", 180))}
+               "exec_change": int((r.get("exec_change") or {}).get("max_age_days", 180)),
+               "page_change": int((r.get("page_changes") or {}).get("max_age_days", 60))}
+    tax = taxonomy(ctx)
     today = _today(now)
     scores = {row["account_id"]: row for row in ctx.store.query("SELECT * FROM scores ORDER BY id")}
     batch, excluded = [], []
@@ -235,6 +237,9 @@ def dispatch(ctx, now: datetime | None = None, limit: int | None = None) -> dict
         for s in sigs:
             src = s["source"][len(SOURCE_PREFIX):]
             if src in windows and s["observed_at"][:10] >= (today - timedelta(days=windows[src])).isoformat():
+                st = tax.types.get(s["signal_type"])
+                if src == "page_change" and not (st and st.say_it):
+                    continue  # timing-only page changes (pricing, competitor scripts) never qualify an account alone
                 live.append((src, s))
         if not why and not live:
             why = "sourced signals are older than their window"
@@ -327,3 +332,50 @@ def add_company(ctx, name: str, domain: str, cik: str = "", ticker: str = "", in
     old.pop("updated_at", None)
     ctx.store.upsert_account({**old, **{k: v for k, v in acct.items() if v not in (None, "")}})
     return {"added": not old, "updated": bool(old), "account": dom, "added_at": now_iso()}
+
+
+
+# ---------- page changes (changedetection.io) ----------
+def page_change(ctx, body, now: datetime | None = None) -> dict:
+    """One changedetection.io notification -> sourced signals on the matching account."""
+    from gtm_core.sources import pagewatch as pw
+    r = rules(ctx)
+    pc = r.get("page_changes") or {}
+    if not pc.get("enabled", True):
+        return {"skipped": "page_changes disabled in config/signals.yaml"}
+    change = body if isinstance(body, dict) and "added" in body and "url" in body else pw.parse_notification(body)
+    acct = pw.account_for(ctx.store, change)
+    if not acct:
+        return {"url": change["url"], "skipped": f"no account for {pw.host(change['url'])} (tag the watch account:<domain>)"}
+    why = q.account_rejection(acct, r.get("exclusions") or {})
+    if why:
+        return {"url": change["url"], "account": acct["id"], "rejected": why}
+    cutoff = (_today(now) - timedelta(days=int(pc.get("max_age_days", 60)))).isoformat()
+    findings = [f for f in pw.classify(change, acct, r) if f.observed_at >= cutoff]
+    stored = _persist(ctx, findings, now)
+    return {"url": change["url"], "account": acct["id"], "kind": pw.page_kind(change, pc.get("page_kinds")),
+            "findings": [f.as_dict() for f in findings], "stored": stored}
+
+
+def poll_page_changes(ctx, now: datetime | None = None, client=None) -> dict:
+    """Read watches changed since the last poll from the changedetection.io API (when configured)."""
+    from gtm_core.sources import pagewatch as pw
+    cd = client or pw.ChangeDetection.from_env()
+    if cd is None:
+        return {"skipped": "CHANGEDETECTION_URL and CHANGEDETECTION_API_KEY not set"}
+    since = int(ctx.store.get_state("sourcing:page_changes_cursor") or 0)
+    res, newest = [], since
+    for ch in cd.changes(since):
+        newest = max(newest, ch.pop("_epoch", since))
+        res.append(page_change(ctx, ch, now))
+    ctx.store.set_state("sourcing:page_changes_cursor", newest)
+    return {"changes": len(res), "stored": sum(len(x.get("stored", [])) for x in res),
+            "skipped": [x for x in res if x.get("skipped") or x.get("rejected")]}
+
+
+def watch_plan(ctx, limit: int = 25) -> dict:
+    """Pages to watch for the best-scored accounts, ready to import into changedetection.io."""
+    from gtm_core.sources import pagewatch as pw
+    accts = [a for a in due_accounts(ctx, limit=None)][:limit] or ctx.store.accounts()[:limit]
+    rows = pw.watch_plan(accts, (rules(ctx).get("page_changes") or {}).get("page_kinds"))
+    return {"accounts": len(accts), "watches": rows, "notification_body": pw.NOTIFICATION_TEMPLATE}

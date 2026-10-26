@@ -31,3 +31,8 @@ def weekly_discovery(ctx, now: datetime | None = None) -> dict:
             f"- {c['name']}" + (f" ({c['ticker']})" if c["ticker"] else "") + f": {', '.join(c['phrases'])}" for c in top)
             + "\n_Add with add_company (needs the domain) or push to Clay._")
     return {"candidates": res.get("count", 0)}
+
+
+def poll_page_changes(ctx, now: datetime | None = None) -> dict:
+    """Every 30 minutes: read changed watches from changedetection.io (when configured) and store signals."""
+    return _eng(ctx).poll_page_changes(ctx, now)

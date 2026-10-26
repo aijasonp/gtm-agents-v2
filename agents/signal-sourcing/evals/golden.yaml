@@ -41,3 +41,13 @@ job_search:
     - {site: indeed, title: "Director of Sales Development", company: Wingtip Toys, date: "2026-08-01",
        url: "https://jobs.example/wt-4"}
   expect_roles: ["Senior Manager, Revenue Operations", "Vice President of Sales, Americas"]
+
+# Page changes from changedetection.io (notifications recorded inline, no network).
+page_changes:
+  account: {id: proseware.example, name: Proseware Inc, domain: proseware.example, industry: Software,
+            employees: 2500, country: US}
+  pricing_only: {watch_url: "https://proseware.example/pricing", watch_tag: "gtm:pricing",
+                 diff_added: "Enterprise plan: contact us", diff_removed: "Enterprise plan: $99 per seat"}
+  careers: {watch_url: "https://proseware.example/careers", watch_tag: "gtm:careers",
+            diff_added: "(added) Director of Sales Development\n(added) Head of Sales, EMEA\n(added) Payroll Specialist"}
+  expect_careers_roles: ["Director of Sales Development", "Head of Sales, EMEA"]

@@ -50,3 +50,11 @@ The account is skipped when any of these is true. The reason is returned.
 - Public endpoints only, with a User-Agent that names the company and a contact email (`GTM_SOURCES_USER_AGENT`).
 - Paced per host, with retries on 429 and 5xx.
 - No disguising, no stealth browsers, no working around a block. A blocked source is logged as `sourcing.fetch_failed` and skipped.
+
+## Page changes
+
+- A watch's `gtm:<kind>` tag names the page (pricing, careers, trust, leadership, news, tech). Without a tag, the URL path decides, from `page_changes.page_kinds`.
+- The account comes from an `account:<domain>` tag, then from the page's domain, subdomains included.
+- Only added lines count, except script tags, where a removed tool is also a signal.
+- Careers: a buyer role from `hiring.buyer_roles`. Leadership: a buyer or C-suite role. Trust: a certification term, High when the line says certified, achieved or completed. News: a commitment and a topic in one line, a launch, or a partnership. Tech: a domain from `complementary_tools` or `competitor_tools`. Pricing: any change.
+- Timing-only types (pricing, competitor scripts, removed tools) are stored for Signal Scout but never qualify an account for the send list.

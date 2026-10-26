@@ -80,7 +80,19 @@ services:
           devices: [{driver: nvidia, count: all, capabilities: [gpu]}]
     restart: unless-stopped
 
+  changedetection:
+    # Optional page watches for owned signals (careers, pricing, trust, leadership, newsroom, scripts).
+    # UI on 127.0.0.1:5000. Notification URL: json://api:8787/v1/page-changes?+Authorization=Bearer%20<GTM_API_TOKEN>
+    # with the body from `gtm call signal-sourcing watch_plan`, or set CHANGEDETECTION_URL=http://changedetection:5000
+    # and CHANGEDETECTION_API_KEY to poll instead.
+    profiles: ["signals"]
+    image: ghcr.io/dgtlmoon/changedetection.io:latest
+    volumes: [changedetection:/datastore]
+    ports: ["127.0.0.1:5000:5000"]
+    restart: unless-stopped
+
 volumes:
   pgdata:
   ollama:
   hf:
+  changedetection:

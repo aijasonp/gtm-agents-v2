@@ -59,5 +59,19 @@ def sourcing_report(ctx, days: int = 7) -> dict:
             "fetch_failures": fails[0]["n"] if fails else 0}
 
 
+def page_change(ctx, watch_url: str, added: str = "", removed: str = "", tags: str = "", changed_at: str = "") -> dict:
+    """Turn one page change into sourced signals: careers roles, leadership appointments, certifications,
+    newsroom initiatives and launches, script-tag tools, pricing changes. Usually arrives from changedetection.io."""
+    body = {"watch_url": watch_url, "diff_added": added, "diff_removed": removed, "watch_tag": tags,
+            "changed_at": changed_at or None}
+    return _eng(ctx).page_change(ctx, body)
+
+
+def watch_plan(ctx, limit: int = 25) -> dict:
+    """Pages to watch (pricing, careers, trust, leadership, news, scripts) for the top accounts, tagged for
+    import into changedetection.io, plus the notification body to paste."""
+    return _eng(ctx).watch_plan(ctx, int(limit))
+
+
 TOOLS = {f.__name__: f for f in [scan_account, scan_due, dispatch_batch, discover_companies, add_company,
-                                 sourcing_report]}
+                                 sourcing_report, page_change, watch_plan]}

@@ -57,6 +57,25 @@ hiring:
     results: 30
     country: usa
 
+# ---- Page changes: changedetection.io watches (self-hosted, Apache-2.0) ----
+# Point a notification at POST /v1/page-changes (body: JSON or the template in sources/pagewatch.py), or set
+# CHANGEDETECTION_URL and CHANGEDETECTION_API_KEY to poll. Tag each watch gtm:<kind> and account:<domain>;
+# `watch_plan` lists the URLs to add for your top accounts.
+page_changes:
+  enabled: true
+  max_age_days: 60
+  page_kinds:
+    pricing: [/pricing, /plans]
+    careers: [/careers, /jobs, /join-us]
+    trust: [/trust, /security, /compliance]
+    leadership: [/leadership, /team, /management, /about/leadership]
+    news: [/press, /news, /newsroom, /blog]
+  certifications: [soc 2, iso 27001, hipaa, fedramp, gdpr, pci dss]
+  launch_terms: [introducing, now available, launches, launched]
+  partnership_terms: [partnership, partners with, integration with]
+  complementary_tools: [salesforce.com, hubspot.com, gong.io, outreach.io, salesloft.com, clari.com]
+  competitor_tools: []      # script domains of competitors: timing only, never in copy
+
 # ---- 4. Executive appointments: 8-K item 5.02 and newsroom announcements ----
 exec_change:
   enabled: true

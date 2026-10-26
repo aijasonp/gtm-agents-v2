@@ -72,6 +72,36 @@ def evaluate(m, spec, make_ctx) -> list[dict]:
     add("offline runtime fetches nothing", eng.scan_account(off, ctx.store.account("northwind.example"), now).get("skipped"), "")
     if spec.get("job_search"):
         out += _job_search_cases(m, spec, make_ctx, eng, now)
+    if spec.get("page_changes"):
+        out += _page_change_cases(m, spec, make_ctx, eng, now)
+    return out
+
+
+def _page_change_cases(m, spec, make_ctx, eng, now) -> list[dict]:
+    pc, out = spec["page_changes"], []
+
+    def add(name, ok, detail=""):
+        out.append({"case": "page changes: " + name, "passed": bool(ok), "detail": str(detail)[:400]})
+
+    ctx = make_ctx(m)
+    ctx.store.upsert_account(pc["account"])
+    aid = pc["account"]["id"]
+    p = eng.page_change(ctx, {**pc["pricing_only"], "changed_at": now.date().isoformat()}, now)
+    add("a pricing page change is stored as a timing-only signal", [f["signal_type"] for f in p["findings"]] ==
+        ["pricing_change"] and p["stored"], p)
+    d = eng.dispatch(ctx, now)
+    add("a timing-only page change never qualifies an account for the send list",
+        aid not in [b["account_id"] for b in d["batch"]], [b["account_id"] for b in d["batch"]])
+    c = eng.page_change(ctx, {**pc["careers"], "changed_at": now.date().isoformat()}, now)
+    f = (c["findings"] or [{}])[0]
+    add("careers page buyer roles become a hiring signal", f.get("signal_type") == "hiring_buyer_team" and
+        f.get("meta", {}).get("roles") == pc["expect_careers_roles"], f)
+    d = eng.dispatch(ctx, now)
+    row = next((b for b in d["batch"] if b["account_id"] == aid), None)
+    add("a mentionable page change can carry an account onto the send list", row and row["signal_source"] == "page change",
+        row)
+    again = eng.page_change(ctx, {**pc["careers"], "changed_at": now.date().isoformat()}, now)
+    add("the same notification twice stores nothing new", again["stored"] == [], again["stored"])
     return out
 
 
