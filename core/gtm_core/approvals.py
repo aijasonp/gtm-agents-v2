@@ -110,6 +110,11 @@ class Approvals:
                                (status, now_iso(), by, rid, PENDING))
         if not n:  # someone else decided it in the meantime
             raise ValueError(f"approval {rid} is no longer pending")
+        try:  # the AE's decision and edits are the drafter's training signal
+            from . import telemetry
+            telemetry.on_decision(self.store, rid, row["action"], payload, approve, by)
+        except Exception as e:  # never block a decision on feedback bookkeeping
+            self.audit.log("telemetry.error", id=rid, error=str(e)[:200])
         if not approve:  # drafts waiting on this approval will never go out
             self.store.execute("UPDATE drafts SET status=? WHERE approval_id=? AND status IN ('queued','draft')",
                                (REJECTED, rid))

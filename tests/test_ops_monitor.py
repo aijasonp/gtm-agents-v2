@@ -20,7 +20,8 @@ def _ms():
 def test_tools_bind(ctx_for):
     ctx = ctx_for("ops-monitor")
     tools = bind_tools(ctx)
-    assert set(tools) == {"health_report", "job_status", "stuck_items", "spend_report"}
+    assert set(tools) == {"health_report", "job_status", "stuck_items", "spend_report", "export_traces"}
+    assert "skipped" in tools["export_traces"]()  # Langfuse not configured
     s = tools["stuck_items"]()
     assert s["approvals_executing"] == [] and s["runs_stuck"] == []
     assert tools["spend_report"](days=3)["total_tokens"] == 0

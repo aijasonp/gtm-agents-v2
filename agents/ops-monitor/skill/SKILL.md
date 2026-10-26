@@ -19,6 +19,7 @@ The full list and thresholds are in `references/checks.md`. What to do about eac
 | "Did Lead Triage run today?" | `job_status` (agent) |
 | "What is stuck?" | `stuck_items` |
 | "What are we spending?" | `spend_report` (days) |
+| "Send traces to Langfuse now" | `export_traces` (Langfuse keys required; also every 5 minutes) |
 
 Lead with the worst problem, then the runbook step for it. Quote times and counts from the tools.
 

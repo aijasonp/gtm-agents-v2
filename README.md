@@ -50,6 +50,7 @@ How they hand work to each other, what each one reads and writes, and which play
 - **Numbers come from code.** Scores, risk, routing, SLAs, coverage and every pipeline metric are deterministic Python with golden-case evals. Models only draft and summarize, from facts handed to them.
 - **No invented facts.** Drafts use only the facts given plus `config/company.yaml`. Proof points and competitor claims come from that file or field evidence; everything else is marked "to verify".
 - **Works with no model key.** Every agent has template drafts, so it runs in demos, evals and air-gapped installs. With a key, drafts are model-written and must pass the Copy QA Gate (up to two rewrites).
+- **Every draft is traced and every AE decision is feedback.** Model calls are recorded with tokens, cost and latency; each draft keeps the facts it was written from; approve, reject and edits become scores (sent as written vs rewritten). Optional export to Langfuse.
 - **Budgets.** Daily token and monthly spend caps per agent, auto-pause and alert.
 - **One agent never steps on another.** Outbound skips accounts with an open deal or an inbound lead in progress; Triage routes leads on open deals to the deal owner instead of drafting; handoffs are deduplicated.
 

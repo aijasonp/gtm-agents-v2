@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from dataclasses import dataclass, field
 
 import httpx
@@ -109,12 +110,27 @@ class Gateway:
         if ep is None:
             raise RuntimeError(f"No model configured for the {model_class} tier: set ANTHROPIC_API_KEY, "
                                "OPENAI_API_KEY, or a GTM_*_BASE_URL for an open-weight server")
-        if ep.provider == "anthropic":
-            out = self._anthropic(ep, system, messages, max_tokens, tools, cache_system)
-        else:
-            out = self._openai(ep, system, messages, max_tokens, tools)
+        from . import telemetry
+        t0 = time.monotonic()
+        try:
+            if ep.provider == "anthropic":
+                out = self._anthropic(ep, system, messages, max_tokens, tools, cache_system)
+            else:
+                out = self._openai(ep, system, messages, max_tokens, tools)
+        except Exception:
+            self._trace(telemetry, ep, model_class, 0, 0, 0.0, t0, "error", messages)
+            raise
         out.usd = self.budgets.record(self.agent, ep.model, model_class, out.input_tokens, out.output_tokens)
+        self._trace(telemetry, ep, model_class, out.input_tokens, out.output_tokens, out.usd, t0, "ok", messages, out.text)
         return out
+
+    def _trace(self, telemetry, ep, model_class, tin, tout, usd, t0, status, messages, text="") -> None:
+        try:
+            prompt = "\n\n".join(str(m.get("content", ""))[:2000] for m in messages[-3:])
+            telemetry.generation(self.budgets.store, self.agent, ep.model, model_class, tin, tout, usd,
+                                 int((time.monotonic() - t0) * 1000), status, prompt, text)
+        except Exception:  # tracing never breaks a model call
+            pass
 
     def _anthropic(self, ep: Endpoint, system, messages, max_tokens, tools, cache_system) -> Completion:
         sys_block = [{"type": "text", "text": system,

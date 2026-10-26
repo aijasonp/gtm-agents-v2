@@ -76,3 +76,9 @@ def test_email_event_intake_runs_triggers_at_once(settings):
     assert code == 201 and out["triggers"] == [{"email": "ben@contoso.example", "rule": "clicked", "action": "tee_up"}]
     code, out = api.route("POST", "/v1/email-events", {}, [{"email": "ben@contoso.example", "event": "open"}])
     assert out["triggers"][0]["rule"] == "already_teed_up"
+
+
+def test_follow_through_tools_bind_over_mcp(ctx_for):
+    from gtm_core.mcp_server import bind_tools
+    tools = bind_tools(ctx_for("follow-through"))
+    assert set(tools) == set(ctx_for("follow-through").manifest.tools)

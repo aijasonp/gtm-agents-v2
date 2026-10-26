@@ -95,6 +95,22 @@ def cmd_approvals(s, a):
         print(json.dumps(ctx.approvals.execute_approved(dry_run=a.dry_run), indent=2, default=str))
 
 
+def cmd_telemetry(s, a):
+    from . import telemetry
+    from .store import Store
+    st = Store(s.database_url)
+    st.init()
+    if a.action == "export":
+        print(json.dumps(telemetry.export_langfuse(st), indent=2))
+    elif a.action == "feedback":
+        print(json.dumps(telemetry.feedback_summary(st, a.days), indent=2))
+    else:
+        telemetry.ensure(st)
+        rows = st.query("SELECT agent, kind, COUNT(*) AS n, SUM(input_tokens) AS tin, SUM(output_tokens) AS tout, "
+                        "SUM(usd) AS usd, AVG(latency_ms) AS ms FROM spans GROUP BY agent, kind ORDER BY agent")
+        print(json.dumps(rows, indent=2, default=str))
+
+
 def cmd_import(s, a):
     from .importers import RECORD_IMPORTERS
     ctx = _ctx(s, a.agent)
@@ -228,6 +244,8 @@ def main(argv=None):
     ap.add_argument("--all", action="store_true")
     ap.add_argument("--dry-run", action="store_true"); ap.add_argument("--all-agents", action="store_true")
     ap.set_defaults(fn=cmd_approvals)
+    tm = sub.add_parser("telemetry"); tm.add_argument("action", choices=["stats", "feedback", "export"])
+    tm.add_argument("--days", type=int, default=28); tm.set_defaults(fn=cmd_telemetry)
     im = sub.add_parser("import"); im.add_argument("agent"); im.add_argument("kind", choices=["accounts", "signals", "outcomes", "contacts", "leads", "deals", "tasks", "meetings"])
     im.add_argument("path"); im.set_defaults(fn=cmd_import)
     u = sub.add_parser("usage"); u.add_argument("agent"); u.set_defaults(fn=cmd_usage)

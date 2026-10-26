@@ -21,6 +21,7 @@ tools:
   - quality_report
   - regression_check
   - draft_scorecard
+  - ae_feedback
 connectors_required: []
 connectors_optional: [slack]
 jobs:

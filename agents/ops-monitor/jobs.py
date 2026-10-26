@@ -27,3 +27,12 @@ def daily_ops_summary(ctx, now: datetime | None = None) -> dict:
     runs = eng.run_counts(ctx, eng._now(now))
     ctx.slack.post(eng.format_summary(rep, runs), channel=ctx.manifest.config.get("alert_channel") or None)
     return {"status": rep["status"], "counts": rep["counts"], "runs_24h": runs}
+
+
+def export_traces(ctx, now: datetime | None = None) -> dict:
+    """Every 5 minutes: send new traces and AE feedback scores to Langfuse when it is configured."""
+    from gtm_core import telemetry
+    res = telemetry.export_langfuse(ctx.store)
+    if res.get("error"):
+        ctx.audit.log("telemetry.export_failed", error=res["error"])
+    return {k: v for k, v in res.items() if k != "body"}

@@ -91,3 +91,7 @@ def start_motion(ctx, motion: str, email: str, ref: str = "manual") -> dict:
     r = _cad(ctx).start(ctx, motion, email, datetime.now(timezone.utc), ref, c.get("owner"), c.get("id"),
                         c.get("account_id"))
     return r or {"error": "already in this motion, or a later motion owns this person"}
+
+
+TOOLS = {f.__name__: f for f in [check_engagement, run_triggers, tee_ups, resolve_tee_up, explain_rules, next_touches,
+                                 cadence_status, log_touch, follow_up_coverage, start_motion]}

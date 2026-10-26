@@ -77,7 +77,21 @@ def _gate(ctx, body: str, max_words: int):
 
 def write(ctx, kind: str, facts: dict, instructions: str, fallback: str, max_words: int = 120,
           max_rewrites: int = 2, subject_fallback: str = "") -> Draft:
-    """Draft outbound copy from facts, enforce the Copy QA Gate, fall back to the template."""
+    """Draft outbound copy from facts, enforce the Copy QA Gate, fall back to the template.
+    The finished draft and its facts are recorded as a trace span, so the AE's later approval or edit
+    becomes a labeled example for the drafter."""
+    d = _write(ctx, kind, facts, instructions, fallback, max_words, max_rewrites, subject_fallback)
+    try:
+        from . import telemetry
+        telemetry.draft_span(ctx.store, ctx.manifest.id, kind, facts, instructions, d.subject, d.body, d.score,
+                             d.passed, d.source, d.attempts)
+    except Exception:  # minimal contexts in tests, or a store without telemetry tables
+        pass
+    return d
+
+
+def _write(ctx, kind: str, facts: dict, instructions: str, fallback: str, max_words: int = 120,
+           max_rewrites: int = 2, subject_fallback: str = "") -> Draft:
     if not model_available(ctx):
         subj, body = split_subject(fallback)
         g = _gate(ctx, body, max_words)

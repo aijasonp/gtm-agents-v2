@@ -31,4 +31,12 @@ def spend_report(ctx, days: int = 7) -> dict:
             "total_tokens": sum(r["tokens"] for r in rows)}
 
 
-TOOLS = {f.__name__: f for f in [health_report, job_status, stuck_items, spend_report]}
+
+
+def export_traces(ctx) -> dict:
+    """Send new traces and AE feedback to Langfuse now (needs LANGFUSE_PUBLIC_KEY and LANGFUSE_SECRET_KEY)."""
+    from gtm_core import telemetry
+    return telemetry.export_langfuse(ctx.store)
+
+
+TOOLS = {f.__name__: f for f in [health_report, job_status, stuck_items, spend_report, export_traces]}

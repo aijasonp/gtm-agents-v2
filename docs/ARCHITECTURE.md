@@ -25,6 +25,10 @@ core/gtm_core/               shared runtime, built once
   rules.py                   decision tables RevOps edits (GoRules cell syntax; zen-engine when installed)
   workflows.py               durable waits with escalation ladders (builtin on the store, or DBOS)
   worktime.py                business hours and days for SLAs and cadences
+  telemetry.py               spans (model calls, drafts with their facts) and AE feedback (approve, reject,
+                             edit similarity); optional Langfuse export
+  approval_policy.py         named approvers for sends, owners confirm pipeline emails
+  sequences.py               held sequence steps for per-step release
   budgets.py                 daily token and monthly spend caps, auto-pause, Slack alert
   gateway.py                 model router on the customer's keys (Anthropic or OpenAI-compatible)
   guardrails.py              hard step limits

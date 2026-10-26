@@ -145,6 +145,9 @@ class Context:
         budgets = Budgets(store, int(b.get("daily_tokens", settings.daily_token_budget)),
                           float(b.get("monthly_usd", settings.monthly_usd_budget)), notify=slack.post,
                           agent=manifest.id)
-        return cls(settings, store, manifest, slack, crm or get_crm(settings), budgets,
+        ctx = cls(settings, store, manifest, slack, crm or get_crm(settings), budgets,
                    Gateway(settings, budgets, manifest.id), Approvals(store, manifest.id), Audit(store, manifest.id),
                    Handoffs(store, manifest.id), sequencer or get_sequencer(), dialer or get_dialer())
+        from . import telemetry
+        telemetry.bind(f"{manifest.id}:{ctx.run_id}")
+        return ctx

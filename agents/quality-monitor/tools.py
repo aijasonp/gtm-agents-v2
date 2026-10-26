@@ -35,4 +35,15 @@ def draft_scorecard(ctx, draft_id: int) -> dict:
     return _eng(ctx).scorecard(ctx, rows[0])
 
 
-TOOLS = {f.__name__: f for f in [sample_drafts, quality_report, regression_check, draft_scorecard]}
+
+
+def ae_feedback(ctx, days: int = 28) -> dict:
+    """What AEs did with each agent's drafts: approved, rejected, sent as written, and how much they rewrote
+    (average similarity between the draft and what was approved, 1.0 = unchanged)."""
+    from gtm_core import telemetry
+    by = telemetry.feedback_summary(ctx.store, int(days))
+    worst = sorted((k for k, v in by.items() if v["avg_similarity"] is not None), key=lambda k: by[k]["avg_similarity"])
+    return {"days": days, "by_agent_kind": by, "most_rewritten": worst[:5]}
+
+
+TOOLS = {f.__name__: f for f in [sample_drafts, quality_report, regression_check, draft_scorecard, ae_feedback]}

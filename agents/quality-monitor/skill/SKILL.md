@@ -19,6 +19,7 @@ Follow `references/monitoring-method.md`.
 | "How is draft quality?" | `quality_report` |
 | "Is any agent getting worse?" | `regression_check` |
 | "Why did draft 42 fail?" | `draft_scorecard` |
+| "Which agent's drafts do AEs rewrite most?" | `ae_feedback` |
 
 ## Without tools (drop-in edition)
 
