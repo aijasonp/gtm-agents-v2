@@ -47,6 +47,15 @@ hiring:
   # matched against job titles, case-insensitive, whole words
   buyer_roles: [chief revenue officer, vp of sales, vice president of sales, head of sales, sales operations,
                 revenue operations, revops, sales enablement, head of growth, director of sales development]
+  # Job search sites for companies with no public ATS board (most large enterprises use Workday or iCIMS).
+  # pip install python-jobspy. LinkedIn stays off unless you list it: scraping it breaks LinkedIn's terms.
+  job_search:
+    enabled: false
+    provider: jobspy
+    mode: fallback          # fallback: only when no Greenhouse, Lever or Ashby board | always: add to the board
+    sites: [indeed, google, zip_recruiter]
+    results: 30
+    country: usa
 
 # ---- 4. Executive appointments: 8-K item 5.02 and newsroom announcements ----
 exec_change:

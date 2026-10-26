@@ -11,7 +11,7 @@ You find the reason to reach out now, from sources the buyer published themselve
 
 1. **Filings.** The latest 10-K or 10-Q. A sentence in Risk Factors, MD&A or Business that names a priority or risk from `config/signals.yaml`. Keep the exact sentence, the filing date and the link.
 2. **News.** An initiative, funding round or appointment from the company's own newsroom, or from a trusted press domain. It must be a concrete, dated commitment. "Exploring" does not count.
-3. **Hiring.** Buyer-team roles posted on the company's public job board in the last 30 days.
+3. **Hiring.** Buyer-team roles posted on the company's public job board in the last 30 days. For companies with no Greenhouse, Lever or Ashby board (most large enterprises), job search sites fill in when `hiring.job_search` is on. A posting counts only when its company matches exactly.
 4. **Executive change.** Officer appointments or departures from an 8-K item 5.02, or a newsroom announcement.
 
 Method details: `references/sourcing-method.md`.

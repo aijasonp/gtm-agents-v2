@@ -71,12 +71,25 @@ def fetch_board(client: SourceClient, acct: dict) -> tuple[str | None, str | Non
 
 
 def hiring_signal(client: SourceClient, acct: dict, buyer_roles: list[str], today: date,
-                  max_age_days: int = 30) -> tuple[Finding | None, dict]:
-    """One hiring finding per account, with every matching role kept in meta (never in copy)."""
+                  max_age_days: int = 30, search=None, search_mode: str = "fallback") -> tuple[Finding | None, dict]:
+    """One hiring finding per account, with every matching role kept in meta (never in copy).
+    `search` (a job search provider) adds postings from job sites: when no ATS board is found (fallback), or
+    on top of the board (always). Postings are deduplicated by title and date."""
     provider, token, posts = fetch_board(client, acct)
     info = {"provider": provider, "token": token, "postings": len(posts)}
+    if search is not None and (not provider or search_mode == "always"):
+        try:
+            found = search.search(acct, max_age_days)
+        except Exception as e:  # a job site failing never blocks the other tiers
+            found, info["search_error"] = [], str(e)[:200]
+        seen = {((p.get("title") or "").lower(), p.get("date")) for p in posts}
+        extra = [p for p in found if ((p.get("title") or "").lower(), p.get("date")) not in seen]
+        info["search"] = {"provider": search.name, "postings": len(found), "added": len(extra)}
+        if extra:
+            posts = posts + extra
+            provider = provider or search.name
     if not provider:
-        return None, {**info, "why": "no public job board found (set ats on the account)"}
+        return None, {**info, "why": "no public job board found (set ats on the account, or enable hiring.job_search)"}
     pat = tx.term_re(buyer_roles)
     cutoff = (today - timedelta(days=max_age_days)).isoformat()
     match = [p for p in posts if p.get("title") and p.get("date") and p["date"] >= cutoff and tx.hits(pat, p["title"])]
@@ -90,4 +103,4 @@ def hiring_signal(client: SourceClient, acct: dict, buyer_roles: list[str], toda
                    url=newest["url"] or "", observed_at=newest["date"], confidence=conf,
                    topics=sorted({h for p in match for h in tx.hits(pat, p["title"])}),
                    meta={"provider": provider, "token": token, "roles": [p["title"] for p in match[:10]],
-                         "count": len(match)}), info
+                         "count": len(match), "sites": sorted({p["site"] for p in match if p.get("site")})}), info

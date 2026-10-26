@@ -117,11 +117,16 @@ def scan_account(ctx, acct: dict, now: datetime | None = None, persist: bool = T
         findings += got
     hcfg = r.get("hiring") or {}
     if hcfg.get("enabled", True) and hcfg.get("buyer_roles"):
-        f, info = jb.hiring_signal(c, acct, hcfg["buyer_roles"], today, int(hcfg.get("max_age_days", 30)))
+        search = getattr(ctx, "job_search", None)
+        if search is None and not getattr(ctx, "sources_client", None):
+            from gtm_core.sources import jobsearch
+            search = jobsearch.provider(hcfg.get("job_search"))
+        f, info = jb.hiring_signal(c, acct, hcfg["buyer_roles"], today, int(hcfg.get("max_age_days", 30)), search,
+                                   (hcfg.get("job_search") or {}).get("mode", "fallback"))
         tiers["hiring"] = info
         if f:
             findings.append(f)
-            if info.get("provider") and not acct.get("ats") and persist:
+            if info.get("provider") in jb.PROVIDERS and not acct.get("ats") and persist:
                 keep = {k: v for k, v in acct.items() if k != "updated_at"}
                 ctx.store.upsert_account({**keep, "ats": {info["provider"]: info["token"]}})
     # an 8-K and a newsroom post about the same appointment: keep the earlier-dated one, once

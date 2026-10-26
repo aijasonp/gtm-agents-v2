@@ -27,3 +27,17 @@ expect:
   discovery: [Litware Manufacturing Corp]
   say_it:
     northwind.example: "Your latest 10-Q calls out sales productivity"
+
+# Job search sites fill hiring for an enterprise with no public ATS board (provider stubbed: no network).
+job_search:
+  account: {id: wingtip.example, name: Wingtip Toys Inc, domain: wingtip.example, industry: Consumer Products,
+            employees: 12000, country: US, ticker: WTPX}
+  postings:
+    - {site: indeed, title: "Vice President of Sales, Americas", company: Wingtip Toys, date: "2026-10-09",
+       url: "https://jobs.example/wt-1"}
+    - {site: google, title: "Senior Manager, Revenue Operations", company: Wingtip Toys Inc., date: "2026-10-14",
+       url: "https://wingtip.example/careers/ro-2", company_url: "https://wingtip.example"}
+    - {site: indeed, title: "Head of Sales", company: Wingtip Labs, date: "2026-10-15", url: "https://jobs.example/wl-3"}
+    - {site: indeed, title: "Director of Sales Development", company: Wingtip Toys, date: "2026-08-01",
+       url: "https://jobs.example/wt-4"}
+  expect_roles: ["Senior Manager, Revenue Operations", "Vice President of Sales, Americas"]

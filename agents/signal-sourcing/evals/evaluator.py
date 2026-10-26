@@ -70,6 +70,40 @@ def evaluate(m, spec, make_ctx) -> list[dict]:
     off = make_ctx(m)
     off.store = ctx.store
     add("offline runtime fetches nothing", eng.scan_account(off, ctx.store.account("northwind.example"), now).get("skipped"), "")
+    if spec.get("job_search"):
+        out += _job_search_cases(m, spec, make_ctx, eng, now)
+    return out
+
+
+class _FakeSearch:
+    name = "jobspy"
+
+    def __init__(self, rows):
+        self.rows = rows
+
+    def search(self, acct, max_age_days):
+        from gtm_core.sources.jobsearch import same_company
+        return [r for r in self.rows if same_company(acct, r.get("company"), r.get("company_url"))]
+
+
+def _job_search_cases(m, spec, make_ctx, eng, now) -> list[dict]:
+    js, out = spec["job_search"], []
+
+    def add(name, ok, detail=""):
+        out.append({"case": "job search: " + name, "passed": bool(ok), "detail": str(detail)[:400]})
+
+    ctx = make_ctx(m)
+    ctx.sources_client = fixture_client(m.path(spec["fixtures"]))
+    ctx.job_search = _FakeSearch(js["postings"])
+    ctx.store.upsert_account(js["account"])
+    r = eng.scan_account(ctx, ctx.store.account(js["account"]["id"]), now)
+    f = next((x for x in r["findings"] if x["source"] == "hiring"), None)
+    add("an enterprise with no ATS board gets its hiring signal from job sites",
+        f and f["meta"]["provider"] == "jobspy" and f["meta"]["roles"] == js["expect_roles"], f and f["meta"])
+    add("job site hiring is stored as a sourced signal", ctx.store.one("SELECT source FROM signals WHERE account_id=? AND signal_type='hiring_buyer_team'",
+                          (js["account"]["id"],)) == {"source": "sourcing:hiring"}, r["stored"])
+    add("a job search provider never becomes the account's ATS board", not ctx.store.account(js["account"]["id"]).get("ats"),
+        ctx.store.account(js["account"]["id"]).get("ats"))
     return out
 
 
