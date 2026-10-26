@@ -28,7 +28,7 @@ def test_add_lead_triages_and_queues(ctx_for):
     assert actions == ["crm_contact", "crm_task", "sequence_enroll"]
     register_core_executors(ctx)
     for a in ctx.approvals.list():
-        ctx.approvals.decide(a["id"], True)
+        ctx.approvals.decide(a["id"], True, by="Sam Rivera")
     ctx.approvals.execute_approved()
     assert ctx.sequencer.sent and ctx.sequencer.sent[0]["contact"]["email"] == "omar@proseware.example"
 

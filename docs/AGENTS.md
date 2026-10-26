@@ -60,15 +60,19 @@ Agents share one database and pass work through `handoffs` (deduplicated, consum
 
 ## Approval actions
 
+Sends to a buyer (`send_actions` in config/approvals.yaml) need a named person on the team, and `pipeline_email` and `sequence_step` need their owner, a listed delegate or the manager. The check runs at the decision and again at send time. Approvers may edit the subject or body before approving; edits are kept in `approval_edits`.
+
 | Action | Queued by | Executes |
 | --- | --- | --- |
-| `sequence_enroll` | Lead Triage, ICP Outbound, Event Campaigns | Pushes contact plus approved copy to the sequencer (webhook, Smartlead or Lemlist) |
-| `crm_task` | Lead Triage, Seller Follow-Up | Task on the deal or account for the owner |
+| `sequence_enroll` | Lead Triage, ICP Outbound, Event Campaigns, Rep Brief | Pushes contact plus approved copy to the sequencer (webhook, Smartlead or Lemlist). With `sequence_release: per_step`, only step 1; the rest are held |
+| `sequence_step` | Follow-Through | One held step, when due, confirmed by its owner |
+| `pipeline_email` | Follow-Through | One pipeline follow-up the owner confirmed; recorded as the cadence touch |
+| `crm_task` | Lead Triage, Seller Follow-Up, Follow-Through | Task on the deal or account for the owner |
 | `crm_contact` | Lead Triage | Creates the contact on the account |
 | `crm_update` | Signal Scout | Score, tier and reasons on the account |
 | `deal_note` | Meeting Intelligence, Seller Follow-Up | Call summary or recap note on the deal |
 | `deal_update` | Deal Inspection, Seller Follow-Up | MEDDPICC fields, next step |
-| `sequence_stop` | Reply Desk | Stops every sequence for a person; runs at once (`auto:safety`). Webhook sequencer; Smartlead flags a manual stop |
+| `sequence_stop` | Reply Desk, Follow-Through | Stops every sequence for a person and cancels held steps; runs at once (`auto:safety`). Webhook sequencer; Smartlead flags a manual stop |
 | `contact_update` | Reply Desk, Enrichment | Opt-out flag, enriched email or phone |
 | `dialer_enqueue` | Rep Brief (push-button), Enrichment (opt-in) | Call task with a short script to the dialer webhook |
 | `crm_merge` | CRM Hygiene | Posts the merge instruction (no connector merges records) and marks losers `merged_into` locally |

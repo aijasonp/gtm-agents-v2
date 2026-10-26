@@ -1,0 +1,21 @@
+# Who may approve what.
+#
+# A send to a buyer is approved by a named person on the team, never by "operator", a shared token or a
+# service account. Pipeline emails are confirmed by their owner (or a listed delegate, or a manager).
+# The same check runs again at send time, so a row approved some other way still does not go out.
+
+named_approver: required        # required | warn (log only) | off
+
+# Actions that put words in front of a buyer or contact them.
+send_actions: [sequence_enroll, sequence_step, pipeline_email, dialer_enqueue, proposal_send, social_post]
+
+# Actions the record's owner (payload `approver` or `owner`) must confirm themselves.
+owner_confirms: [pipeline_email, sequence_step]
+managers_can_confirm: true      # team.manager in company.yaml may confirm for any owner
+delegates: {}                   # owner name: [names who may confirm for them], e.g. {Sam Rivera: [Priya Shah]}
+extra_approvers: []             # named people outside team.owners who may approve sends (RevOps, enablement)
+
+# Outbound sequences: release every approved step at enrollment (all), or only the first step and hold the rest
+# for one approval each when it falls due (per_step).
+sequence_release: all
+step_gap_business_days: 3

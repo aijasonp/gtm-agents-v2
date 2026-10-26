@@ -21,7 +21,7 @@ from pathlib import Path
 
 import yaml
 
-from gtm_core import pipeline, profile, suppression, writer
+from gtm_core import pipeline, profile, sequences, suppression, writer
 from gtm_core.agents import load_module
 from gtm_core.store import now_iso
 from gtm_core.workflows import get_waits
@@ -442,7 +442,10 @@ def manager(ctx) -> str | None:
 
 def escalate(ctx, w: dict) -> dict:
     who = w.get("owner") if w.get("notify") == "owner" else (manager(ctx) or "sales manager")
-    row = get(ctx, w["subject"].split("#", 1)[0]) or {}
+    if w["subject"].startswith("held:"):
+        row = {"email": w["payload"].get("email"), "motion": "outbound sequence", "step_id": f"step {w['payload'].get('step')}"}
+    else:
+        row = get(ctx, w["subject"].split("#", 1)[0]) or {}
     what = "confirm the drafted email" if w["kind"] == "approval" else "make the touch"
     late = "due" if w["escalation_level"] == 0 else "overdue"
     msg = (f":alarm_clock: *Follow-up {late}* for {who}: {what} to {row.get('email')} "
@@ -454,13 +457,62 @@ def escalate(ctx, w: dict) -> dict:
     return {"id": w["subject"], "kind": w["kind"], "level": w["escalation_level"], "to": who}
 
 
+# ---------- held sequence steps (sequence_release: per_step) ----------
+def release_held(ctx, now: datetime | None = None) -> dict:
+    """Queue each due held step as one `sequence_step` approval for its owner, unless the person replied,
+    opted out or is now with an AE."""
+    now = _now(now)
+    queued = cancelled = 0
+    cfg = config(ctx)
+    for h in sequences.due(ctx.store, now):
+        email = h["email"]
+        why = None
+        if suppression.is_suppressed(ctx.store, email, ctx.store.contact_by_email(email)):
+            why = "opted out, bounced or do-not-contact"
+        elif ctx.store.one("SELECT id FROM email_events WHERE email=? AND event IN (?,?,?) AND occurred_at>=?",
+                           (email, *REPLIES, h["created_at"])):
+            why = "replied"
+        else:
+            load_module(ctx.manifest, "engine").ensure_schema(ctx)
+            if ctx.store.one("SELECT id FROM teeups WHERE email=? AND status='open'", (email,)):
+                why = "with the AE (tee-up)"
+        if why:
+            sequences.mark(ctx.store, h["id"], sequences.CANCELLED, why)
+            cancelled += 1
+            continue
+        rid = ctx.request_approval("sequence_step", {
+            "held_id": h["id"], "contact": h["contact"], "subject": h["subject"], "body": h["body"],
+            "draft_id": h["draft_id"], "owner": h["owner"], "approver": h["owner"], "step": f"step_{h['step_index'] + 1}",
+            "campaign": h["meta"].get("campaign")},
+            summary=f"{h['owner'] or 'unassigned'}: confirm step {h['step_index'] + 1} to {h['contact'].get('name') or email}")
+        sequences.mark(ctx.store, h["id"], sequences.QUEUED, approval_id=rid)
+        _waits(ctx).open("approval", f"held:{h['id']}", add_business_hours(now, float(cfg.get("approval_sla_hours", 4)),
+                                                                            tz(ctx)),
+                         cfg.get("escalation"), h["owner"], {"email": email, "step": h["step_index"] + 1})
+        queued += 1
+    return {"queued": queued, "cancelled": cancelled}
+
+
+def _resolve_held_waits(ctx) -> None:
+    for w in _waits(ctx).list("approval"):
+        if not w["subject"].startswith("held:"):
+            continue
+        h = ctx.store.one("SELECT status, approval_id FROM held_steps WHERE id=?", (w["subject"][5:],))
+        a = ctx.store.one("SELECT status FROM approvals WHERE id=?", (h["approval_id"],)) if h and h["approval_id"] else None
+        if not h or h["status"] != sequences.QUEUED or (a and a["status"] != "pending"):
+            _waits(ctx).resolve("approval", w["subject"], (a or {}).get("status") or (h or {}).get("status") or "gone")
+
+
 # ---------- the sweep ----------
 def sweep(ctx, now: datetime | None = None) -> dict:
     ensure_schema(ctx)
     now = _now(now)
     cfg = config(ctx)
     started = discover(ctx, now)
-    stats = {"started": len(started), "stopped": 0, "advanced": 0, "drafted": 0, "missed": 0, "escalated": []}
+    held = release_held(ctx, now)
+    _resolve_held_waits(ctx)
+    stats = {"started": len(started), "stopped": 0, "advanced": 0, "drafted": 0, "missed": 0, "escalated": [],
+             "held_queued": held["queued"], "held_cancelled": held["cancelled"]}
     rows = [_row(r) for r in ctx.store.query("SELECT * FROM cadence WHERE status IN (?,?) ORDER BY next_touch_at", LIVE)]
     ahead = float(cfg.get("draft_ahead_hours", 16))
     grace = float(cfg.get("grace_hours", 4))

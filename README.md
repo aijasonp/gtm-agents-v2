@@ -45,7 +45,8 @@ How they hand work to each other, what each one reads and writes, and which play
 ## Guarantees built into the runtime
 
 - **Opt-outs win everywhere.** One suppression list, checked by every agent and again by the sequence and dialer executors at send time; stops run at once.
-- **Nothing is written or sent without a human.** CRM writes, notes, tasks and sequence enrollments are queued in the approval queue. Approve from the CLI or the HTTP API.
+- **Nothing is written or sent without a human.** CRM writes, notes, tasks and sequence enrollments are queued in the approval queue. Approve from the CLI, Slack or the HTTP API.
+- **Sends need a named person.** A buyer-facing send is approved by someone on the team (never `operator` or a shared token), pipeline emails by their owner, and the check runs again at send time. Approvers can edit the copy first; the edit is recorded.
 - **Numbers come from code.** Scores, risk, routing, SLAs, coverage and every pipeline metric are deterministic Python with golden-case evals. Models only draft and summarize, from facts handed to them.
 - **No invented facts.** Drafts use only the facts given plus `config/company.yaml`. Proof points and competitor claims come from that file or field evidence; everything else is marked "to verify".
 - **Works with no model key.** Every agent has template drafts, so it runs in demos, evals and air-gapped installs. With a key, drafts are model-written and must pass the Copy QA Gate (up to two rewrites).

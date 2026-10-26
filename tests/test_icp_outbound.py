@@ -57,7 +57,7 @@ def test_draft_sequence_queues_one_send_and_executes(ctx):
     assert appr["action"] == "sequence_enroll" and len(appr["payload"]["steps"]) == 3
     assert ctx.store.get("contacts", "omar")["outbound_queued_at"]
     register_core_executors(ctx)
-    ctx.approvals.decide(appr["id"], True)
+    ctx.approvals.decide(appr["id"], True, by="Sam Rivera")
     ctx.approvals.execute_approved()
     assert ctx.sequencer.sent[0]["contact"]["email"] == "omar@proseware.example"
     # once sent, the account counts as recently contacted
@@ -131,7 +131,7 @@ def test_sent_sequence_events_feed_angle_performance(ctx):
     meta = appr["payload"]["meta"]
     assert meta["angle_key"] == "signal:funding_round" and meta["value_prop"] == "prioritization"
     register_core_executors(ctx)
-    ctx.approvals.decide(appr["id"], True)
+    ctx.approvals.decide(appr["id"], True, by="Sam Rivera")
     ctx.approvals.execute_approved()
     first = out["steps"][0]["draft_id"]
     assert t["record_email_event"](email="omar@proseware.example", event="sent", occurred_at="2026-10-23T13:00:00Z",

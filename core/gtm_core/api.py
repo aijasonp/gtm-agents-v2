@@ -8,7 +8,7 @@ Lets the customer's existing tools push work in and lets approvers act without a
   POST /v1/replies                    JSON reply or list (from_email, subject, body, received_at...) -> Reply Desk
   POST /v1/engagement                 JSON engagement row or list (platform, post_url, engager_name...) -> Social Signals
   GET  /v1/approvals?status=pending   approval queue across agents
-  POST /v1/approvals/<id>/approve     body {"by": "name"} optional
+  POST /v1/approvals/<id>/approve     body {"edits": {"subject": ..., "body": ...}} optional
   POST /v1/approvals/<id>/reject
   POST /v1/approvals/execute          run every approved action
   GET  /v1/health
@@ -18,6 +18,8 @@ Two tokens, two roles:
                           event apps, Clay or Zapier.
   GTM_API_APPROVER_TOKEN  approval queue. Unset = approvals over HTTP are off. Decisions are recorded
                           under GTM_API_APPROVER_NAME, never a name sent in the request.
+  GTM_API_APPROVERS       personal approver tokens, JSON {"Sam Rivera": "<token>", ...}. Each decision is
+                          recorded under that person, which is what sends to a buyer need (config/approvals.yaml).
   GTM_API_ALLOW_EXECUTE=1 additionally lets the approver token run approved actions over HTTP.
 Without GTM_API_TOKEN the API refuses to start. Bind it to an internal interface or put it behind
 the customer's proxy.
@@ -60,7 +62,8 @@ def _str(v) -> str:
 
 class Api:
     def __init__(self, settings: Settings, token: str, store: Store | None = None, approver_token: str | None = None,
-                 approver_name: str = "api-approver", allow_execute: bool = False):
+                 approver_name: str = "api-approver", allow_execute: bool = False,
+                 approvers: dict[str, str] | None = None):
         if not token:
             raise RuntimeError("set GTM_API_TOKEN before starting the API")
         if approver_token and hmac.compare_digest(approver_token, token):
@@ -70,6 +73,10 @@ class Api:
         self.approver_token = approver_token or None
         self.approver_name = approver_name
         self.allow_execute = allow_execute
+        self.approvers = {n: t for n, t in (approvers or {}).items() if t}
+        for n, t in self.approvers.items():
+            if hmac.compare_digest(t, token):
+                raise RuntimeError(f"approver token for {n} must differ from GTM_API_TOKEN")
         self.store = store or Store(settings.database_url)
         self.store.init()
         self.manifests = discover(settings.agents_dir)
@@ -218,12 +225,17 @@ class Api:
         rows = Approvals(self.store, "core").list(status or None, all_agents=True)
         return 200, {"approvals": rows}
 
-    def decide(self, rid: int, approve: bool) -> tuple[int, dict]:
+    def decide(self, rid: int, approve: bool, by: str | None = None, edits: dict | None = None) -> tuple[int, dict]:
+        from .approval_policy import ApprovalRefused
         from .approvals import Approvals
+        if edits is not None and not isinstance(edits, dict):
+            return 400, {"error": "edits must be an object of field: new value"}
         try:
-            Approvals(self.store, "core").decide(rid, approve, by=self.approver_name)
+            Approvals(self.store, "core").decide(rid, approve, by=by or self.approver_name, edits=edits)
         except KeyError as e:
             return 404, {"error": str(e)}
+        except ApprovalRefused as e:
+            return 403, {"error": str(e)}
         except ValueError as e:
             return 409, {"error": str(e)}
         return 200, {"id": rid, "status": "approved" if approve else "rejected"}
@@ -241,6 +253,10 @@ class Api:
         return 200, {"results": ctx.approvals.execute_approved()}
 
     def role(self, auth: str) -> str | None:
+        """'intake', 'approver' (the shared token) or 'approver:<name>' (a personal token)."""
+        for name, t in self.approvers.items():
+            if hmac.compare_digest(auth, f"Bearer {t}"):
+                return f"approver:{name}"
         if self.approver_token and hmac.compare_digest(auth, f"Bearer {self.approver_token}"):
             return "approver"
         if hmac.compare_digest(auth, f"Bearer {self.token}"):
@@ -263,7 +279,7 @@ class Api:
             except BadRequest as e:
                 return 400, {"error": str(e)}
         if path.startswith("/v1/approvals"):
-            if role != "approver":
+            if not (role or "").startswith("approver"):
                 return 403, {"error": "approvals need the approver token (GTM_API_APPROVER_TOKEN)"}
             if method == "GET" and path == "/v1/approvals":
                 return self.approvals(query.get("status", "pending"))
@@ -273,7 +289,9 @@ class Api:
                 return self.execute()
             m = re.match(r"^/v1/approvals/(\d+)/(approve|reject)$", path)
             if method == "POST" and m:
-                return self.decide(int(m.group(1)), m.group(2) == "approve")
+                who = role.split(":", 1)[1] if ":" in role else None
+                return self.decide(int(m.group(1)), m.group(2) == "approve", who,
+                                   (body or {}).get("edits") if isinstance(body, dict) else None)
         return 404, {"error": "not found"}
 
 
@@ -326,8 +344,9 @@ def make_handler(api: Api):
 
 
 def serve(settings: Settings, host: str = "127.0.0.1", port: int = 8787) -> None:  # pragma: no cover
+    approvers = json.loads(os.environ.get("GTM_API_APPROVERS") or "{}")
     api = Api(settings, os.environ.get("GTM_API_TOKEN", ""), approver_token=os.environ.get("GTM_API_APPROVER_TOKEN"),
               approver_name=os.environ.get("GTM_API_APPROVER_NAME", "api-approver"),
-              allow_execute=os.environ.get("GTM_API_ALLOW_EXECUTE") == "1")
+              allow_execute=os.environ.get("GTM_API_ALLOW_EXECUTE") == "1", approvers=approvers)
     print(f"gtm api listening on {host}:{port}")
     ThreadingHTTPServer((host, port), make_handler(api)).serve_forever()

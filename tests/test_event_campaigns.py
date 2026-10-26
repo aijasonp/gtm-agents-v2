@@ -46,7 +46,7 @@ def test_invite_sends_through_sequencer_after_approval(ctx_for, tmp_path):
     eng.draft_invites(ctx, "chi-revenue-dinner", 1, NOW)
     [appr] = ctx.approvals.list()
     register_core_executors(ctx)
-    ctx.approvals.decide(appr["id"], True)
+    ctx.approvals.decide(appr["id"], True, by="Sam Rivera")
     ctx.approvals.execute_approved()
     sent = ctx.sequencer.sent[0]
     assert sent["campaign"] == "chi-revenue-dinner" and sent["contact"]["email"] == "dana@northwind.example"

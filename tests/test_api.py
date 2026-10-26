@@ -15,7 +15,8 @@ def server(settings):
     st = Store("sqlite:///:memory:"); st.init()
     st.upsert_account({"id": "proseware.example", "name": "Proseware", "domain": "proseware.example", "industry": "Software",
                        "employees": 350, "country": "US", "crm_id": "9"})
-    api = Api(settings, "secret", store=st, approver_token="approver-secret", approver_name="Jason", allow_execute=True)
+    api = Api(settings, "secret", store=st, approver_token="approver-secret", approver_name="Jason", allow_execute=True,
+              approvers={"Sam Rivera": "sam-secret"})
     httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(api))
     t = threading.Thread(target=httpd.serve_forever, daemon=True); t.start()
     yield f"http://127.0.0.1:{httpd.server_address[1]}", st
@@ -44,14 +45,25 @@ def test_api_auth_and_lead_flow(server):
     assert call(base, "POST", "/v1/approvals/1/approve")[0] == 403
     pending = call(base, "GET", "/v1/approvals", token=A)[1]["approvals"]
     assert {p["action"] for p in pending} == {"crm_contact", "crm_task", "sequence_enroll"}
+    send = next(p for p in pending if p["action"] == "sequence_enroll")
     for p in pending:
-        assert call(base, "POST", f"/v1/approvals/{p['id']}/approve", {"by": "someone-else"}, token=A)[0] == 200
+        if p is not send:  # CRM writes: the shared approver token is fine
+            assert call(base, "POST", f"/v1/approvals/{p['id']}/approve", {"by": "someone-else"}, token=A)[0] == 200
+    code, out = call(base, "POST", f"/v1/approvals/{send['id']}/approve", token=A)
+    assert code == 403 and "named approver" in out["error"]  # a send needs a person, not a shared token
+    edited = {"subject": "Quick question, Omar", "body": "Hi Omar, saw the demo request. Does Tuesday work?"}
+    assert call(base, "POST", f"/v1/approvals/{send['id']}/approve", {"edits": edited}, token="sam-secret")[0] == 200
     assert call(base, "POST", f"/v1/approvals/{pending[0]['id']}/approve", token=A)[0] == 409
     res = call(base, "POST", "/v1/approvals/execute", token=A)[1]["results"]
     assert len(res) == 3 and all("result" in r for r in res), res
     assert call(base, "POST", "/v1/approvals/execute", token=A)[1]["results"] == []  # never twice
     decided = call(base, "GET", "/v1/approvals?status=executed", token=A)[1]["approvals"]
-    assert {d["decided_by"] for d in decided} == {"Jason"}
+    assert {d["action"]: d["decided_by"] for d in decided}["sequence_enroll"] == "Sam Rivera"
+    assert {d["decided_by"] for d in decided if d["action"] != "sequence_enroll"} == {"Jason"}
+    sent = next(d for d in decided if d["action"] == "sequence_enroll")
+    assert sent["payload"]["steps"][0]["subject"] == edited["subject"]
+    assert st.query("SELECT field, edited_by FROM approval_edits") == [
+        {"field": "steps.0.subject", "edited_by": "Sam Rivera"}, {"field": "steps.0.body", "edited_by": "Sam Rivera"}]
 
 
 def test_api_meetings_and_bad_input(server):

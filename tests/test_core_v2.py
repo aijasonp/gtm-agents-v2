@@ -149,7 +149,7 @@ def test_core_executors_and_sequencer(ctx_for):
                                summary="enroll A B")
     rid2 = ctx.request_approval("crm_task", {"subject": "Follow up", "deal_crm_id": "123"})
     for r in (rid, rid2):
-        ctx.approvals.decide(r, True)
+        ctx.approvals.decide(r, True, by="Sam Rivera")
     res = ctx.approvals.execute_approved()
     assert all("result" in r for r in res), res
     assert ctx.sequencer.sent[0]["contact"]["email"] == "a@b.example"
@@ -212,7 +212,7 @@ def test_double_execute_is_impossible(ctx_for):
     calls = []
     executor("count_me")(lambda p: calls.append(1) or {"ok": True})
     rid = ctx.approvals.request("count_me", {})
-    ctx.approvals.decide(rid, True)
+    ctx.approvals.decide(rid, True, by="Sam Rivera")
     ctx.approvals.execute_approved()
     ctx.store.execute("UPDATE approvals SET status='approved' WHERE id=? AND status='never'", (rid,))
     ctx.approvals.execute_approved()
@@ -272,12 +272,12 @@ def test_suppression_blocks_sends_at_run_time(ctx_for):
     ctx.store.upsert("contacts", {"id": "a@b.example", "email": "a@b.example", "name": "A"})
     pending = ctx.request_approval("sequence_enroll", {"contact": {"email": "a@b.example"}, "steps": []})
     approved = ctx.request_approval("dialer_enqueue", {"contact": {"email": "a@b.example", "phone": "+15555550100"}})
-    ctx.approvals.decide(approved, True)
+    ctx.approvals.decide(approved, True, by="Sam Rivera")
     out = suppression.suppress(ctx.store, "A@b.example", "opt-out")
     assert set(out["rejected_approvals"]) == {pending, approved}
     assert ctx.store.contact_by_email("a@b.example")["do_not_contact"] is True
     late = ctx.request_approval("sequence_enroll", {"contact": {"email": "a@b.example"}, "steps": []})
-    ctx.approvals.decide(late, True)
+    ctx.approvals.decide(late, True, by="Sam Rivera")
     res = ctx.approvals.execute_approved()
     assert res[0]["result"]["skipped"].startswith("suppressed") and not ctx.sequencer.sent
 

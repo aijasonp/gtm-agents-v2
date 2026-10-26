@@ -23,7 +23,7 @@ def test_opt_out_is_local_at_once_and_stop_executes(ctx_for):
     assert ctx.store.get("contacts", "dana@nw.example")["do_not_contact"] is True
     register_core_executors(ctx)
     for a in ctx.approvals.list():
-        ctx.approvals.decide(a["id"], True)
+        ctx.approvals.decide(a["id"], True, by="Sam Rivera")
     ctx.approvals.execute_approved()
     assert ctx.sequencer.stopped[0]["email"] == "dana@nw.example"
     assert ctx.crm.writes[-1] == {"kind": "contact_update", "crm_id": "c1", "fields": {"gtm_do_not_contact": True}}
@@ -104,7 +104,7 @@ def test_opt_out_blocks_every_other_send(ctx_for, manifests):
     # a send approved later (e.g. by another agent) is skipped when it executes
     register_core_executors(ctx)
     late = ctx.request_approval("sequence_enroll", {"contact": {"email": "dana@nw.example"}, "steps": []})
-    ctx.approvals.decide(late, True)
+    ctx.approvals.decide(late, True, by="Sam Rivera")
     res = [r for r in ctx.approvals.execute_approved() if r["id"] == late][0]
     assert res["result"]["skipped"].startswith("suppressed") and not ctx.sequencer.sent
     # other agents' pickers skip her too

@@ -32,6 +32,13 @@ class Sequencer:
         self.stopped.append({"email": email, "reason": reason, "meta": meta or {}})
         return {"ok": True, "sequencer": self.name, "recorded": True}
 
+    def send_one(self, contact: dict, step: dict, meta: dict | None = None) -> dict:
+        """One approved email, now: a pipeline follow-up the AE confirmed, or one held sequence step.
+        Campaign-based sequencers send it through a one-step campaign (GTM_SEQUENCER_SINGLE_CAMPAIGN) whose
+        template uses {{gtm_subject_1}} and {{gtm_body_1}}."""
+        camp = (meta or {}).get("campaign") or os.environ.get("GTM_SEQUENCER_SINGLE_CAMPAIGN")
+        return self.enroll(contact, [step], camp, {**(meta or {}), "single": True})
+
 
 class WebhookSequencer(Sequencer):
     name = "webhook"
@@ -50,6 +57,12 @@ class WebhookSequencer(Sequencer):
 
     def stop(self, email: str, reason: str = "", meta: dict | None = None) -> dict:
         body = {"event": "sequence_stop", "email": email, "reason": reason, "meta": meta or {}}
+        r = self.http.post(self.url, json=body, headers=self.headers)
+        r.raise_for_status()
+        return {"ok": True, "sequencer": self.name, "status": r.status_code}
+
+    def send_one(self, contact: dict, step: dict, meta: dict | None = None) -> dict:
+        body = {"event": "send_one", "contact": contact, "step": step, "meta": meta or {}}
         r = self.http.post(self.url, json=body, headers=self.headers)
         r.raise_for_status()
         return {"ok": True, "sequencer": self.name, "status": r.status_code}

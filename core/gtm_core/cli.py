@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -74,8 +75,15 @@ def cmd_approvals(s, a):
         for r in ctx.approvals.list(None if a.all else "pending", all_agents=a.all_agents):
             print(f"#{r['id']:<5} {r['status']:<9} {r['action']:<18} {json.dumps(r['payload'])[:110]}")
     elif a.action in ("approve", "reject"):
+        from .approval_policy import ApprovalRefused
+        edits = {k: v for k, v in (("subject", a.subject), ("body", a.body)) if v is not None} or None
+        if edits and len(a.ids) != 1:
+            raise SystemExit("--subject and --body edit one approval at a time")
         for rid in a.ids:
-            ctx.approvals.decide(int(rid), a.action == "approve", by=a.by)
+            try:
+                ctx.approvals.decide(int(rid), a.action == "approve", by=a.by, edits=edits)
+            except ApprovalRefused as e:
+                raise SystemExit(f"#{rid} not approved: {e}")
         print(f"{a.action}d: {', '.join(a.ids)}")
     elif a.action == "execute":
         from .agents import load_module
@@ -215,7 +223,9 @@ def main(argv=None):
     sa = sub.add_parser("serve-api"); sa.add_argument("--host", default="127.0.0.1"); sa.add_argument("--port", type=int, default=8787)
     sa.set_defaults(fn=cmd_serve_api)
     ap = sub.add_parser("approvals"); ap.add_argument("agent"); ap.add_argument("action", choices=["list", "approve", "reject", "execute"])
-    ap.add_argument("ids", nargs="*"); ap.add_argument("--by", default="operator"); ap.add_argument("--all", action="store_true")
+    ap.add_argument("ids", nargs="*"); ap.add_argument("--by", default=os.environ.get("GTM_APPROVER", "operator"))
+    ap.add_argument("--subject", default=None); ap.add_argument("--body", default=None)
+    ap.add_argument("--all", action="store_true")
     ap.add_argument("--dry-run", action="store_true"); ap.add_argument("--all-agents", action="store_true")
     ap.set_defaults(fn=cmd_approvals)
     im = sub.add_parser("import"); im.add_argument("agent"); im.add_argument("kind", choices=["accounts", "signals", "outcomes", "contacts", "leads", "deals", "tasks", "meetings"])

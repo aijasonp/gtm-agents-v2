@@ -30,6 +30,7 @@ personas:
   champion_functions: [sales, revops]
 team:  # used by Lead Triage routing and Revenue Pulse rollups
   owners:
+    # add slack_id: U012ABC to let someone approve sends from Slack (`approve 12`)
     - {name: Sam Rivera, email: sam@beacon.example, regions: [US], segments: [mid_market]}
     - {name: Priya Shah, email: priya@beacon.example, regions: [CA, GB], segments: [mid_market, enterprise]}
     - {name: Lee Park, email: lee@beacon.example, regions: [US], segments: [enterprise]}

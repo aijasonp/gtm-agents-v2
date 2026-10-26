@@ -49,13 +49,13 @@ def test_discount_approval_flow_then_send(ctx):
     html = open(r["html_path"]).read()
     assert "Draft:" in html and "lists built in spreadsheets" in html and "What success looks like" not in html
     assert t["send_proposal"](quote_id=q["quote_id"], to_email="omar@proseware.example")["error"]
-    ctx.approvals.decide(q["approval_id"], True)
+    ctx.approvals.decide(q["approval_id"], True, by="Sam Rivera")
     ctx.approvals.execute_approved()
     assert t["get_quote"](quote_id=q["quote_id"])["status"] == "ready"
     r2 = t["render_proposal"](quote_id=q["quote_id"])
     assert "Draft:" not in open(r2["html_path"]).read() and r2["ready_to_send"]
     s = t["send_proposal"](quote_id=q["quote_id"], to_email="omar@proseware.example")
-    ctx.approvals.decide(s["queued_for_approval"], True)
+    ctx.approvals.decide(s["queued_for_approval"], True, by="Sam Rivera")
     res = ctx.approvals.execute_approved()
     assert res[0]["result"]["to"] == "omar@proseware.example"
     assert t["get_quote"](quote_id=q["quote_id"])["status"] == "sent"

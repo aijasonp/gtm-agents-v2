@@ -213,6 +213,8 @@ def act(ctx, facts: dict, decision: dict, now: datetime | None = None) -> dict:
     tid = f"teeup:{facts['email']}:{now.date().isoformat()}"
     approvals = []
     if decision.get("pause", True):
+        from gtm_core import sequences
+        sequences.cancel_for(ctx.store, facts["email"], f"teed up for AE: {decision.get('reason')}")
         approvals.append(ctx.request_approval("sequence_stop", {"email": facts["email"],
                                                                 "reason": f"teed up for AE: {decision.get('reason')}"},
                                               auto_safe=True))

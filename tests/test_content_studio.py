@@ -36,7 +36,7 @@ def test_social_post_executor_without_webhook(ctx_for, monkeypatch):
     p = eng.linkedin_post(ctx, "Why forecast calls go sideways", now=NOW)
     rid = eng.publish_post(ctx, p["draft_id"])["queued_for_approval"]
     load_module(ctx.manifest, "jobs").register_executors(ctx)
-    ctx.approvals.decide(rid, True)
+    ctx.approvals.decide(rid, True, by="Sam Rivera")
     [res] = ctx.approvals.execute_approved()
     assert res["result"]["manual"]
     assert ctx.store.query("SELECT status FROM drafts WHERE id=?", (p["draft_id"],))[0]["status"] == "approved_manual"

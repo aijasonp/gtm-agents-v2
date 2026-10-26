@@ -38,7 +38,7 @@ def test_push_button_executes_through_approvals(ctx_for):
     assert not r["refused"] and len(r["approvals"]) == 3 and r["call_script"].count("\n") == 2
     register_core_executors(ctx)
     for a in ctx.approvals.list():
-        ctx.approvals.decide(a["id"], True)
+        ctx.approvals.decide(a["id"], True, by="Sam Rivera")
     res = ctx.approvals.execute_approved()
     assert all("result" in x for x in res), res
     assert ctx.sequencer.sent[0]["contact"]["email"] == "rosa@fourthcoffee.example"

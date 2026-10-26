@@ -202,11 +202,20 @@ def evaluate_cadence(m, cs, make_ctx) -> list[dict]:
         r["status"] == "active" and r["ae_owns"] == 1 and len([x for x in ctx.approvals.list("pending", all_agents=True)
                                                                if x["payload"].get("cadence_id") == r["id"]]) == 0, r["status"])
 
-    later = now + timedelta(hours=1)
-    did = pend["cara@contoso.example"]["payload"]["draft_id"]
-    ctx.approvals.decide(pend["cara@contoso.example"]["id"], True, by="Lee Park")
-    ctx.store.execute("UPDATE drafts SET status='sent' WHERE id=?", (did,))
-    engagement.record(ctx.store, "cara@contoso.example", "sent", later.isoformat(), did, "cadence_bump")
+    from gtm_core.approval_policy import ApprovalRefused
+    register_core_executors(ctx)
+    cid = pend["cara@contoso.example"]["id"]
+    try:
+        ctx.approvals.decide(cid, True, by="Priya Shah")
+        refused = False
+    except ApprovalRefused:
+        refused = True
+    add("only the owner (or delegate or manager) can confirm a pipeline email", refused, "Priya Shah on Lee Park's email")
+    ctx.approvals.decide(cid, True, by="Lee Park")
+    ran = ctx.approvals.execute_approved()
+    add("the confirmed email goes out through the sequencer as one email", any(r.get("id") == cid and "result" in r
+        for r in ran) and ctx.sequencer.sent and ctx.sequencer.sent[-1]["contact"]["email"] == "cara@contoso.example", ran)
+    later = datetime.now(__import__("datetime").timezone.utc) + timedelta(minutes=1)
     cad.sweep(ctx, later)
     add("a confirmed and sent touch advances to the next step", live("cara@contoso.example")["step_id"] ==
         ex["cara_after_send"], live("cara@contoso.example")["step_id"])
