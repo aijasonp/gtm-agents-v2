@@ -4,6 +4,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from gtm_core.agents import load_module
+from gtm_core.connectors.slack import send_to_owner
 from gtm_core.store import now_iso
 
 
@@ -23,7 +24,7 @@ def daily_briefs(ctx, now: datetime | None = None) -> dict:
         if not b["has_news"]:
             skipped.append(owner)
             continue
-        ctx.slack.post(eng.format_brief(b))
+        send_to_owner(ctx, owner, eng.format_brief(b))
         ctx.store.set_state(f"rep_brief_last:{owner}", now_iso())  # wall clock: when the brief actually went out
         sent.append(owner)
     return {"sent": len(sent), "skipped": len(skipped), "reps": sent, "failed": failed}

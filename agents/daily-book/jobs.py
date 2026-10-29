@@ -4,6 +4,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from gtm_core.agents import load_module
+from gtm_core.connectors.slack import send_to_owner
 
 
 def daily_books(ctx, now: datetime | None = None) -> dict:
@@ -19,7 +20,7 @@ def daily_books(ctx, now: datetime | None = None) -> dict:
         stats["rows"] += b["filled"]
         stats["shortfall"] += b["shortfall"]
         stats["drafted"] += d["queued"]
-        ctx.slack.post(eng.format_book(b))
+        send_to_owner(ctx, o["name"], eng.format_book(b))
         if b["shortfall"]:
             ctx.audit.log("daily_book.shortfall", owner=o["name"], short=b["shortfall"], pools=b["pools"])
     return stats

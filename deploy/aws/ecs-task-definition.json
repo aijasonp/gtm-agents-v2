@@ -1,0 +1,55 @@
+{
+  "family": "gtm-agents",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "2048",
+  "memory": "4096",
+  "taskRoleArn": "arn:aws:iam::ACCOUNT_ID:role/gtm-agents-task",
+  "executionRoleArn": "arn:aws:iam::ACCOUNT_ID:role/gtm-agents-execution",
+  "containerDefinitions": [
+    {
+      "name": "scheduler",
+      "image": "ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/gtm-agents:VERSION",
+      "command": ["schedule"],
+      "essential": true,
+      "environment": [
+        {"name": "GTM_CHEAP_PROVIDER", "value": "bedrock"},
+        {"name": "GTM_FRONTIER_PROVIDER", "value": "bedrock"},
+        {"name": "GTM_BEDROCK_REGION", "value": "REGION"},
+        {"name": "GTM_MODEL_CHEAP", "value": "FAST_TIER_MODEL_ID"},
+        {"name": "GTM_MODEL_FRONTIER", "value": "MAIN_TIER_MODEL_ID"},
+        {"name": "GTM_CRM", "value": "salesforce"}
+      ],
+      "secrets": [
+        {"name": "DATABASE_URL", "valueFrom": "arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:gtm-agents/database-url"},
+        {"name": "SALESFORCE_INSTANCE_URL", "valueFrom": "arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:gtm-agents/salesforce-url"},
+        {"name": "SALESFORCE_ACCESS_TOKEN", "valueFrom": "arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:gtm-agents/salesforce-token"},
+        {"name": "SLACK_BOT_TOKEN", "valueFrom": "arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:gtm-agents/slack-bot"}
+      ],
+      "logConfiguration": {"logDriver": "awslogs", "options": {
+        "awslogs-group": "/gtm-agents/scheduler", "awslogs-region": "REGION", "awslogs-stream-prefix": "gtm"}}
+    },
+    {
+      "name": "slack-bot",
+      "image": "ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/gtm-agents:VERSION",
+      "command": ["slack-bot"],
+      "essential": true,
+      "environment": [
+        {"name": "GTM_CHEAP_PROVIDER", "value": "bedrock"},
+        {"name": "GTM_FRONTIER_PROVIDER", "value": "bedrock"},
+        {"name": "GTM_BEDROCK_REGION", "value": "REGION"},
+        {"name": "GTM_MODEL_CHEAP", "value": "FAST_TIER_MODEL_ID"},
+        {"name": "GTM_MODEL_FRONTIER", "value": "MAIN_TIER_MODEL_ID"}
+      ],
+      "secrets": [
+        {"name": "DATABASE_URL", "valueFrom": "arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:gtm-agents/database-url"},
+        {"name": "SLACK_BOT_TOKEN", "valueFrom": "arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:gtm-agents/slack-bot"},
+        {"name": "SLACK_APP_TOKEN", "valueFrom": "arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:gtm-agents/slack-app"},
+        {"name": "GTM_SLACK_ALLOWED_USERS", "valueFrom": "arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:gtm-agents/slack-allowed"},
+        {"name": "GTM_SLACK_APPROVERS", "valueFrom": "arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:gtm-agents/slack-approvers"}
+      ],
+      "logConfiguration": {"logDriver": "awslogs", "options": {
+        "awslogs-group": "/gtm-agents/slack-bot", "awslogs-region": "REGION", "awslogs-stream-prefix": "gtm"}}
+    }
+  ]
+}

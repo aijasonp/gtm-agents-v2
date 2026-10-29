@@ -90,6 +90,7 @@ class Assistant:
         self.store.init()
         ms = manifests or discover(settings.agents_dir)
         wanted = agents or [a.strip() for a in os.environ.get("GTM_ASSISTANT_AGENTS", "").split(",") if a.strip()]
+        self.all_manifests = ms  # Slack commands (run, status) reach every agent, whatever the tool filter
         self.manifests = {k: v for k, v in ms.items() if not wanted or k in wanted}
         self.tier = os.environ.get("GTM_ASSISTANT_TIER", "frontier")
         self.tools: dict[str, Tool] = {}
@@ -153,27 +154,15 @@ class Assistant:
 
 
 # ---------------- Slack bot (Socket Mode: no public URL needed) ----------------
-APPROVE_RE = re.compile(r"^\s*(approve|reject)\s+#?(\d+(?:\s*[, ]\s*\d+)*)\s*$", re.I)
 
 
 def handle_message(assistant: Assistant, text: str, user: str, history: list[dict]) -> str:
-    """Slack message -> reply. `approve 12` / `reject 12, 13` are handled without a model and only for
-    users listed in GTM_SLACK_APPROVERS."""
-    from .approvals import Approvals
-    m = APPROVE_RE.match(text or "")
-    if m:
-        approvers = {u.strip() for u in os.environ.get("GTM_SLACK_APPROVERS", "").split(",") if u.strip()}
-        if user not in approvers:
-            return "Only approvers can do that. Ask an admin to add your Slack ID to GTM_SLACK_APPROVERS."
-        ids = [int(x) for x in re.findall(r"\d+", m.group(2))]
-        out = []
-        for rid in ids:
-            try:
-                Approvals(assistant.store, "core").decide(rid, m.group(1).lower() == "approve", by=f"slack:{user}")
-                out.append(f"#{rid} {m.group(1).lower()}d")
-            except (KeyError, ValueError) as e:
-                out.append(f"#{rid}: {e}")
-        return "; ".join(out) + ". Approved actions run on the next `gtm approvals ... execute` or scheduled run."
+    """Slack message -> reply. Commands (status, approvals, approve, reject, stop, resume, run, help) are handled
+    in code without a model; see gtm_core.slack_commands. Everything else goes to the model with tools."""
+    from .slack_commands import handle
+    reply = handle(text, user, assistant.store, assistant.s, getattr(assistant, "all_manifests", assistant.manifests))
+    if reply is not None:
+        return reply
     return assistant.ask(text, history).text or "(no answer)"
 
 

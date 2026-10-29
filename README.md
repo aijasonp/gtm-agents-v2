@@ -57,7 +57,11 @@ How they hand work to each other, what each one reads and writes, and which play
 - **Budgets.** Daily token and monthly spend caps per agent, auto-pause and alert.
 - **One agent never steps on another.** Outbound skips accounts with an open deal or an inbound lead in progress; Triage routes leads on open deals to the deal owner instead of drafting; handoffs are deduplicated.
 
-## Optional: Slack front end on NetClaw
+## Talking to the agents from Slack
+
+`gtm slack-bot` (the `slack-bot` service in docker compose) is the built-in Slack front end: one bot over Socket Mode, no public URL, no agent host. Ask in a DM or by mention; `status`, `approvals`, `approve 12`, `stop`, `resume` and `run <agent> <job>` are handled in code without a model. Rep briefs and daily books go to each owner's DM. Nothing in the runtime depends on OpenClaw or NetClaw. AWS deployment with Bedrock: [docs/DEPLOY-AWS.md](docs/DEPLOY-AWS.md).
+
+## Optional, not deployed by default: NetClaw front end
 
 `netclaw/` adds three Slack bots (pipeline, deals, revops) with 13 conversational subagents for an AE-only team. They call these 27 agents' tools over MCP; the runtime still does every calculation and holds every write for approval. See [netclaw/README.md](netclaw/README.md).
 

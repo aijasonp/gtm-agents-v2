@@ -5,6 +5,9 @@ Two tiers, routed independently:
   model_class="frontier" -> research synthesis and copywriting
 
 Each tier resolves to one endpoint:
+  * GTM_<TIER>_PROVIDER=bedrock -> Amazon Bedrock Converse API (Claude or any Bedrock model id). Signs in with
+    the standard AWS credential chain (the instance or task role), so no model key is stored. Region from
+    GTM_BEDROCK_REGION, else AWS_REGION. Needs boto3 (`pip install 'gtm-agents[aws]'`).
   * a model name starting with "claude" and ANTHROPIC_API_KEY set -> Anthropic Messages API
   * anything else -> an OpenAI-compatible /chat/completions endpoint: OpenAI, Azure OpenAI,
     vLLM, Ollama, LM Studio, llama.cpp server, Together, Fireworks, Groq, OpenRouter, DeepInfra...
@@ -44,13 +47,13 @@ class Completion:
 
 @dataclass
 class Endpoint:
-    provider: str  # "anthropic" | "openai"
+    provider: str  # "anthropic" | "openai" | "bedrock"
     model: str
     base_url: str
     api_key: str | None
 
     def describe(self) -> str:
-        where = "api.anthropic.com" if self.provider == "anthropic" else self.base_url
+        where = {"anthropic": "api.anthropic.com", "bedrock": f"bedrock {self.base_url}"}.get(self.provider, self.base_url)
         return f"{self.model} via {self.provider} ({where})"
 
 
@@ -60,6 +63,9 @@ def resolve(settings: Settings, model_class: str) -> Endpoint | None:
     tier = "CHEAP" if model_class == "cheap" else "FRONTIER"
     model = settings.model_cheap if model_class == "cheap" else settings.model_frontier
     provider = (os.environ.get(f"GTM_{tier}_PROVIDER") or "").lower()
+    if provider == "bedrock":
+        region = os.environ.get("GTM_BEDROCK_REGION") or os.environ.get("AWS_REGION") or os.environ.get("AWS_DEFAULT_REGION")
+        return Endpoint("bedrock", model, region or "us-east-1", None)
     if provider == "anthropic" or (not provider and model.startswith("claude") and settings.anthropic_api_key):
         if not settings.anthropic_api_key:
             return None
@@ -76,11 +82,13 @@ def resolve(settings: Settings, model_class: str) -> Endpoint | None:
 
 
 class Gateway:
-    def __init__(self, settings: Settings, budgets: Budgets, agent: str = "core", client: httpx.Client | None = None):
+    def __init__(self, settings: Settings, budgets: Budgets, agent: str = "core", client: httpx.Client | None = None,
+                 bedrock_client=None):
         self.s = settings
         self.budgets = budgets
         self.agent = agent
         self.http = client or httpx.Client(timeout=float(os.environ.get("GTM_MODEL_TIMEOUT", 180)))
+        self._bedrock = bedrock_client  # injected in tests; created lazily from boto3 otherwise
 
     def model_for(self, model_class: str) -> str:
         return self.s.model_cheap if model_class == "cheap" else self.s.model_frontier
@@ -115,6 +123,8 @@ class Gateway:
         try:
             if ep.provider == "anthropic":
                 out = self._anthropic(ep, system, messages, max_tokens, tools, cache_system)
+            elif ep.provider == "bedrock":
+                out = self._bedrock_converse(ep, system, messages, max_tokens, tools)
             else:
                 out = self._openai(ep, system, messages, max_tokens, tools)
         except Exception:
@@ -209,6 +219,53 @@ class Gateway:
         if not u:  # server omitted usage: estimate so budgets still trip
             tin, tout = _estimate(body), _estimate(text) + _estimate(calls)
         return Completion(text, ep.model, tin, tout, 0.0, calls, choice.get("finish_reason", ""))
+
+
+    # ---------- Amazon Bedrock (Converse API) ----------
+    def bedrock_client(self, region: str):
+        if self._bedrock is None:
+            try:
+                import boto3
+                from botocore.config import Config
+            except ImportError as e:
+                raise RuntimeError("Bedrock needs boto3: pip install 'gtm-agents[aws]'") from e
+            self._bedrock = boto3.client("bedrock-runtime", region_name=region, config=Config(
+                read_timeout=float(os.environ.get("GTM_MODEL_TIMEOUT", 180)), retries={"max_attempts": 4, "mode": "adaptive"}))
+        return self._bedrock
+
+    def _bedrock_converse(self, ep: Endpoint, system, messages, max_tokens, tools) -> Completion:
+        msgs: list[dict] = []
+
+        def add(role: str, blocks: list[dict]):
+            if msgs and msgs[-1]["role"] == role:  # Converse requires alternating roles
+                msgs[-1]["content"].extend(blocks)
+            else:
+                msgs.append({"role": role, "content": blocks})
+        for m in messages:
+            if m["role"] == "tool":
+                add("user", [{"toolResult": {"toolUseId": m["tool_call_id"], "content": [{"text": str(m["content"])}]}}])
+            elif m["role"] == "assistant" and m.get("tool_calls"):
+                add("assistant", ([{"text": m["content"]}] if m.get("content") else []) + [
+                    {"toolUse": {"toolUseId": c["id"], "name": c["name"], "input": c.get("args") or {}}} for c in m["tool_calls"]])
+            else:
+                add(m["role"], [{"text": str(m["content"] or " ")}])
+        req = {"modelId": ep.model, "messages": msgs, "inferenceConfig": {"maxTokens": max_tokens}}
+        if system:
+            req["system"] = [{"text": system}]
+        if tools:
+            req["toolConfig"] = {"tools": [{"toolSpec": {
+                "name": t["name"], "description": t.get("description", "") or t["name"],
+                "inputSchema": {"json": t.get("parameters") or {"type": "object", "properties": {}}}}} for t in tools]}
+        data = self.bedrock_client(ep.base_url).converse(**req)
+        content = ((data.get("output") or {}).get("message") or {}).get("content") or []
+        text = "".join(b.get("text", "") for b in content if "text" in b)
+        calls = [{"id": b["toolUse"]["toolUseId"], "name": b["toolUse"]["name"], "args": b["toolUse"].get("input") or {}}
+                 for b in content if "toolUse" in b]
+        u = data.get("usage") or {}
+        tin, tout = int(u.get("inputTokens") or 0), int(u.get("outputTokens") or 0)
+        if not u:
+            tin, tout = _estimate(req), _estimate(text)
+        return Completion(text, ep.model, tin, tout, 0.0, calls, data.get("stopReason", ""))
 
 
 def _estimate(obj) -> int:

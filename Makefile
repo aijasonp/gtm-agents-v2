@@ -27,4 +27,5 @@ fleet:
 clean-check:
 	$(PY) netclaw/check_clean.py
 
-release: clean-check test evals compile image fleet
+# The NetClaw front end is optional and not part of a release: Slack runs through `gtm slack-bot`.
+release: clean-check test evals compile image
