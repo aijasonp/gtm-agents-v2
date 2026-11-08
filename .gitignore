@@ -8,6 +8,7 @@ license.json
 license_priv.pem
 *_priv.pem
 __pycache__/
+node_modules/
 *.pyc
 .pytest_cache/
 dist/

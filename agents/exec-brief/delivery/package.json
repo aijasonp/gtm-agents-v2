@@ -1,0 +1,14 @@
+{
+  "name": "exec-brief-renderer",
+  "private": true,
+  "type": "module",
+  "description": "Renders Exec Brief json-render specs to native Slack Block Kit through Chat SDK's Slack adapter.",
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "@chat-adapter/slack": "^4.44.0",
+    "@json-render/chat": "^0.22.0",
+    "@json-render/core": "^0.22.0",
+    "chat": "^4.44.0",
+    "zod": "^4.0.0"
+  }
+}

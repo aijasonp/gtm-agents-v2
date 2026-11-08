@@ -1,6 +1,6 @@
 # Agent guide
 
-How the twenty-seven agents work together, what each one reads and writes, and which licensed playbooks each bundles.
+How the twenty-eight agents work together, what each one reads and writes, and which licensed playbooks each bundles.
 
 ## The flow
 
@@ -112,12 +112,13 @@ Sends to a buyer (`send_actions` in config/approvals.yaml) need a named person o
 | Signal Sourcing | accounts, SEC EDGAR, newsroom feeds, job boards, changedetection.io, PostHog events, config/signals.yaml | signals (source `sourcing:<tier>` and `first_party:posthog`), web_events, account ATS board, discovery candidates | none | scan_account, scan_due, dispatch_batch, discover_companies, add_company, sourcing_report, page_change, watch_plan, web_events, poll_posthog | daily_scan, weekly_discovery, poll_page_changes, poll_posthog | sales-intent, sales-prospect-list |
 | Follow-Through | email events, contacts, drafts, approvals, meetings, event leads, deals, Signal Scout tiers, config/triggers.yaml, config/cadences.yaml | teeups, cadence ledger, workflow waits, AE tasks (local), sequence stops (at once), crm_task and pipeline_email (approval), Slack briefs and escalations | none | check_engagement, run_triggers, tee_ups, resolve_tee_up, explain_rules, next_touches, cadence_status, log_touch, follow_up_coverage, start_motion | evaluate_triggers, sweep_cadence, coverage_report | sales-cadence |
 | Daily Book | accounts, scores, signals, contacts, deals, leads, email events, insights, Signal Sourcing send list, Follow-Through tee-ups and cadences | daily_book rows, sequence_enroll for cold rows (approval, via ICP Outbound), local contacts from MCP people search (opt-in) | none | my_book, build_books, book_status, mark_done | daily_books | sales-prospect-list |
+| Exec Brief | warehouse rows (Snowflake: opportunities, leads, renewals, deal registrations) or the CRM sync; yesterday's snapshot | state: yesterday's snapshot and daily metric history; command center page in the data folder | none | exec_metrics, exec_brief_preview, company_snapshot, command_center | daily_exec_briefs | revops |
 
 ## Selling agents separately
 
 Each agent compiles to its own package (`make compile`), so any one can be sold on its own. Dependencies when sold alone:
 
-- Lead Triage, Signal Scout, Copy QA Gate, Meeting Intelligence, Deal Inspection, Revenue Pulse: standalone.
+- Lead Triage, Signal Scout, Copy QA Gate, Meeting Intelligence, Deal Inspection, Revenue Pulse, Exec Brief: standalone.
 - ICP Outbound: best with Signal Scout (falls back to ICP fit only).
 - Seller Follow-Up: recaps need Meeting Intelligence; the daily digest is standalone.
 - Sales Execution: richer with Meeting Intelligence and Deal Inspection; works from CRM data alone.
