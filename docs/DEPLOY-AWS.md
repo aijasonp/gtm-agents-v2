@@ -52,9 +52,9 @@ The runtime is a Docker image with three long-running services: the scheduler, t
   - `help`
 - **Pushed to each owner's DM:** each rep's brief and daily book. The DM is found through `slack_id` in `config/company.yaml`, or by email lookup. `GTM_SLACK_DM=0` keeps everything in the team channel.
 
-## Running beside Itential's own harness
+## Running beside your company's own agent harness
 
-If the internal agent harness already schedules work and talks to Slack:
+If your company already has an agent harness that schedules work and talks to Slack:
 - Run only the API service and the MCP servers (`gtm serve-mcp <agent> --transport streamable-http`).
 - Let the harness call the tools.
 
