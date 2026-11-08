@@ -1,0 +1,100 @@
+# Exec Brief: daily pipeline-critical numbers for each executive, plus one company snapshot.
+# Edit during install. Every number in a brief is computed in code from the rows these queries return.
+
+# Where the rows come from:
+#   snowflake  run the SQL below against the warehouse (Salesforce, Pardot and CS tables replicated there)
+#   fixtures   read rows from a local YAML or JSON file (demos, evals, dry runs)
+#   store      opportunities from the CRM sync in the agent database; leads, renewals, deal regs empty
+source: fixtures
+fixtures_path: data/sample/exec_brief.yaml
+
+# Who gets what. Slack user ids and the channel come from environment variables, never this file.
+recipients:
+  ceo:     {title: CEO,                        slack_id_env: EXEC_BRIEF_CEO_SLACK_ID}
+  cso:     {title: Chief Sales Officer,         slack_id_env: EXEC_BRIEF_CSO_SLACK_ID}
+  cmo:     {title: Chief Marketing Officer,     slack_id_env: EXEC_BRIEF_CMO_SLACK_ID}
+  channel: {title: VP Channel and Partnerships, slack_id_env: EXEC_BRIEF_CHANNEL_SLACK_ID}
+company:
+  channel_env: EXEC_BRIEF_COMPANY_CHANNEL     # e.g. C0123ABCD for #company-daily
+  departments: [sales, marketing, partners, customer_success]
+
+# Five metrics per executive, in display order. Keys are defined in skill/references/metric-definitions.md.
+briefs:
+  ceo:     [bookings_qtd, forecast_vs_plan, pipeline_coverage, pipeline_created_qtd, renewal_arr_at_risk]
+  cso:     [bookings_qtd, commit_qtr, slipped_out_1d, stalled_late_stage, win_rate_qtd]
+  cmo:     [mqls_mtd, mql_to_sql_90d, marketing_pipeline_qtd, marketing_share_qtd, speed_to_lead]
+  channel: [partner_pipeline_qtd, partner_bookings_qtd, deal_regs_7d, partner_share_open, active_partners_90d]
+
+# Plans and targets (sample values sized to the fictional sample data; replace with your plan).
+# Quarter and month targets are paced by time elapsed; ratios are compared as is.
+targets:
+  bookings_plan_qtr: 6000000          # new + expansion bookings
+  pipeline_created_qtr: 16000000       # all sources, new + expansion
+  coverage: 3.0                       # open pipeline closing this quarter / remaining plan
+  win_rate: 0.25                      # by amount, closed this quarter
+  mqls_month: 280
+  mql_to_sql: 0.25
+  marketing_pipeline_qtr: 7000000
+  marketing_share: 0.40
+  speed_to_lead: 0.90                 # share of MQLs touched within sla_hours
+  partner_pipeline_qtr: 4500000
+  partner_bookings_qtr: 600000
+  partner_share: 0.25
+  active_partners: 10
+  grr: 0.90
+  nrr: 1.05
+
+settings:
+  stale_days: 14            # late-stage deals with no activity this long are stalled
+  sla_hours: 24             # speed to lead
+  renewal_window_days: 90
+  late_stage_categories: [commit, best_case]
+  links:                    # optional buttons on each brief
+    ceo: ""
+    cso: ""
+    cmo: ""
+    channel: ""
+    company: ""
+
+# Snowflake. Each query must return the columns listed in its comment, one row per record.
+# Replace table and column names with your own (examples follow Fivetran's Salesforce naming).
+# Credentials come from SNOWFLAKE_* environment variables. Use a read-only role.
+snowflake:
+  queries:
+    # id, name, account, owner, status (open|won|lost), amount, close_date, created_at, last_activity_at,
+    # forecast_category, source (marketing|partner|sales|other), partner, type (new|expansion|renewal)
+    opportunities: |
+      SELECT o.ID AS id, o.NAME AS name, a.NAME AS account, u.NAME AS owner,
+             CASE WHEN o.IS_WON THEN 'won' WHEN o.IS_CLOSED THEN 'lost' ELSE 'open' END AS status,
+             o.AMOUNT AS amount, o.CLOSE_DATE AS close_date, o.CREATED_DATE AS created_at,
+             o.LAST_ACTIVITY_DATE AS last_activity_at, LOWER(o.FORECAST_CATEGORY_NAME) AS forecast_category,
+             CASE WHEN o.PARTNER_SOURCED_C THEN 'partner'
+                  WHEN o.LEAD_SOURCE IN ('Web', 'Webinar', 'Event', 'Content', 'Paid') THEN 'marketing'
+                  WHEN o.LEAD_SOURCE IS NULL THEN 'other' ELSE 'sales' END AS source,
+             p.NAME AS partner,
+             CASE o.TYPE WHEN 'Renewal' THEN 'renewal' WHEN 'Existing Business' THEN 'expansion' ELSE 'new' END AS type
+      FROM SALESFORCE.OPPORTUNITY o
+      LEFT JOIN SALESFORCE.ACCOUNT a ON a.ID = o.ACCOUNT_ID
+      LEFT JOIN SALESFORCE.USER u ON u.ID = o.OWNER_ID
+      LEFT JOIN SALESFORCE.ACCOUNT p ON p.ID = o.PARTNER_ACCOUNT_C
+      WHERE NOT o.IS_DELETED
+        AND (NOT o.IS_CLOSED OR o.CLOSE_DATE >= DATEADD(day, -400, CURRENT_DATE)
+             OR o.CREATED_DATE >= DATEADD(day, -400, CURRENT_DATE))
+    # id, created_at, mql_at, sql_at, first_touch_at, source
+    leads: |
+      SELECT l.ID AS id, l.CREATED_DATE AS created_at, l.MQL_DATE_C AS mql_at, l.SQL_DATE_C AS sql_at,
+             l.FIRST_TOUCH_DATE_C AS first_touch_at, l.LEAD_SOURCE AS source
+      FROM SALESFORCE.LEAD l
+      WHERE NOT l.IS_DELETED AND l.MQL_DATE_C >= DATEADD(day, -120, CURRENT_DATE)
+    # account, arr, renewal_date, status (open|renewed|churned|downsell), renewed_arr, health (green|yellow|red)
+    renewals: |
+      SELECT a.NAME AS account, r.ARR_C AS arr, r.CLOSE_DATE AS renewal_date,
+             CASE WHEN NOT r.IS_CLOSED THEN 'open' WHEN r.IS_WON AND r.AMOUNT >= r.ARR_C THEN 'renewed'
+                  WHEN r.IS_WON THEN 'downsell' ELSE 'churned' END AS status,
+             CASE WHEN r.IS_WON THEN r.AMOUNT ELSE 0 END AS renewed_arr,
+             LOWER(a.HEALTH_SCORE_C) AS health
+      FROM SALESFORCE.OPPORTUNITY r JOIN SALESFORCE.ACCOUNT a ON a.ID = r.ACCOUNT_ID
+      WHERE r.TYPE = 'Renewal' AND NOT r.IS_DELETED
+        AND r.CLOSE_DATE BETWEEN DATEADD(day, -120, CURRENT_DATE) AND DATEADD(day, 120, CURRENT_DATE)
+    # id, partner, submitted_at, status   (optional: leave empty to count partner-sourced opportunities instead)
+    deal_registrations: ""

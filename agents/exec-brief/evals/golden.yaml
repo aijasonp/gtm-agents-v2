@@ -1,0 +1,97 @@
+# Exec Brief golden cases. now = Mon 2026-11-16 00:00 UTC: exactly half of Q4 (Oct 1 to Jan 1) and half of November.
+# Fictional rows. Every expected number is computed by hand below the row it depends on.
+now: "2026-11-16T00:00:00+00:00"
+config:
+  recipients:
+    ceo: {title: CEO, slack_id_env: EVAL_CEO}
+    cso: {title: Chief Sales Officer, slack_id_env: EVAL_CSO}
+    cmo: {title: Chief Marketing Officer, slack_id_env: EVAL_CMO}
+    channel: {title: VP Channel and Partnerships, slack_id_env: EVAL_CHANNEL}
+  company: {channel_env: EVAL_COMPANY, departments: [sales, marketing, partners, customer_success]}
+  briefs:
+    ceo: [bookings_qtd, forecast_vs_plan, pipeline_coverage, pipeline_created_qtd, renewal_arr_at_risk]
+    cso: [bookings_qtd, commit_qtr, slipped_out_1d, stalled_late_stage, win_rate_qtd]
+    cmo: [mqls_mtd, mql_to_sql_90d, marketing_pipeline_qtd, marketing_share_qtd, speed_to_lead]
+    channel: [partner_pipeline_qtd, partner_bookings_qtd, deal_regs_7d, partner_share_open, active_partners_90d]
+  targets: {bookings_plan_qtr: 400000, pipeline_created_qtr: 1000000, coverage: 3.0, win_rate: 0.5, mqls_month: 20,
+            mql_to_sql: 0.5, marketing_pipeline_qtr: 400000, marketing_share: 0.4, speed_to_lead: 0.8,
+            partner_pipeline_qtr: 200000, partner_bookings_qtr: 100000, partner_share: 0.25, active_partners: 3,
+            grr: 0.9, nrr: 1.0}
+  settings: {stale_days: 14, sla_hours: 24, renewal_window_days: 90, late_stage_categories: [commit, best_case]}
+rows:
+  opportunities:
+    - {id: O1, name: Contoso Platform, owner: Sam Rivera, status: won, amount: 100000, close_date: "2026-10-10", created_at: "2026-08-01", source: sales, type: new}
+    - {id: O2, name: Northwind Pilot, owner: Lee Park, status: won, amount: 60000, close_date: "2026-11-02", created_at: "2026-10-05", source: partner, partner: Orbit Integrators, type: new}
+    - {id: O3, name: Fabrikam Rollout, owner: Sam Rivera, status: lost, amount: 40000, close_date: "2026-10-20", created_at: "2026-09-01", source: sales, type: new}
+    - {id: O4, name: Tailspin Automation, owner: Priya Shah, status: open, amount: 120000, close_date: "2026-12-10", created_at: "2026-10-01", last_activity_at: "2026-11-14", forecast_category: commit, source: marketing, type: new}
+    - {id: O5, name: Litware Expansion, owner: Lee Park, status: open, amount: 80000, close_date: "2026-12-20", created_at: "2026-10-12", last_activity_at: "2026-10-20", forecast_category: best_case, source: partner, partner: Keystone Systems, type: expansion}
+    - {id: O6, name: Adatum Network, owner: Priya Shah, status: open, amount: 50000, close_date: "2027-02-01", created_at: "2026-11-10", last_activity_at: "2026-11-12", forecast_category: pipeline, source: marketing, type: new}
+    - {id: O7, name: Woodgrove Orchestration, owner: Sam Rivera, status: open, amount: 30000, close_date: "2027-01-15", created_at: "2026-09-15", last_activity_at: "2026-11-15", forecast_category: commit, source: sales, type: new}
+    - {id: O8, name: Proseware Pilot, owner: Lee Park, status: lost, amount: 25000, close_date: "2026-11-15", created_at: "2026-10-20", source: marketing, type: new}
+    - {id: O9, name: Wingtip Renewal, owner: Lee Park, status: open, amount: 999999, close_date: "2026-12-01", created_at: "2026-10-01", forecast_category: commit, source: sales, type: renewal}
+    - {id: O10, name: Coho Trial, owner: Priya Shah, status: lost, amount: 20000, close_date: "2026-09-30", created_at: "2026-08-20", source: partner, partner: Harbor Networks, type: new}
+  leads:
+    - {id: L1, mql_at: "2026-11-02T10:00:00", sql_at: "2026-11-06T10:00:00", first_touch_at: "2026-11-02T11:00:00"}
+    - {id: L2, mql_at: "2026-11-03T10:00:00"}
+    - {id: L3, mql_at: "2026-11-05T10:00:00"}
+    - {id: L4, mql_at: "2026-11-06T10:00:00"}
+    - {id: L5, mql_at: "2026-11-09T10:00:00", first_touch_at: "2026-11-09T12:00:00"}
+    - {id: L6, mql_at: "2026-11-10T10:00:00", first_touch_at: "2026-11-11T16:00:00"}
+    - {id: L7, mql_at: "2026-11-12T10:00:00", first_touch_at: "2026-11-12T15:00:00"}
+    - {id: L8, mql_at: "2026-11-14T10:00:00"}
+    - {id: L9, mql_at: "2026-10-05T10:00:00", sql_at: "2026-10-09T10:00:00"}
+    - {id: L10, mql_at: "2026-10-10T10:00:00", sql_at: "2026-10-12T10:00:00"}
+    - {id: L11, mql_at: "2026-10-15T10:00:00", sql_at: "2026-10-20T10:00:00"}
+    - {id: L12, mql_at: "2026-10-20T10:00:00", sql_at: "2026-10-28T10:00:00"}
+    - {id: L13, mql_at: "2026-07-01T10:00:00", sql_at: "2026-07-05T10:00:00"}
+  renewals:
+    - {account: Alpine Ski House, arr: 100000, renewal_date: "2026-10-15", status: renewed, renewed_arr: 110000, health: green}
+    - {account: Coho Vineyard, arr: 50000, renewal_date: "2026-11-01", status: churned, renewed_arr: 0, health: red}
+    - {account: Trey Research, arr: 40000, renewal_date: "2026-12-01", status: open, health: red}
+    - {account: Fourth Coffee, arr: 60000, renewal_date: "2027-01-10", status: open, health: green}
+    - {account: Relecloud, arr: 30000, renewal_date: "2027-03-01", status: open, health: red}
+  deal_registrations:
+    - {id: R1, partner: Orbit Integrators, submitted_at: "2026-11-12"}
+    - {id: R2, partner: Keystone Systems, submitted_at: "2026-11-03"}
+    - {id: R3, partner: Harbor Networks, submitted_at: "2026-11-05"}
+previous:   # yesterday's stored snapshot
+  metrics: {commit_qtr: 150000, bookings_qtd: 100000}
+  open: {O4: {close_date: "2026-12-10"}, O7: {close_date: "2026-12-15"}, O8: {close_date: "2026-12-01"}}
+expect:
+  values:
+    bookings_qtd: 160000          # O1 + O2; O9 is a renewal and excluded
+    forecast_vs_plan: 0.7         # (160000 + O4 commit 120000) / 400000; O7 commit now closes next quarter
+    pipeline_coverage: 0.83       # open closing this quarter (O4 + O5 = 200000) / (400000 - 160000)
+    pipeline_created_qtd: 335000  # O2 + O4 + O5 + O6 + O8
+    commit_qtr: 120000
+    slipped_out_1d: 55000         # O7 moved to January (30000) + O8 lost (25000)
+    stalled_late_stage: 80000     # O5 best case, 27 days quiet
+    win_rate_qtd: 0.7111          # 160000 / (160000 + 65000)
+    mqls_mtd: 8
+    mql_to_sql_90d: 0.4167        # 5 of 12 (L13 is older than 90 days)
+    marketing_pipeline_qtd: 195000
+    marketing_share_qtd: 0.5821
+    speed_to_lead: 0.5            # L5 and L7 of L5..L8
+    partner_pipeline_qtd: 140000
+    partner_bookings_qtd: 60000
+    deal_regs_7d: 1
+    partner_share_open: 0.2857    # O5 80000 / 280000 open
+    active_partners_90d: 3
+    grr_qtd: 0.6667               # min(110000, 100000) / 150000
+    nrr_qtd: 0.7333
+    renewal_arr_at_risk: 40000    # Trey Research; Relecloud renews after the window
+    renewals_due: 100000
+  status:
+    bookings_qtd: bad             # 160000 vs pace 200000 is -20%
+    marketing_pipeline_qtd: watch # 195000 vs pace 200000 is -2.5%
+    partner_pipeline_qtd: good
+    active_partners_90d: good     # at target
+    win_rate_qtd: good
+    renewals_due: null            # volume: never ranked
+  deltas: {bookings_qtd: 60000, commit_qtr: -30000, deal_regs_7d: -1}
+  slipped_order: [Woodgrove Orchestration, Proseware Pilot]
+  extremes:
+    sales: [win_rate_qtd, slipped_out_1d]
+    marketing: [marketing_share_qtd, speed_to_lead]
+    partners: [partner_pipeline_qtd, deal_regs_7d]
+    customer_success: [grr_qtd, renewal_arr_at_risk]
