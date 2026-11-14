@@ -1,0 +1,8 @@
+account,metric,value,observed_at,source
+litware.example,active_users,24,2026-10-05,sample
+litware.example,active_users,23,2026-10-12,sample
+litware.example,active_users,29,2026-10-26,sample
+litware.example,active_users,31,2026-11-09,sample
+litware.example,teams,1,2026-10-05,sample
+litware.example,teams,2,2026-11-09,sample
+litware.example,support_tickets,1,2026-10-20,sample

@@ -1,0 +1,112 @@
+# Account Health rules. RevOps or CS owns this file; edit thresholds and points during install.
+# Every number here feeds deterministic code in engine.py. The model never scores.
+
+# Who counts as a customer: an account with `customer: true` in its CRM fields, or with a won deal.
+# Contract fields read from the account: arr, seats (licensed), renewal_date, owner (CSM or AE).
+# With no renewal_date, the latest won deal's close date plus contract_months is used.
+contract_months: 12
+
+# Product usage metric names as they arrive (Snowflake export, PostHog, CSV) mapped to the names below.
+metric_aliases:
+  active_users: [active_users, mau, wau, monthly_active_users, weekly_active_users, active_seats]
+  core_actions: [core_actions, key_events, workflows_run, automations_run, jobs_run, api_calls]
+  features_used: [features_used, feature_count, modules_used]
+  teams: [teams, departments, business_units, workspaces]
+  support_tickets: [support_tickets, tickets, cases]
+  escalations: [escalations, sev1, p1_tickets]
+
+windows:
+  usage_days: 30            # current window vs the 30 days before it
+  dark_days: 21             # no usage data for this long, after data existed, is "dark"
+  conversation_days: 90     # meetings and call insights read for language
+  signal_days: 60           # account signals read
+  no_meeting_days: 60       # no customer meeting for this long
+  renewal_alert_days: 120   # renewal inside this window raises the alert level
+
+thresholds:
+  usage_drop: -0.20         # active users or core actions down 20% or more
+  usage_growth: 0.20        # up 20% or more
+  low_utilization: 0.50     # active users / licensed seats below this
+  seat_ceiling: 0.85        # at or above this
+  support_spike: 0.50       # tickets up 50% or more ...
+  support_spike_min: 3      # ... and at least this many in the current window
+
+risk_points:
+  usage_drop: 25
+  usage_dark: 20
+  low_utilization: 15
+  feature_shrink: 10
+  support_spike: 10
+  escalation: 10
+  churn_language: 25
+  competitor_mentioned: 10
+  champion_left: 20
+  no_meeting: 10
+  risk_signal: 10
+
+expansion_points:
+  seat_ceiling: 30
+  usage_growth: 20
+  breadth_growth: 15
+  expansion_language: 25
+  expansion_signal: 10
+
+bands:                      # risk score -> band
+  at_risk: 50
+  watch: 25
+
+expansion_ready: 50         # expansion score at or above this is an expansion play (only when not at risk)
+
+# Renewal urgency multiplies risk for the priority order (risk itself is not changed).
+urgency:
+  - {within_days: 90, factor: 1.5}
+  - {within_days: 180, factor: 1.2}
+
+# Contact roles that count as champion or sponsor, and the contact fields that mark someone as gone.
+champion_roles: [champion, economic_buyer, executive_sponsor, sponsor, admin]
+departed_markers: {left_company: true, status: [left, departed, inactive]}
+
+signals:
+  risk: [buyer_departed, hiring_freeze, was_acquired, new_exec_in_buyer_function, negative_reviews_spike, public_incident]
+  expansion: [hiring_buyer_team, hiring_surge, funding_round, acquisition_made, new_market_entry, new_office,
+              new_product_launch]
+
+# Phrases matched as whole words in customer call transcripts, summaries and call insights.
+# A phrase preceded closely by a negation (not, no, never, won't, don't, isn't, aren't) is ignored.
+churn_phrases:
+  - cancel
+  - cancellation
+  - not renewing
+  - won't renew
+  - budget cut
+  - budget cuts
+  - cutting budget
+  - evaluating alternatives
+  - looking at alternatives
+  - switch to
+  - switching to
+  - too expensive
+  - price increase
+  - consolidating vendors
+  - consolidate vendors
+  - not using it
+  - low adoption
+  - nobody uses
+  - rip and replace
+  - sunset
+expansion_phrases:
+  - other teams
+  - another team
+  - roll out
+  - rollout
+  - more seats
+  - more licenses
+  - additional licenses
+  - add users
+  - expand
+  - expansion
+  - next phase
+  - another region
+  - new use case
+  - company-wide
+  - enterprise-wide

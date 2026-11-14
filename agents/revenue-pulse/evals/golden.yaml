@@ -22,6 +22,30 @@ inspections:   # oldest first; latest per deal wins
   - {deal_id: A, risk: 40, recommendation: fix, observed_at: "2026-10-19T07:00:00+00:00"}
   - {deal_id: C, risk: 70, recommendation: disqualify, observed_at: "2026-10-19T07:00:00+00:00"}
   - {deal_id: E, risk: 50, recommendation: fix, observed_at: "2026-10-19T07:00:00+00:00"}
+# Agent adoption. Window 30 days: current Sep 23 to Oct 23, previous Aug 24 to Sep 23.
+# Sam is matched by a Slack id cached for his email, Priya by name, Lee by email; autonomy decisions never count.
+slack_ids: {sam@beacon.example: U01SAM}
+approvals_decided:   # [decided_by, decided_at]
+  - ["slack:U01SAM", "2026-10-01T15:00:00+00:00"]
+  - ["slack:U01SAM", "2026-10-02T15:00:00+00:00"]
+  - ["Priya Shah", "2026-08-30T15:00:00+00:00"]
+  - ["Priya Shah", "2026-09-01T15:00:00+00:00"]
+  - ["Priya Shah", "2026-09-05T15:00:00+00:00"]
+  - ["autonomy:auto", "2026-10-10T15:00:00+00:00"]
+  - ["autonomy:auto", "2026-10-11T15:00:00+00:00"]
+  - ["autonomy:auto", "2026-10-12T15:00:00+00:00"]
+  - ["operator", "2026-10-12T16:00:00+00:00"]
+activity:   # [actor, action, at]
+  - ["slack:U01SAM", slack_ask, "2026-09-10T15:00:00+00:00"]
+  - ["slack:U01SAM", slack_ask, "2026-09-12T15:00:00+00:00"]
+  - ["slack:U01SAM", slack_ask, "2026-09-15T15:00:00+00:00"]
+  - ["slack:U01SAM", slack_ask, "2026-10-18T15:00:00+00:00"]
+  - ["slack:U01SAM", slack_ask, "2026-10-20T15:00:00+00:00"]
+  - ["Priya Shah", extension_prequal, "2026-10-10T15:00:00+00:00"]
+  - ["api:lee@beacon.example", push_button, "2026-10-10T15:00:00+00:00"]
+  - ["api:lee@beacon.example", push_button, "2026-10-12T15:00:00+00:00"]
+  - ["api:lee@beacon.example", push_button, "2026-10-15T15:00:00+00:00"]
+  - ["slack:UNKNOWN", slack_ask, "2026-10-15T15:00:00+00:00"]
 previous_pulse: {as_of: "2026-10-16T08:00:00+00:00", open_pipeline: 300000, weighted_pipeline: 100000, coverage: 0.3, won_qtd: 100000, stale_count: 2}
 expect:
   open_pipeline: 270000
@@ -45,3 +69,15 @@ expect:
   top_risk_order: [C, A]
   wow: {open_pipeline: -30000, weighted_pipeline: 20000, won_qtd: 200000, stale_count: -1}
   job_posts_summary: true
+  adoption:
+    team: 3
+    active: 2
+    adoption: 0.667
+    retention: 0.5
+    actions: 8
+    active_reps: [Lee Park, Sam Rivera]
+    users: {won: 2, lost: 1, closed: 3, win_rate: 0.667, won_amount: 300000.0}
+    non_users: {won: 0, lost: 1, closed: 1, win_rate: 0.0, won_amount: 0.0}
+    lift: 66.7
+    small_sample: true
+    closers: [2, 2]

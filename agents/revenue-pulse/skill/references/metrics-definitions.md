@@ -20,3 +20,10 @@ All dates are UTC. "Period" is the last `period_days` (default 7) ending now. "Q
 | Overdue tasks | Open tasks with a due date before now, by owner. |
 | Top risks | Latest Deal Inspection result per open deal, highest risk first. If Deal Inspection has not run, a rule-based score: stale 30, slipped this period 30, close date passed 25, no next step 15. |
 | Week over week | Difference from the last stored pulse for open pipeline, weighted pipeline, coverage, won QTD and stale count. |
+| Rep action | One approval decision by a named person (`approvals.decided_by`), or one row in `rep_activity` (Slack question or command, push-button run, browser extension or other front end via `POST /v1/activity`). Decisions by `autonomy:*`, `operator` or unmatched actors never count. Actors match a rep by Slack id, email or name from `team.owners`. |
+| Active rep | A rep with `min_actions` (default 3) or more actions in the last `window_days` (default 30). |
+| Adoption | Active reps / reps in `team.owners`. |
+| Retention | Reps active in both the previous and the current window / reps active in the previous window. Blank when nobody was active before. |
+| Win-rate cohorts | Every won or lost deal with close date in the last `lookback_days` (default 90) and an owner on the team. It counts for `users` when its owner had `min_actions` or more actions in the `window_days` before the close date, else for `non_users`. Win rate = won / (won + lost) in each cohort. |
+| Win-rate lift | Users win rate minus non-users win rate, in points, one decimal. Blank when either cohort has no closed deals. Flagged as a small sample when either cohort has fewer than `min_cohort` (default 5) deals. |
+| Closers using the agents | Owners with a won deal in the lookback, and how many of them were active before at least one of those wins. |

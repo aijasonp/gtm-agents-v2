@@ -21,6 +21,14 @@ def evaluate(m, spec, make_ctx) -> list[dict]:
         ctx.store.add_insight("deal-inspection", "deal_inspection", i["deal_id"],
                               {"risk": i["risk"], "recommendation": i["recommendation"], "flags": [f"risk {i['risk']}"]},
                               observed_at=i["observed_at"], deal_id=i["deal_id"])
+    for email, uid in spec.get("slack_ids", {}).items():
+        ctx.store.set_state(f"slack_id:{email}", uid)
+    for by, at in spec.get("approvals_decided", []):
+        ctx.store.insert("INSERT INTO approvals (agent, action, payload, status, requested_at, decided_at, decided_by) "
+                         "VALUES (?,?,?,?,?,?,?)", ("icp-outbound", "sequence_enroll", "{}", "approved", at, at, by))
+    from gtm_core import adoption
+    for actor, action, at in spec.get("activity", []):
+        adoption.record(ctx.store, actor, action, "golden", "", at)
     eng = load_module(m, "engine")
     if spec.get("previous_pulse"):
         ctx.store.set_state(eng.STATE_KEY, spec["previous_pulse"])
@@ -70,6 +78,20 @@ def evaluate(m, spec, make_ctx) -> list[dict]:
         add("job stores snapshot for next week", ctx.store.get_state(eng.STATE_KEY)["open_pipeline"] == ex["open_pipeline"],
             json.dumps(ctx.store.get_state(eng.STATE_KEY)))
         add("every number in the post is from the pulse", "$270,000" in text and "$120,000" in text and "0.26x" in text, "")
+    ae = ex.get("adoption")
+    if ae:
+        a = eng.adoption(ctx, now=now)
+        for k in ("team", "active", "adoption", "retention", "actions", "small_sample"):
+            add(f"adoption {k}", a[k] == ae[k], a[k])
+        add("active reps (Slack id from cache, name, email; system actors ignored)",
+            sorted(r["rep"] for r in a["reps"] if r["active"]) == ae["active_reps"], a["reps"])
+        for side in ("users", "non_users"):
+            add(f"win-rate cohort {side}", a["cohorts"][side] == ae[side], a["cohorts"][side])
+        add("win-rate lift in points", a["win_rate_lift_pts"] == ae["lift"], a["win_rate_lift_pts"])
+        add("closers using the agents", [a["closers_using"], a["closers"]] == ae["closers"], [a["closers_using"], a["closers"]])
+        if ex.get("job_posts_summary"):
+            add("weekly pulse post carries the adoption section", "Agent adoption:" in text and "2 of 3 reps (67%)" in text
+                and "lift +66.7 pts" in text, text[-500:])
     d = eng.daily(ctx, now, days=7)
     add("daily report: won in window matches the pulse", d["deals"]["won"]["count"] == p["won"]["count"],
         (d["deals"]["won"], p["won"]))
