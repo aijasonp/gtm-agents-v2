@@ -7,6 +7,9 @@ Lets the customer's existing tools push work in and lets approvers act without a
   POST /v1/signals                    JSON signal or list (account_id, signal_type, observed_at, url?, title?)
   POST /v1/replies                    JSON reply or list (from_email, subject, body, received_at...) -> Reply Desk
   POST /v1/engagement                 JSON engagement row or list (platform, post_url, engager_name...) -> Social Signals
+  POST /v1/usage                      JSON usage row or list (account, metric, value, observed_at) -> Account Health
+  POST /v1/activity                   JSON rep action or list (actor, action, agent?, ref?, at?): adoption tracking
+                                      from a browser extension or any other front end
   POST /v1/page-changes               changedetection.io notification: flat JSON, or Apprise json:// with the
                                       plain-text template as the message -> Signal Sourcing
   GET  /v1/approvals?status=pending   approval queue across agents
@@ -130,6 +133,35 @@ class Api:
             self.store.upsert("meetings", {**r, "source": r.get("source", "api"), "processed_at": None})
             n += 1
         return (201 if n else 400), {"meetings": n}
+
+    def usage(self, body) -> tuple[int, dict]:
+        rows = _rows(body)
+        if "account-health" not in self.manifests:
+            return 400, {"error": "account-health agent not installed"}
+        from .agents import load_module
+        ctx = self.ctx("account-health")
+        eng = load_module(ctx.manifest, "engine")
+        stored, errors = 0, []
+        for i, r in enumerate(rows):
+            res = eng.add_usage(ctx, _str(r.get("account") or r.get("account_id")), _str(r.get("metric")), r.get("value"),
+                                _str(r.get("observed_at")) or now_iso(), _str(r.get("source")) or "api")
+            if res["ok"]:
+                stored += 1
+            else:
+                errors.append(f"row {i}: {res['error']}")
+        return 200, {"stored": stored, "errors": errors[:20]}
+
+    def activity(self, body) -> tuple[int, dict]:
+        from . import adoption
+        rows = _rows(body)
+        n = 0
+        for r in rows:
+            actor, action = _str(r.get("actor")), _str(r.get("action"))
+            if not actor or not action:
+                raise BadRequest("actor and action are required")
+            adoption.record(self.store, actor, action, _str(r.get("agent")), _str(r.get("ref")), _str(r.get("at")) or None)
+            n += 1
+        return 200, {"recorded": n}
 
     def signals(self, body) -> tuple[int, dict]:
         rows = _rows(body)
@@ -313,6 +345,8 @@ class Api:
                   "/v1/email-events": self.email_events, "/v1/enrichment": self.enrichment,
                   "/v1/page-changes": self.page_changes,
                   "/v1/web-events": self.web_events,
+                  "/v1/usage": self.usage,
+                  "/v1/activity": self.activity,
                   "/v1/replies": lambda b: self.to_inbox("reply-desk", "reply_inbox", b, ("from_email", "body")),
                   "/v1/engagement": lambda b: self.to_inbox("social-signals", "engagement_inbox", b,
                                                             ("engager_name", "engagement_type"))}

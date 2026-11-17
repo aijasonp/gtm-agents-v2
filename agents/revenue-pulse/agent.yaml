@@ -6,7 +6,8 @@ description: >
   Weekly operating summary for sales leadership, computed from the CRM: open and weighted pipeline,
   coverage against remaining quota, what was created, won, lost and slipped this week, stage moves,
   stale deals, this month's forecast by category, a per-owner scorecard and the top deal risks from
-  Deal Inspection, with week-over-week changes. Every number is computed in code.
+  Deal Inspection, with week-over-week changes. Also tracks agent adoption by rep and
+  the win-rate gap between reps who use the agents and reps who do not. Every number is computed in code.
 editions: [dropin, persistent]
 skill: skill/SKILL.md
 references:
@@ -25,6 +26,7 @@ tools:
   - top_risks
   - owner_scorecard
   - daily_report
+  - adoption_report
 connectors_required: []
 connectors_optional: [crm, slack]
 jobs:
@@ -38,3 +40,4 @@ config:
   period_days: 7
   stale_days: 14
   top_risks: 5
+  adoption: {window_days: 30, min_actions: 3, lookback_days: 90, min_cohort: 5}

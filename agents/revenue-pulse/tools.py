@@ -84,5 +84,14 @@ def daily_report(ctx, days: int = 1) -> dict:
     return {**r, "text": _eng(ctx).format_daily(r)}
 
 
+def adoption_report(ctx, window_days: int = 0, lookback_days: int = 0, min_actions: int = 0) -> dict:
+    """Which reps use the agents (active = min_actions or more actions in the window), adoption and month-over-month
+    retention, and win rate on deals closed in the lookback for reps who were active before the close vs those who
+    were not, with the lift in points and how many closers used the agents. Zero means the configured default."""
+    from gtm_core import adoption
+    r = _eng(ctx).adoption(ctx, window_days=window_days, lookback_days=lookback_days, min_actions=min_actions)
+    return {**r, "text": adoption.format_report(r)}
+
+
 TOOLS = {f.__name__: f for f in [pipeline_summary, forecast_rollup, slipped_deals, stale_deals, top_risks, owner_scorecard,
-                                 daily_report]}
+                                 daily_report, adoption_report]}

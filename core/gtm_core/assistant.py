@@ -159,10 +159,15 @@ class Assistant:
 def handle_message(assistant: Assistant, text: str, user: str, history: list[dict]) -> str:
     """Slack message -> reply. Commands (status, approvals, approve, reject, stop, resume, run, help) are handled
     in code without a model; see gtm_core.slack_commands. Everything else goes to the model with tools."""
+    from . import adoption
     from .slack_commands import handle
     reply = handle(text, user, assistant.store, assistant.s, getattr(assistant, "all_manifests", assistant.manifests))
     if reply is not None:
+        verb = (text or "").strip().split(" ", 1)[0].lower()
+        if verb not in ("approve", "reject"):  # decisions already count from the approvals table
+            adoption.record(assistant.store, f"slack:{user}", "slack_command:" + verb, "core")
         return reply
+    adoption.record(assistant.store, f"slack:{user}", "slack_ask", "core")
     return assistant.ask(text, history).text or "(no answer)"
 
 

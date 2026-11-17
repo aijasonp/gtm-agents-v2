@@ -42,6 +42,9 @@ Agents share one database and pass work through `handoffs` (deduplicated, consum
 | Reply Desk | Enrichment | `enrich_request` handoff | referred person with a name but no email |
 | Social Signals | Signal Scout, Rep Brief | `signals` (category social) | comments, shares, follows, reactions, repeat views |
 | Deal Inspection | Forecast Prep | insight `deal_inspection` | risk feeds the suggested commit |
+| Meeting Intelligence | Account Health | insights `objection`, `competitor_mention`, `pricing_mention`, `next_step`, `call_flag` plus meeting transcripts | churn and expansion language on customer calls, competitors named |
+| Signal Sourcing, Signal Scout | Account Health | `signals` | risk news (layoffs, acquisition, new leader) and growth news (hiring, funding) on customer accounts |
+| Account Health | (owners, leadership) | insight `account_health` | risk, band, expansion, recommendation, renewal date, drivers |
 | Stack Audit | (leadership) | draft `tool_cut_memo` | savings by renewal date with cut conditions |
 | Product Marketing | (enablement) | insight `battlecard` + draft | card per competitor |
 
@@ -67,7 +70,7 @@ Sends to a buyer (`send_actions` in config/approvals.yaml) need a named person o
 | `sequence_enroll` | Lead Triage, ICP Outbound, Event Campaigns, Rep Brief | Pushes contact plus approved copy to the sequencer (webhook, Smartlead or Lemlist). With `sequence_release: per_step`, only step 1; the rest are held |
 | `sequence_step` | Follow-Through | One held step, when due, confirmed by its owner |
 | `pipeline_email` | Follow-Through | One pipeline follow-up the owner confirmed; recorded as the cadence touch |
-| `crm_task` | Lead Triage, Seller Follow-Up, Follow-Through | Task on the deal or account for the owner |
+| `crm_task` | Lead Triage, Seller Follow-Up, Follow-Through, Account Health | Task on the deal or account for the owner |
 | `crm_contact` | Lead Triage | Creates the contact on the account |
 | `crm_update` | Signal Scout | Score, tier and reasons on the account |
 | `deal_note` | Meeting Intelligence, Seller Follow-Up | Call summary or recap note on the deal |
@@ -92,7 +95,7 @@ Sends to a buyer (`send_actions` in config/approvals.yaml) need a named person o
 | Meeting Intelligence | meetings (transcripts), deals, accounts | meeting summary, insights, handoffs | deal_note | analyze_call, meeting_summary, list_meetings, coaching_notes, search_mentions | ingest_inbox, pull_transcripts, process_meetings | sales-call-review, sales-coaching |
 | Sales Execution | meetings, deals, contacts, scores, insights, tasks | precall_brief insights | none | precall_brief, meddpicc_questions, objection_help, proposal_outline, next_steps_summary | precall_briefs | sales-proposal-template, sales-enablement, hundred-million-offers, crossing-the-chasm |
 | Product Marketing | insights, deals, accounts | battlecard insights and drafts | none | competitor_intel, battlecard, win_loss_report, objection_library, messaging_brief, launch_brief | weekly_field_report, battlecard_refresh | competitor-alternatives, competitor-profiling, product-marketing-context, launch-strategy, pricing-strategy, product-positioning, product-messaging, case-study-builder, sales-compete, obviously-awesome, storybrand-messaging, made-to-stick |
-| Revenue Pulse | deals, deal history, insights, tasks | weekly snapshot (state) | none | pipeline_summary, forecast_rollup, slipped_deals, stale_deals, top_risks, owner_scorecard, daily_report | weekly_pulse, daily_gtm_report | sales-forecast, revops |
+| Revenue Pulse | deals, deal history, insights, tasks, approvals, rep_activity | weekly snapshot (state) | none | pipeline_summary, forecast_rollup, slipped_deals, stale_deals, top_risks, owner_scorecard, daily_report, adoption_report | weekly_pulse, daily_gtm_report | sales-forecast, revops |
 | Signal Scout | accounts, signals, outcomes, email events | scores, decisions (judged ICP), learned signal and question weights | crm_update | score_account, list_priority_accounts, explain_score, add_signal, record_outcome, push_to_crm, judge_account | sync_accounts, daily_sweep, weekly_reweight | sales-intent, sales-account-map, sales-enrich, clay-gtm-outbound |
 | Copy QA Gate | text | none | none | check_copy, check_batch | none | avoid-ai-writing, humanizer, unslop, no-slop, copy-editing |
 | Rep Brief | scores, signals, deals, tasks, leads, replies, insights | brief state | sequence_enroll, crm_task, dialer_enqueue | my_brief, push_button, top_accounts, pipeline_gaps, whats_new | daily_briefs | sales-account-map, sales-cadence, cold-email, predictable-revenue |
@@ -112,6 +115,7 @@ Sends to a buyer (`send_actions` in config/approvals.yaml) need a named person o
 | Signal Sourcing | accounts, SEC EDGAR, newsroom feeds, job boards, changedetection.io, PostHog events, config/signals.yaml | signals (source `sourcing:<tier>` and `first_party:posthog`), web_events, account ATS board, discovery candidates | none | scan_account, scan_due, dispatch_batch, discover_companies, add_company, sourcing_report, page_change, watch_plan, web_events, poll_posthog | daily_scan, weekly_discovery, poll_page_changes, poll_posthog | sales-intent, sales-prospect-list |
 | Follow-Through | email events, contacts, drafts, approvals, meetings, event leads, deals, Signal Scout tiers, config/triggers.yaml, config/cadences.yaml | teeups, cadence ledger, workflow waits, AE tasks (local), sequence stops (at once), crm_task and pipeline_email (approval), Slack briefs and escalations | none | check_engagement, run_triggers, tee_ups, resolve_tee_up, explain_rules, next_touches, cadence_status, log_touch, follow_up_coverage, start_motion | evaluate_triggers, sweep_cadence, coverage_report | sales-cadence |
 | Daily Book | accounts, scores, signals, contacts, deals, leads, email events, insights, Signal Sourcing send list, Follow-Through tee-ups and cadences | daily_book rows, sequence_enroll for cold rows (approval, via ICP Outbound), local contacts from MCP people search (opt-in) | none | my_book, build_books, book_status, mark_done | daily_books | sales-prospect-list |
+| Account Health | accounts (customer, arr, seats, renewal_date, owner), won deals, product_usage, meetings, insights, contacts, signals | product_usage, account_health insights, last recommendation (state) | crm_task | account_health, at_risk_customers, expansion_ready, portfolio_summary, explain_health, add_usage, import_usage | sync_customers, import_usage_inbox, daily_health, weekly_portfolio | sales-account-map, revops |
 
 ## Selling agents separately
 

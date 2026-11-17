@@ -1,0 +1,88 @@
+# Account Health golden cases. now = 2026-11-14 12:00 UTC.
+# Usage windows: current Oct 15 to Nov 14, previous Sep 15 to Oct 15.
+now: "2026-11-14T12:00:00+00:00"
+accounts:
+  # save: usage down, low utilization, churn language, competitor on a call, champion left, renews in 62 days
+  - {id: northwind.example, name: Northwind Logistics, domain: northwind.example, crm_id: "A1", customer: true, arr: 120000, seats: 100, renewal_date: "2027-01-15", owner: Lee Park}
+  # expand: seats near the limit, usage and teams up, expansion language, hiring news
+  - {id: tailspin.example, name: Tailspin Software, domain: tailspin.example, crm_id: "A2", customer: true, arr: 80000, seats: 50, renewal_date: "2027-06-30", owner: Sam Rivera}
+  # steady: customer only through a won deal; renewal and ARR come from the deal
+  - {id: contoso.example, name: Contoso Health, domain: contoso.example, crm_id: "A3"}
+  # watch: usage went dark, low utilization, no meeting in 105 days, renews in 79 days
+  - {id: fabrikam.example, name: Fabrikam Insurance, domain: fabrikam.example, crm_id: "A4", customer: true, arr: 60000, seats: 100, renewal_date: "2027-02-01", owner: Priya Shah}
+  # save, not expand: at seat ceiling and talks about other teams, but usage down and a budget cut on the call
+  - {id: litware.example, name: Litware Inc, domain: litware.example, crm_id: "A5", customer: true, arr: 90000, seats: 40, renewal_date: "2026-12-20", owner: Lee Park}
+  # steady: negated churn phrases must not count
+  - {id: adatum.example, name: Adatum Corp, domain: adatum.example, crm_id: "A6", customer: true, arr: 50000, seats: 60, renewal_date: "2027-08-01", owner: Sam Rivera}
+  # not customers
+  - {id: wingtip.example, name: Wingtip Toys, domain: wingtip.example}
+  - {id: woodgrove.example, name: Woodgrove Bank, domain: woodgrove.example, customer: false}
+deals:
+  - {id: d-contoso, account_id: contoso.example, name: Contoso Platform, owner: Priya Shah, stage: Closed Won, status: won, amount: 60000, close_date: "2026-03-01"}
+  - {id: d-wingtip, account_id: wingtip.example, name: Wingtip Pilot, owner: Sam Rivera, stage: Discovery, status: open, amount: 30000, close_date: "2026-12-15"}
+  - {id: d-woodgrove, account_id: woodgrove.example, name: Woodgrove One-time, owner: Lee Park, stage: Closed Won, status: won, amount: 15000, close_date: "2025-12-01"}
+contacts:
+  - {id: dana@northwind.example, account_id: northwind.example, name: Dana Cole, title: VP Operations, role: champion, left_company: true}
+  - {id: marcus@northwind.example, account_id: northwind.example, name: Marcus Lee, title: Ops Manager, role: user}
+  - {id: kim@tailspin.example, account_id: tailspin.example, name: Kim Ortiz, title: VP Support, role: champion}
+usage:   # [account, metric, value, observed_at]
+  - [northwind.example, active_users, 82, "2026-09-20"]
+  - [northwind.example, active_users, 78, "2026-10-05"]
+  - [northwind.example, active_users, 52, "2026-10-20"]
+  - [northwind.example, active_users, 48, "2026-11-05"]
+  - [tailspin.example, active_users, 35, "2026-09-25"]
+  - [tailspin.example, active_users, 47, "2026-11-01"]
+  - [tailspin.example, teams, 2, "2026-09-25"]
+  - [tailspin.example, teams, 3, "2026-11-01"]
+  - [contoso.example, active_users, 40, "2026-09-25"]
+  - [contoso.example, active_users, 41, "2026-11-01"]
+  - [fabrikam.example, active_users, 30, "2026-09-20"]
+  - [fabrikam.example, active_users, 28, "2026-10-01"]
+  - [litware.example, active_users, 50, "2026-09-25"]
+  - [litware.example, active_users, 38, "2026-11-01"]
+  - [adatum.example, active_users, 45, "2026-09-25"]
+  - [adatum.example, active_users, 46, "2026-11-01"]
+meetings:
+  - {id: m-nw, account_id: northwind.example, title: QBR, started_at: "2026-10-28T15:00:00+00:00", owner: Lee Park,
+     summary: "Usage is down since the reorg. We are evaluating alternatives for next year."}
+  - {id: m-ts, account_id: tailspin.example, title: Check-in, started_at: "2026-11-03T15:00:00+00:00", owner: Sam Rivera,
+     transcript: "Kim: The agents team loves it. They want to roll out to the support team next quarter."}
+  - {id: m-co, account_id: contoso.example, title: QBR, started_at: "2026-10-30T15:00:00+00:00", owner: Priya Shah,
+     summary: "Quarterly review went well. Renewal on track."}
+  - {id: m-fb, account_id: fabrikam.example, title: Kickoff, started_at: "2026-08-01T15:00:00+00:00", owner: Priya Shah,
+     summary: "Kickoff with the admin team."}
+  - {id: m-lw, account_id: litware.example, title: Check-in, started_at: "2026-11-06T15:00:00+00:00", owner: Lee Park,
+     transcript: "Finance announced a budget cut, so we may cancel. Other teams asked about it though."}
+  - {id: m-ad, account_id: adatum.example, title: Check-in, started_at: "2026-11-10T15:00:00+00:00", owner: Sam Rivera,
+     transcript: "We have no plans to cancel. We are not evaluating alternatives right now."}
+insights:   # [kind, key, account_id, meeting_id, evidence, observed_at]
+  - [competitor_mention, Acme Intel, northwind.example, m-nw, "Acme Intel pitched our COO last week.", "2026-10-28T16:00:00+00:00"]
+signals:   # [account_id, signal_type, category, observed_at]
+  - [tailspin.example, hiring_surge, hiring, "2026-10-20"]
+expect:
+  recommendation: {northwind.example: save, tailspin.example: expand, contoso.example: steady, fabrikam.example: watch,
+                   litware.example: save, adatum.example: steady}
+  band: {northwind.example: at_risk, tailspin.example: healthy, contoso.example: healthy, fabrikam.example: watch,
+         litware.example: at_risk, adatum.example: healthy}
+  risk: {northwind.example: 95, fabrikam.example: 45, litware.example: 50, tailspin.example: 0}
+  expansion: {tailspin.example: 100, litware.example: 55}
+  order: [northwind.example, litware.example, fabrikam.example]
+  risk_keys_include:
+    northwind.example: [usage_drop, low_utilization, churn_language, competitor_mentioned, champion_left]
+    fabrikam.example: [usage_dark, low_utilization, no_meeting]
+    litware.example: [usage_drop, churn_language]
+  risk_keys_exclude:
+    adatum.example: [churn_language]
+    tailspin.example: [no_meeting]
+  expansion_keys_include:
+    tailspin.example: [seat_ceiling, usage_growth, breadth_growth, expansion_language, expansion_signal]
+  drivers_include:
+    northwind.example: ["active users -38% (80 to 50)", "48 of 100 seats active (48%)", "evaluating alternatives", "Dana Cole", "Acme Intel"]
+    tailspin.example: ["47 of 50 seats active (94%)", "roll out to the support team", "hiring_surge"]
+  renewal: {contoso.example: ["2027-03-01", "last won deal + contract_months"], northwind.example: ["2027-01-15", account]}
+  arr: {contoso.example: 60000}
+  not_assessed: [wingtip.example, woodgrove.example]
+  tasks_first_run: 3
+  tasks_second_run: 0
+  entered_window: [fabrikam.example, litware.example, northwind.example]
+  portfolio: {customers: 6, arr: 460000, at_risk: {count: 2, arr: 210000}, expand: {count: 1, arr: 80000}}

@@ -1,6 +1,6 @@
 # gtm-agents
 
-A full-stack GTM agent pack a mid-market sales team installs in its own environment and runs on the model keys it already pays for, frontier or open-weight. Twenty-seven agents cover the revenue motion from first signal and event to signed proposal and the board forecast, on one runtime with a chat assistant (terminal and Slack), approvals for every write, and a licensed library of 716 sales and marketing playbooks. No agent host is required: see [docs/RUNNING.md](docs/RUNNING.md).
+A full-stack GTM agent pack a mid-market sales team installs in its own environment and runs on the model keys it already pays for, frontier or open-weight. Twenty-eight agents cover the revenue motion from first signal and event to signed proposal, the board forecast and the renewal, on one runtime with a chat assistant (terminal and Slack), approvals for every write, and a licensed library of 716 sales and marketing playbooks. No agent host is required: see [docs/RUNNING.md](docs/RUNNING.md).
 
 Every agent ships in two editions from one source:
 
@@ -20,7 +20,7 @@ Every agent ships in two editions from one source:
 | 5 | **Meeting Intelligence** | A | Reads call transcripts: summary, pain, next steps, objections, competitors, pricing talk, MEDDPICC evidence, coaching flags; hands work to Follow-Up and Deal Inspection; pulls transcripts from Gong, Fireflies or Fathom | every 30 min |
 | 6 | **Sales Execution** | B | Pre-call brief for every upcoming meeting, MEDDPICC questions, objection help, proposal outline, next-steps summary | daily 7am |
 | 7 | **Product Marketing** | B | Competitor trends, win/loss by competitor and segment, objection library with gaps, evidence-backed battlecards, messaging and launch briefs | weekly, monthly |
-| 8 | **Revenue Pulse** | B | Weekly leadership summary computed from the CRM: pipeline, coverage, created / won / lost, slips, stage moves, stale deals, forecast rollup, owner scorecards, top risks; plus a daily whole-funnel GTM report | Monday 8am, weekdays 7:30am |
+| 8 | **Revenue Pulse** | B | Weekly leadership summary computed from the CRM: pipeline, coverage, created / won / lost, slips, stage moves, stale deals, forecast rollup, owner scorecards, top risks; plus a daily whole-funnel GTM report; agent adoption by rep, month-over-month retention and win rate for reps who use the agents vs reps who do not | Monday 8am, weekdays 7:30am |
 | 9 | **Rep Brief** | A | One daily brief per AE: top accounts, top people, new signals, pipeline gaps, replies, what to do next; plus the push-button AE workflow (research, gated first touch, sequence and call task in one approval) | weekdays 7:30am |
 | 10 | **Social Signals** | A | Engagement with company and influencer LinkedIn and YouTube content resolved to contacts and accounts, scored, and routed to the owner as signals | every 30 min |
 | 11 | **Reply Desk** | A | Every reply sorted (bounce, opt-out, out of office, referral, not now, objection, interested, question) and handled: stops, opt-outs, tasks, drafted answers | every 10 min |
@@ -40,6 +40,7 @@ Every agent ships in two editions from one source:
 | 25 | **Signal Sourcing** | A | Finds dated, sourced signals: 10-K and 10-Q quotes (Risk Factors, MD&A), 8-K officer changes, newsroom initiatives and funding, buyer-team hiring on public job boards, or job search sites for enterprises with no public board; changedetection.io page changes (careers, leadership, trust, newsroom, pricing, scripts); first-party PostHog web and product events (pricing, demo and security visits, downloads, trials, repeat visits, product-qualified accounts); no signal, no send; discovers new companies from SEC full-text search | weekdays 5am, weekly discovery |
 | 26 | **Follow-Through** | A | Engagement triggers from a RevOps decision table (3 human opens, a click, 2 opens on tier A) pause automation and tee up the AE with a business-hours SLA; a cadence ledger gives every contact after a meeting, event, tee-up or proposal one next touch, drafts the gaps for the AE to confirm one email at a time, escalates anything missed to the owner then the manager, and reports any deal with no follow-up | every 10 and 15 min, weekdays 8am |
 | 27 | **Daily Book** | A | A full, ranked book of 25 to 50 people per AE every weekday: warm from the CRM and engagement (engaged, quiet deals, champions who moved, unworked inbound, events, social, closed-lost recycle), cold from owned signals (today's sourced accounts first); per-rep warm/cold split, backfill between pools, shortfall reported never padded; cold first touches drafted for approval | weekdays 6:45am |
+| 28 | **Account Health** | A | Renewal risk and expansion readiness for every customer from product usage (active users, core actions, features, teams, support load), call transcripts and insights, champion departures and account news; save, expand, watch or steady with the evidence and next actions; ARR at risk and renewals in the window; a CRM task for each new save or expansion play after approval | weekdays 6:45am, Monday portfolio |
 
 How they hand work to each other, what each one reads and writes, and which playbooks each bundles: [docs/AGENTS.md](docs/AGENTS.md).
 
@@ -63,14 +64,14 @@ How they hand work to each other, what each one reads and writes, and which play
 
 ## Optional, not deployed by default: NetClaw front end
 
-`netclaw/` adds three Slack bots (pipeline, deals, revops) with 13 conversational subagents for an AE-only team. They call these 27 agents' tools over MCP; the runtime still does every calculation and holds every write for approval. See [netclaw/README.md](netclaw/README.md).
+`netclaw/` adds three Slack bots (pipeline, deals, revops) with 13 conversational subagents for an AE-only team. They call these 28 agents' tools over MCP; the runtime still does every calculation and holds every write for approval. See [netclaw/README.md](netclaw/README.md).
 
 ## Quick start (development)
 
 ```bash
 pip install -e ".[mcp,dev]"
-make test        # 194 tests
-make evals       # 524 golden cases across 25 agents (release gate)
+make test        # 272 tests
+make evals       # 660 golden cases across 28 agents (release gate)
 make demo        # every agent runs once on the fictional sample data, in pipeline order
 make compile     # drop-in packages in dist/<agent>/<version>/{claude,chatgpt,gemini,copilot}
 ```

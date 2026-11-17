@@ -6,6 +6,7 @@ from functools import lru_cache
 
 import yaml
 
+from gtm_core import adoption as adoption_core
 from gtm_core import meddpicc, pipeline, profile, writer
 
 STATE_KEY = "revenue_pulse:last"
@@ -315,9 +316,21 @@ def format_pulse(p: dict, summary_text: str = "") -> str:
         lines += [f"- {o['owner']}: open {money(o['open_pipeline'])} | weighted {money(o['weighted'])} | won QTD "
                   f"{money(o['won_qtd'])} | stale {o['stale']} | slipped {o['slipped']} | overdue tasks {o['overdue_tasks']}"
                   for o in p["by_owner"]]
+    if p.get("adoption"):
+        lines += ["Agent adoption:", adoption_core.format_report(p["adoption"])]
     if summary_text:
         lines += ["Summary:", summary_text]
     return "\n".join(lines)
+
+
+# ---------- adoption: who uses the agents, and do users win more ----------
+def adoption(ctx, now: datetime | None = None, **overrides) -> dict:
+    """Rep adoption, retention and user vs non-user win rate (gtm_core.adoption). Settings from `adoption` in
+    agent.yaml, overridable per call."""
+    cfg = {**{"window_days": 30, "min_actions": 3, "lookback_days": 90, "min_cohort": 5},
+           **(ctx.manifest.config.get("adoption") or {}), **{k: int(v) for k, v in overrides.items() if v}}
+    owners = (profile.company(ctx).get("team") or {}).get("owners") or []
+    return adoption_core.report(ctx.store, owners, ctx.store.select("deals"), _now(now), **cfg)
 
 
 # ---------- daily GTM report: the whole funnel, yesterday ----------

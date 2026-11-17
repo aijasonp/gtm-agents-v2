@@ -40,6 +40,9 @@ PIPELINE = [
     ("enrichment", "enrich_queue", "Email and phone waterfall for target contacts"),
     ("rep-brief", "daily_briefs", "One brief per AE: top accounts, people, signals, gaps, next actions"),
     ("product-marketing", "weekly_field_report", "Competitor, objection and win/loss trends from the field"),
+    ("account-health", "import_usage_inbox", "Load the product usage export"),
+    ("account-health", "daily_health", "Customer renewal risk and expansion readiness; tasks queued on change"),
+    ("account-health", "weekly_portfolio", "ARR at risk, expansion plays, renewals in the window"),
     ("revenue-pulse", "weekly_pulse", "Leadership pipeline summary"),
     ("forecast-prep", "forecast_prep", "Forecast call prep for AEs, managers and execs"),
     ("stack-audit", "monthly_utilization", "Tool spend, utilization, overlap and savings"),
@@ -64,11 +67,12 @@ def main() -> int:
                        ("leads", "leads.csv"), ("meetings", "meetings"), ("meetings", "meetings.csv")]:
         print(f"import {kind:<9} {RECORD_IMPORTERS[kind](ctx, sample / path)}")
     import shutil
-    for src, inbox in [("replies.json", "data/replies/inbox"), ("engagement.csv", "data/engagement/inbox")]:
+    for src, inbox in [("replies.json", "data/replies/inbox"), ("engagement.csv", "data/engagement/inbox"),
+                       ("../../agents/account-health/sample/usage.csv", "data/usage/inbox")]:
         Path(inbox).mkdir(parents=True, exist_ok=True)
         for old in Path(inbox).parent.glob("processed/*"):
             old.unlink()
-        shutil.copy(sample / src, Path(inbox) / src)
+        shutil.copy(sample / src, Path(inbox) / Path(src).name)
 
     for agent, job, what in PIPELINE:
         print(f"\n{'=' * 78}\n{ms[agent].name} :: {job}\n{what}\n{'-' * 78}")

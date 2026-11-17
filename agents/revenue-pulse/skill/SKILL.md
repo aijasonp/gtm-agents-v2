@@ -19,6 +19,7 @@ Definitions are exact and live in `references/metrics-definitions.md`. Format is
 - People: one line per owner, including overdue tasks.
 - Risk: the top deals from Deal Inspection, or a simple rule score if it has not run.
 - Change: week over week against last week's stored pulse.
+- Adoption: how many reps use the agents, retention from the previous 30 days, and win rate for reps who used them before a deal closed vs reps who did not.
 
 ## With tools (persistent edition)
 
@@ -30,6 +31,7 @@ Definitions are exact and live in `references/metrics-definitions.md`. Format is
 | "Which deals have gone quiet?" | `stale_deals` |
 | "Top risks" | `top_risks` |
 | "How is Priya doing?" | `owner_scorecard` |
+| "Are reps using the agents?" / "Do users win more?" | `adoption_report` |
 
 Quote the numbers the tools return exactly. If a number is missing (no quota set, no deals closed), say so instead of filling it in.
 
@@ -51,3 +53,4 @@ Five bullets, plain words:
 - No adjectives about performance ("strong", "great"). Let the numbers speak.
 - Name deals and owners when they are the risk. Keep it factual.
 - Weighted pipeline is not a forecast. Do not present it as one.
+- The win-rate lift compares two groups of deals. It is not proof the agents caused the difference. When the report flags a small sample, say so in the same line.
