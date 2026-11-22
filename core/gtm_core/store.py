@@ -171,6 +171,19 @@ CREATE TABLE IF NOT EXISTS deal_history (
   forecast_category TEXT
 );
 CREATE INDEX IF NOT EXISTS ix_deal_history ON deal_history(deal_id, snapshot_at);
+CREATE TABLE IF NOT EXISTS deal_stage_history (
+  id TEXT PRIMARY KEY,
+  deal_id TEXT NOT NULL,
+  stage TEXT,
+  amount REAL,
+  close_date TEXT,
+  forecast_category TEXT,
+  probability REAL,
+  changed_at TEXT,
+  attrs TEXT,
+  updated_at TEXT
+);
+CREATE INDEX IF NOT EXISTS ix_deal_stage_history ON deal_stage_history(deal_id, changed_at);
 CREATE TABLE IF NOT EXISTS meetings (
   id TEXT PRIMARY KEY,
   account_id TEXT,
@@ -299,6 +312,8 @@ RECORD_TABLES = {
     "meetings": ["id", "account_id", "deal_id", "title", "started_at", "owner", "attendees", "transcript", "summary",
                  "source", "processed_at"],
     "tasks": ["id", "owner", "account_id", "deal_id", "contact_id", "title", "due_at", "status", "source"],
+    # CRM stage history (Salesforce OpportunityHistory): one row per change, keyed by the CRM row id
+    "deal_stage_history": ["id", "deal_id", "stage", "amount", "close_date", "forecast_category", "probability", "changed_at"],
 }
 JSON_COLUMNS = {"meddpicc", "attendees", "summary"}
 

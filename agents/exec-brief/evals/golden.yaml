@@ -1,0 +1,38 @@
+# Exec Brief golden cases. now = Fri 2026-11-20 12:00 UTC. Last week = Fri 2026-11-13.
+now: "2026-11-20T12:00:00+00:00"
+deals:
+  - {id: A, name: Contoso Platform, owner: Sam Rivera, stage: Discovery, status: open, amount: 100000, created_at: "2026-11-16", close_date: "2026-12-31", last_activity_at: "2026-11-18", lead_source: Web}
+  - {id: B, name: Fabrikam Pilot, owner: Priya Shah, stage: Evaluation, status: open, amount: 50000, created_at: "2026-11-10", close_date: "2026-11-15", last_activity_at: "2026-10-20", lead_source: Partner}
+  - {id: C, name: Northwind Rollout, owner: Sam Rivera, stage: Closed Won, status: won, amount: 200000, created_at: "2026-08-01", close_date: "2026-11-18", lead_source: Partner}
+  - {id: D, name: Tailspin Data, owner: Priya Shah, stage: Closed Lost, status: lost, amount: 40000, created_at: "2026-07-01", close_date: "2026-11-17", lead_source: Outbound}
+  - {id: E, name: Adatum Expansion, owner: Lee Park, stage: Closed Won, status: won, amount: 60000, created_at: "2026-09-01", close_date: "2026-11-11", lead_source: Web}
+  - {id: F, name: Litware Pilot, owner: Lee Park, stage: Closed Lost, status: lost, amount: 30000, created_at: "2026-06-01", close_date: "2026-11-08", lead_source: Outbound}
+snapshots:   # stored daily values (only the ones the cases use)
+  "2026-10-16": {open_pipeline: 90000}
+  "2026-10-23": {open_pipeline: 90000}
+  "2026-10-30": {open_pipeline: 110000}
+  "2026-11-06": {open_pipeline: 100000}
+  "2026-11-13": {open_pipeline: 120000, past_due_opps: 3}
+expect:
+  values:
+    open_pipeline: [150000, 120000, good]
+    new_pipeline_7d: [100000, 50000, good]
+    new_opps_7d: [1, 1, flat]
+    won_7d: [200000, 60000, good]
+    lost_7d: [40000, 30000, bad]
+    won_qtd: [260000, null, none]
+    win_rate_90d: [0.5, 0.5, flat]
+    past_due_opps: [1, 3, good]
+    stalled_opps: [1, null, none]
+    avg_cycle_days_90d: [90.0, 71.0, bad]
+    marketing_sourced_pipeline_7d: [100000, 0, good]
+    partner_sourced_pipeline_7d: [0, 50000, bad]
+    partner_won_qtd: [200000, null, none]
+  not_configured: mqls_7d
+  cso_signals: [good, good, bad, good, none]
+  snapshot:
+    sales: {good: won_7d, bad: lost_7d}
+    marketing: {good: marketing_sourced_pipeline_7d, bad: null}
+    partners: {good: null, bad: partner_sourced_pipeline_7d}
+    customer_success: {good: null, bad: null}
+  heat_open_pipeline: {values: [90000, 110000, 100000, 120000, 150000], cells: [flat, good, bad, good, good]}

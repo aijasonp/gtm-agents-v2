@@ -10,6 +10,7 @@
   approve 12 [13 ...]          approve (approvers only)
   reject 12 [13 ...]           reject (approvers only)
   run <agent> <job>            run a job now (admins only). STOP still holds it.
+  route <question>             (handled in assistant.handle_message) which agents the chief of staff would use
 
 Who is who (Slack user ids, comma-separated):
   GTM_SLACK_APPROVERS  may approve and reject
@@ -29,6 +30,7 @@ HELP = """*Commands* (instant, no model):
 - `stop` or `stop cold` or `stop icp-outbound -- reason`: pause everything or one scope (anyone allowed)
 - `resume`: lift STOP (admins)
 - `run <agent> <job>`: run a job now (admins)
+- `route <question>`: show which agents would handle a question and how many tools they load, without running it
 Anything else is a question for the agents, for example "what is stalled in Stage 1 for Sam?"."""
 
 CMD = re.compile(r"^\s*(help|status|approvals|approve|reject|stop|resume|run)\b(.*)$", re.I | re.S)

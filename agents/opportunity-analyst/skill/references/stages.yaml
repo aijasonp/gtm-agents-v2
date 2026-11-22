@@ -1,0 +1,17 @@
+# Stage keys, the CRM stage names that map to them, and the win probability used for weighted pipeline.
+# Edit during install to match the CRM. Matching is case-insensitive, exact or contained.
+stage_aliases:
+  discovery: [discovery, appointment scheduled, appointmentscheduled, prospecting, first meeting]
+  qualification: [qualification, qualified, qualifiedtobuy, needs analysis]
+  evaluation: [evaluation, demo, presentationscheduled, technical validation, pilot, value proposition]
+  proposal: [proposal, proposal sent, quote, id. decision makers]
+  negotiation: [negotiation, contract sent, contractsent, legal, redlines]
+  commit: [commit, verbal, decisionmakerboughtin, closing]
+probabilities:
+  discovery: 0.10
+  qualification: 0.20
+  evaluation: 0.40
+  proposal: 0.60
+  negotiation: 0.80
+  commit: 0.90
+order: [discovery, qualification, evaluation, proposal, negotiation, commit]

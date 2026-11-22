@@ -1,6 +1,6 @@
 # gtm-agents
 
-A full-stack GTM agent pack a mid-market sales team installs in its own environment and runs on the model keys it already pays for, frontier or open-weight. Twenty-seven agents cover the revenue motion from first signal and event to signed proposal and the board forecast, on one runtime with a chat assistant (terminal and Slack), approvals for every write, and a licensed library of 716 sales and marketing playbooks. No agent host is required: see [docs/RUNNING.md](docs/RUNNING.md).
+A full-stack GTM agent pack a mid-market sales team installs in its own environment and runs on the model keys it already pays for, frontier or open-weight. Twenty-nine agents cover the revenue motion from first signal and event to signed proposal and the board forecast, on one runtime with a chat assistant (terminal and Slack), approvals for every write, and a licensed library of 716 sales and marketing playbooks. No agent host is required: see [docs/RUNNING.md](docs/RUNNING.md).
 
 Every agent ships in two editions from one source:
 
@@ -40,6 +40,8 @@ Every agent ships in two editions from one source:
 | 25 | **Signal Sourcing** | A | Finds dated, sourced signals: 10-K and 10-Q quotes (Risk Factors, MD&A), 8-K officer changes, newsroom initiatives and funding, buyer-team hiring on public job boards, or job search sites for enterprises with no public board; changedetection.io page changes (careers, leadership, trust, newsroom, pricing, scripts); first-party PostHog web and product events (pricing, demo and security visits, downloads, trials, repeat visits, product-qualified accounts); no signal, no send; discovers new companies from SEC full-text search | weekdays 5am, weekly discovery |
 | 26 | **Follow-Through** | A | Engagement triggers from a RevOps decision table (3 human opens, a click, 2 opens on tier A) pause automation and tee up the AE with a business-hours SLA; a cadence ledger gives every contact after a meeting, event, tee-up or proposal one next touch, drafts the gaps for the AE to confirm one email at a time, escalates anything missed to the owner then the manager, and reports any deal with no follow-up | every 10 and 15 min, weekdays 8am |
 | 27 | **Daily Book** | A | A full, ranked book of 25 to 50 people per AE every weekday: warm from the CRM and engagement (engaged, quiet deals, champions who moved, unworked inbound, events, social, closed-lost recycle), cold from owned signals (today's sourced accounts first); per-rep warm/cold split, backfill between pools, shortfall reported never padded; cold first touches drafted for approval | weekdays 6:45am |
+| 28 | **Opportunity Analyst** | A | Every open, won and lost opportunity from the CRM (all history, incremental sync): win rate by owner, segment, source, type or competitor, loss reasons and the stage deals die at, stage conversion and days in stage, monthly and quarterly trends, any deal with its stage history | every 30 min sync, Sunday full |
+| 29 | **Exec Brief** | A | Five numbers per leader (CEO, CMO, CSO, channel) with week-over-week change, a company snapshot with one good and one bad number per department, and a command center heat map; CRM metrics in code plus named read-only Snowflake queries | weekdays 7am |
 
 How they hand work to each other, what each one reads and writes, and which playbooks each bundles: [docs/AGENTS.md](docs/AGENTS.md).
 
@@ -60,6 +62,10 @@ How they hand work to each other, what each one reads and writes, and which play
 ## Talking to the agents from Slack
 
 `gtm slack-bot` (the `slack-bot` service in docker compose) is the built-in Slack front end: one bot over Socket Mode, no public URL, no agent host. Ask in a DM or by mention; `status`, `approvals`, `approve 12`, `stop`, `resume` and `run <agent> <job>` are handled in code without a model. Rep briefs and daily books go to each owner's DM. Nothing in the runtime depends on OpenClaw or NetClaw. AWS deployment with Bedrock: [docs/DEPLOY-AWS.md](docs/DEPLOY-AWS.md).
+
+### Chief of staff routing
+
+Questions go to a chief of staff that picks the one to three agents a request needs, then runs each step in a fresh context holding only those agents' tools and skills. The model never sees all 167 tools at once: a routed step loads 2 to 10 tools (about 1,100 to 2,000 tokens of prompt) where the flat assistant loads every tool on every call (about 13,800 tokens). Clear requests route on keywords with no model call; the rest take one small routing call that reads a one-line catalog of agents. `route <question>` in Slack (or `gtm route "..."`) shows the plan without running it. Domains, keywords and limits: [config/routing.yaml](config/routing.yaml). How it works: [docs/CHIEF-OF-STAFF.md](docs/CHIEF-OF-STAFF.md). `GTM_ROUTER=off` restores the flat assistant.
 
 ## Optional, not deployed by default: NetClaw front end
 
@@ -91,7 +97,6 @@ Full steps: [docs/INSTALL.md](docs/INSTALL.md). How it fits together: [docs/ARCH
 | Command | Does |
 | --- | --- |
 | `gtm agents` | List installed agents |
-| `gtm sync <agent>` | Read accounts, contacts and deals from the CRM (read-only) |
 | `gtm import <agent> accounts\|contacts\|signals\|leads\|deals\|tasks\|meetings\|outcomes <path>` | Load CSV, JSON or a folder of transcripts (zero-integration path) |
 | `gtm run <agent> <job>` | Run a job now |
 | `gtm schedule` | Run every agent's jobs on their cron |
@@ -102,7 +107,9 @@ Full steps: [docs/INSTALL.md](docs/INSTALL.md). How it fits together: [docs/ARCH
 | `gtm call <agent> <tool> --args '{...}'` | Call any tool from the shell |
 | `gtm serve-mcp <agent>` | MCP server for Claude, ChatGPT or any MCP client |
 | `gtm serve-api` | HTTP intake (leads, meetings, signals, replies, engagement) and approvals |
-| `gtm ask "..."` / `gtm assistant` / `gtm slack-bot` | Chat with every agent's tools from the terminal or Slack |
+| `gtm ask "..."` / `gtm assistant` / `gtm slack-bot` | Chat with the agents from the terminal or Slack, routed by the chief of staff (`--flat` loads every tool) |
+| `gtm route "..."` | Show which agents would handle a question and how many tools they load |
+| `gtm sync <agent> [--full]` | Pull accounts, contacts, every opportunity and stage history from the CRM (incremental unless --full) |
 | `gtm models` | Check both model tiers (Claude, OpenAI or any open-weight endpoint) |
 | `gtm usage <agent>` / `gtm resume <agent>` | Token and spend budgets |
 | `gtm selftest` / `gtm eval <agent>` | Diagnostics and golden-case evals |

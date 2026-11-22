@@ -1,0 +1,30 @@
+id: exec-brief
+name: Exec Brief
+version: 0.1.0
+tier: A
+description: >
+  Daily leadership briefs: five numbers per leader (CEO, CMO, CSO, channel) with week-over-week change, a company
+  snapshot with one good and one bad number per department, and a command center heat map of the leadership
+  metrics week over week. Numbers come from the synced CRM and named read-only Snowflake queries, computed in code.
+editions: [persistent]
+skill: skill/SKILL.md
+references:
+  - ../../config/exec_brief.yaml
+  - ../../config/company.yaml
+library:
+  - library/coreyhaines-marketingskills/skills/revops
+tools:
+  - exec_brief
+  - company_snapshot
+  - command_center
+  - leadership_metric
+  - list_leadership_metrics
+connectors_required: [crm]
+connectors_optional: [slack, snowflake]
+jobs:
+  - {name: daily_briefs, cron: "0 12 * * 1-5", model_class: none}   # 7:00 Central (CDT; 6:00 in CST)
+  - {name: snapshot_only, cron: "0 12 * * 0,6", model_class: none}
+budgets: {daily_tokens: 100000, monthly_usd: 10}
+evals: evals/golden.yaml
+config:
+  brief: ../../config/exec_brief.yaml
