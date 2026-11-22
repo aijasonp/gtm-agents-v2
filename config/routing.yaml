@@ -1,0 +1,81 @@
+# Chief of staff routing: which agent handles a request, so only that agent's tools and skill are loaded.
+#
+# How a request is routed (core/gtm_core/chief_of_staff.py):
+#   1. Keywords below are scored against the request. A clear winner is routed with no model call.
+#   2. Otherwise one small model call reads the one-line catalog of agents (not their tools) and picks
+#      one to three agents, split into steps when the request has several parts.
+#   3. Each step runs in a fresh context holding only the chosen agents' tools and skills.
+#
+# Keywords are lowercase words or phrases matched on word boundaries. A phrase scores its word count, so
+# "loss reason" (2) beats "loss" (1). RevOps owns this file; add the words your team actually uses.
+
+limits:
+  max_agents_per_step: 3
+  max_steps: 3
+  max_tools_per_step: 24      # a step that would load more is split
+  skill_chars: 6000           # how much of each routed agent's SKILL.md goes into the step's prompt
+  history_turns: 4            # recent thread turns passed to a step, for follow-ups
+
+# A clear keyword winner skips the routing model: its score must reach min_score and beat the
+# runner-up by `margin` times.
+keyword_routing:
+  min_score: 2
+  margin: 2.0
+
+domains:
+  pipeline:
+    description: New pipeline in. Inbound leads, replies, signals, accounts to target, enrichment, daily books and briefs for AEs.
+    agents: [lead-triage, reply-desk, signal-scout, signal-sourcing, social-signals, enrichment, icp-outbound, daily-book, rep-brief]
+  deals:
+    description: Working open deals. Meeting prep, call notes, follow-ups, deal risk, proposals, call coaching.
+    agents: [sales-execution, meeting-intelligence, seller-follow-up, follow-through, deal-inspection, proposal-builder, call-coach]
+  revops:
+    description: Opportunity data and analysis, pipeline health, forecast, CRM data quality.
+    agents: [opportunity-analyst, revenue-pulse, forecast-prep, crm-hygiene]
+  exec:
+    description: Daily leadership briefs for the CEO, CMO, CSO and channel lead, and the company snapshot.
+    agents: [exec-brief]
+  marketing:
+    description: Competitors, battlecards, messaging, content, events, copy checks.
+    agents: [product-marketing, content-studio, event-campaigns, copy-qa-gate]
+  ops:
+    description: Agent health, draft quality, tool stack and renewals, AE feedback on agents.
+    agents: [ops-monitor, quality-monitor, stack-audit, rep-feedback]
+
+keywords:
+  opportunity-analyst: [opportunity, opportunities, opps, opp, lost deals, lost opportunities, closed lost, closed won,
+    win rate, win/loss, win loss, loss reason, loss reasons, why we lose, why are we losing, lost to, competitor losses,
+    stage conversion, conversion rate, days in stage, cycle time, sales cycle, pipeline by, pipeline trend,
+    created vs won, salesforce data, sync salesforce, refresh salesforce, past due, by lead source, by segment]
+  revenue-pulse: [weekly pulse, pulse, pipeline health, coverage, quota, weighted pipeline, slipped, slipped deals,
+    stale deals, owner scorecard, rep scorecard, daily gtm report, funnel report, top risks]
+  forecast-prep: [forecast, forecast call, commit, best case, board forecast, forecast accuracy, call the number]
+  crm-hygiene: [duplicate, duplicates, dedupe, crm hygiene, data quality, bounced contacts, past close date, clean up crm]
+  exec-brief: [ceo, cmo, cso, exec brief, executive brief, leadership brief, company snapshot, command center,
+    leadership team, board update, heat map, good and bad]
+  lead-triage: [inbound, inbound lead, new lead, leads, lead routing, route lead, demo request, mql, sla]
+  reply-desk: [reply, replies, out of office, opt out, unsubscribe, bounce, bounced]
+  signal-scout: [icp score, icp fit, account score, tier a, tier, buying signals, intent, score account, top accounts]
+  signal-sourcing: [10-k, 10-q, 8-k, sec filing, filings, job postings, hiring, newsroom, funding, scrape, scraping,
+    source signals, page changes, website visits, posthog]
+  social-signals: [linkedin engagement, linkedin, youtube, social, who engaged, post engagement]
+  enrichment: [enrich, enrichment, phone number, mobile, email address, find email, waterfall, apollo, clay, floqer]
+  icp-outbound: [outbound, cold email, target list, prospect list, sequence, prospecting, cold outreach]
+  daily-book: [daily book, book of people, warm and cold, call list, who to call today]
+  rep-brief: [rep brief, morning brief, my brief, ae brief, what should i do today]
+  sales-execution: [meeting prep, pre-call, prep me, call prep, discovery questions, objection, objections, next meeting]
+  meeting-intelligence: [transcript, call notes, call summary, gong, recording, what was said, meddpicc evidence]
+  seller-follow-up: [overdue tasks, missed next steps, recap email, call recap, follow up list]
+  follow-through: [follow-through, cadence, tee up, tee-up, no follow-up, missed follow-up, engagement trigger]
+  deal-inspection: [deal risk, risky deals, at risk, meddpicc, inspect, deal inspection, deal review, disqualify]
+  proposal-builder: [proposal, quote, pricing, discount, price book, order form]
+  call-coach: [roleplay, role play, coaching, coach, call score, drill]
+  product-marketing: [competitor, competitors, battlecard, battlecards, competitive, win/loss by competitor, messaging,
+    positioning, launch brief, objection library]
+  content-studio: [linkedin post, content, video script, captions, srt, post idea]
+  event-campaigns: [event, events, webinar, dinner, booth, invite list, conference]
+  copy-qa-gate: [check copy, copy check, score this email, review this email, qa this]
+  ops-monitor: [agent health, failed jobs, missed jobs, stuck approvals, spend, budget, ops monitor, runtime]
+  quality-monitor: [draft quality, quality drop, unsourced claims, quality monitor]
+  stack-audit: [tool stack, stack audit, renewal, renewals, utilization, tool overlap, savings]
+  rep-feedback: [feedback on the agent, agent feedback, rule change, the agent keeps, stop writing]

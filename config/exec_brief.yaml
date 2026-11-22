@@ -1,0 +1,67 @@
+# Exec Brief: who gets which five numbers every morning, the company snapshot, and the command center.
+#
+# Metrics come from two places:
+#   source: crm        computed in code from the synced CRM (built in; listed under `crm_metrics` below)
+#   source: snowflake  a named read-only query; it must return a column `value` and may return `prior`
+#                      (the same number one week earlier). Leave sql empty until the query is written: an
+#                      empty metric is skipped and reported as "not configured", never guessed.
+#
+# base: <built-in crm metric>   compute a built-in metric over only the deals matching `filter`
+# good: up | down       which direction is good news (lost amount and cycle days are good when they go down)
+# Week over week: crm flow metrics (created, won, lost in a 7-day window) compute last week directly; stock
+# metrics (open pipeline, past due) compare with the snapshot stored 7 days earlier.
+
+timezone: America/Chicago
+channel: ""            # Slack channel for the company snapshot (blank: the default channel)
+
+roles:
+  ceo:
+    title: CEO
+    person: {name: "", email: "", slack_id: ""}
+    metrics: [open_pipeline, new_pipeline_7d, won_qtd, win_rate_90d, net_revenue_retention]
+  cmo:
+    title: CMO
+    person: {name: "", email: "", slack_id: ""}
+    metrics: [marketing_sourced_pipeline_7d, mqls_7d, new_opps_7d, new_pipeline_7d, win_rate_90d]
+  cso:
+    title: CSO
+    person: {name: "", email: "", slack_id: ""}
+    metrics: [open_pipeline, won_7d, lost_7d, past_due_opps, stalled_opps]
+  channel:
+    title: VP Channel and Partnerships
+    person: {name: "", email: "", slack_id: ""}
+    metrics: [partner_sourced_pipeline_7d, partner_won_qtd, new_opps_7d, open_pipeline, win_rate_90d]
+
+# Company snapshot: one good and one bad number per department, picked in code by week-over-week change.
+departments:
+  sales: [new_pipeline_7d, won_7d, lost_7d, win_rate_90d, past_due_opps, stalled_opps]
+  marketing: [marketing_sourced_pipeline_7d, mqls_7d, new_opps_7d]
+  partners: [partner_sourced_pipeline_7d, partner_won_qtd]
+  customer_success: [net_revenue_retention, logo_churn_qtd]
+
+# Command center: these metrics as a week-over-week heat map, every weekday.
+command_center: [open_pipeline, new_pipeline_7d, won_7d, lost_7d, win_rate_90d, past_due_opps, stalled_opps,
+                 avg_cycle_days_90d, marketing_sourced_pipeline_7d, partner_sourced_pipeline_7d, net_revenue_retention]
+
+metrics:
+  # ---- built in, from the CRM ----
+  open_pipeline:        {label: Open pipeline, source: crm, unit: usd, good: up}
+  new_pipeline_7d:      {label: Pipeline created (7d), source: crm, unit: usd, good: up}
+  new_opps_7d:          {label: Opportunities created (7d), source: crm, unit: count, good: up}
+  won_7d:               {label: Closed won (7d), source: crm, unit: usd, good: up}
+  lost_7d:              {label: Closed lost (7d), source: crm, unit: usd, good: down}
+  won_qtd:              {label: Closed won (QTD), source: crm, unit: usd, good: up}
+  win_rate_90d:         {label: Win rate (90d), source: crm, unit: pct, good: up}
+  past_due_opps:        {label: Open opps past close date, source: crm, unit: count, good: down}
+  stalled_opps:         {label: Open opps idle 14+ days, source: crm, unit: count, good: down}
+  avg_cycle_days_90d:   {label: Sales cycle, won (90d), source: crm, unit: days, good: down}
+  marketing_sourced_pipeline_7d: {label: Marketing-sourced pipeline (7d), source: crm, base: new_pipeline_7d, unit: usd, good: up,
+                                  filter: {lead_source: [Web, Inbound, Marketing, Event, Webinar, Content]}}
+  partner_sourced_pipeline_7d:   {label: Partner-sourced pipeline (7d), source: crm, base: new_pipeline_7d, unit: usd, good: up,
+                                  filter: {lead_source: [Partner, Channel, Reseller, Referral Partner]}}
+  partner_won_qtd:      {label: Partner-sourced won (QTD), source: crm, base: won_qtd, unit: usd, good: up,
+                         filter: {lead_source: [Partner, Channel, Reseller, Referral Partner]}}
+  # ---- warehouse (fill in the SQL against your Snowflake tables) ----
+  mqls_7d:              {label: MQLs (7d), source: snowflake, unit: count, good: up, sql: ""}
+  net_revenue_retention: {label: Net revenue retention, source: snowflake, unit: pct, good: up, sql: ""}
+  logo_churn_qtd:       {label: Logos churned (QTD), source: snowflake, unit: count, good: down, sql: ""}

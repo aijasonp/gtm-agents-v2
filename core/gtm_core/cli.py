@@ -167,18 +167,33 @@ def cmd_import(s, a):
     print(json.dumps(RECORD_IMPORTERS[a.kind](ctx, Path(a.path)), indent=2))
 
 
-def cmd_ask(s, a):
+def _front(s, a):
+    """Chief of staff unless --agents pins the tools, --flat is set, or GTM_ROUTER=off."""
     from .assistant import Assistant
-    ans = Assistant(s, agents=a.agents.split(",") if a.agents else None).ask(" ".join(a.question))
+    from .chief_of_staff import ChiefOfStaff, router_enabled
+    if a.agents or getattr(a, "flat", False) or not router_enabled():
+        return Assistant(s, agents=a.agents.split(",") if a.agents else None)
+    return ChiefOfStaff(s)
+
+
+def cmd_ask(s, a):
+    ans = _front(s, a).ask(" ".join(a.question))
     print(ans.text)
     if a.trace:
         print(json.dumps(ans.trace, indent=2, default=str))
 
 
+def cmd_route(s, a):
+    from .chief_of_staff import ChiefOfStaff
+    print(ChiefOfStaff(s).explain(" ".join(a.question)))
+
+
 def cmd_assistant(s, a):  # pragma: no cover - interactive
-    from .assistant import Assistant
-    bot = Assistant(s, agents=a.agents.split(",") if a.agents else None)
-    print(f"GTM assistant: {len(bot.tools)} tools from {len(bot.manifests)} agents. Ctrl-D to quit.")
+    from .chief_of_staff import ChiefOfStaff
+    bot = _front(s, a)
+    flat = bot.a if isinstance(bot, ChiefOfStaff) else bot
+    mode = "chief of staff routing" if bot is not flat else "every tool loaded"
+    print(f"GTM assistant: {len(flat.manifests)} agents, {len(flat.tools)} tools, {mode}. Ctrl-D to quit.")
     history = []
     while True:
         try:
@@ -187,7 +202,7 @@ def cmd_assistant(s, a):  # pragma: no cover - interactive
             break
         if not q:
             continue
-        ans = bot.ask(q, history)
+        ans = bot.ask(q, history, thread_key="cli") if bot is not flat else bot.ask(q, history)
         print(ans.text + "\n")
         if ans.text.strip():
             history += [{"role": "user", "content": q}, {"role": "assistant", "content": ans.text}]
@@ -211,7 +226,7 @@ def cmd_models(s, a):
 
 def cmd_sync(s, a):
     from .sync import sync_all
-    print(json.dumps(sync_all(_ctx(s, a.agent)), indent=2))
+    print(json.dumps(sync_all(_ctx(s, a.agent), full=getattr(a, "full", False)), indent=2))
 
 
 def cmd_handoffs(s, a):
@@ -313,11 +328,12 @@ def main(argv=None):
     rs = sub.add_parser("resume"); rs.add_argument("agent"); rs.set_defaults(fn=cmd_resume)
     sub.add_parser("selftest").set_defaults(fn=cmd_selftest)
     sub.add_parser("models").set_defaults(fn=cmd_models)
-    ak = sub.add_parser("ask"); ak.add_argument("question", nargs="+"); ak.add_argument("--agents", default="")
+    ak = sub.add_parser("ask"); ak.add_argument("question", nargs="+"); ak.add_argument("--agents", default=""); ak.add_argument("--flat", action="store_true")
     ak.add_argument("--trace", action="store_true"); ak.set_defaults(fn=cmd_ask)
-    asst = sub.add_parser("assistant"); asst.add_argument("--agents", default=""); asst.set_defaults(fn=cmd_assistant)
+    asst = sub.add_parser("assistant"); asst.add_argument("--agents", default=""); asst.add_argument("--flat", action="store_true"); asst.set_defaults(fn=cmd_assistant)
+    rt = sub.add_parser("route", help="show which agents the chief of staff would use for a question"); rt.add_argument("question", nargs="+"); rt.set_defaults(fn=cmd_route)
     sub.add_parser("slack-bot").set_defaults(fn=cmd_slack_bot)
-    sy = sub.add_parser("sync"); sy.add_argument("agent"); sy.set_defaults(fn=cmd_sync)
+    sy = sub.add_parser("sync"); sy.add_argument("agent"); sy.add_argument("--full", action="store_true", help="pull every record again, not only changes"); sy.set_defaults(fn=cmd_sync)
     ho = sub.add_parser("handoffs"); ho.add_argument("--all", action="store_true"); ho.set_defaults(fn=cmd_handoffs)
     dr = sub.add_parser("drafts"); dr.add_argument("--agent"); dr.add_argument("--status")
     dr.add_argument("--limit", type=int, default=20); dr.add_argument("--full", action="store_true")

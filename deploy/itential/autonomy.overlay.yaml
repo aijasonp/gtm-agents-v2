@@ -1,0 +1,12 @@
+# Itential deployment: autonomy levels layered on config/autonomy.yaml (set GTM_AUTONOMY_OVERLAY to this file).
+#
+# Agents write routine Salesforce updates (post-call notes, tasks, deal notes, field and contact updates) with no
+# human approval. Every auto write is still recorded in the approval queue and stops under STOP.
+# Follow-up emails to prospects and customers stay with the rep: sends to a buyer can never be auto
+# (config/approvals.yaml send_actions), whatever this file says.
+actions:
+  crm_task: auto
+  crm_note: auto
+  deal_note: auto
+  crm_update: auto
+  contact_update: auto

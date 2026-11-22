@@ -53,6 +53,12 @@ class Autonomy:
             rules.update(yaml.safe_load((base / "autonomy.yaml").read_text()) or {})
         except FileNotFoundError:
             pass
+        overlay = os.environ.get("GTM_AUTONOMY_OVERLAY")
+        if overlay:
+            # A deployment's own levels on top of the shipped file: only the keys it names change.
+            extra = yaml.safe_load(Path(overlay).read_text()) or {}
+            for k, v in extra.items():
+                rules[k] = {**(rules.get(k) or {}), **v} if isinstance(v, dict) and isinstance(rules.get(k), dict) else v
         rules["stop"] = {**DEFAULTS["stop"], **(rules.get("stop") or {})}
         pol = Policy.load(base)
         return cls(rules, set(pol.rules.get("send_actions") or []), base)

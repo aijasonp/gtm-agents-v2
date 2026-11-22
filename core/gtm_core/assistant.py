@@ -105,11 +105,15 @@ class Assistant:
         core = next(iter(self.ctxs.values()), None)
         self.gateway = gateway or (core.gateway if core else None)
 
-    def tool_specs(self) -> list[dict]:
-        return [{"name": t.name, "description": t.description, "parameters": t.schema} for t in self.tools.values()]
+    def tool_specs(self, agents: list[str] | None = None) -> list[dict]:
+        """Tool definitions sent to the model; `agents` limits them to those agents' tools only."""
+        return [{"name": t.name, "description": t.description, "parameters": t.schema} for t in self.tools.values()
+                if agents is None or t.agent in agents]
 
-    def call_tool(self, name: str, args: dict) -> str:
+    def call_tool(self, name: str, args: dict, agents: list[str] | None = None) -> str:
         t = self.tools.get(name)
+        if t is not None and agents is not None and t.agent not in agents:
+            t = None  # a tool outside the routed agents is never run, even if the model names it
         if t is None:
             return json.dumps({"error": f"unknown tool {name}"})
         if isinstance(args, str):
@@ -132,23 +136,27 @@ class Assistant:
         limit = int(os.environ.get("GTM_ASSISTANT_TOOL_CHARS", 8000))
         return text if len(text) <= limit else text[:limit] + '..."(truncated)"'
 
-    def ask(self, question: str, history: list[dict] | None = None, max_steps: int = 8) -> Answer:
+    def ask(self, question: str, history: list[dict] | None = None, max_steps: int = 8,
+            agents: list[str] | None = None, system: str | None = None) -> Answer:
+        """Tool loop. `agents` limits the tools loaded for this question (the chief of staff routes here with one
+        or two agents, so only their tools reach the model); `system` replaces the default prompt."""
         if self.gateway is None or not self.gateway.available(self.tier):
             return Answer("No model is configured. Set ANTHROPIC_API_KEY, OPENAI_API_KEY or GTM_FRONTIER_BASE_URL "
                           "(open-weight server), then run `gtm models`.")
         messages = list(history or []) + [{"role": "user", "content": question}]
         trace, usd = [], 0.0
-        specs = self.tool_specs()
+        specs = self.tool_specs(agents)
         with StepCounter(limit=max_steps) as steps:
             while True:
                 steps.tick("assistant")
-                c = self.gateway.chat(messages, system=SYSTEM, model_class=self.tier, max_tokens=1500, tools=specs)
+                c = self.gateway.chat(messages, system=system or SYSTEM, model_class=self.tier, max_tokens=1500,
+                                     tools=specs or None)
                 usd += c.usd
                 if not c.tool_calls:
                     return Answer(c.text.strip(), trace, usd)
                 messages.append({"role": "assistant", "content": c.text, "tool_calls": c.tool_calls})
                 for call in c.tool_calls:
-                    result = self.call_tool(call["name"], call.get("args") or {})
+                    result = self.call_tool(call["name"], call.get("args") or {}, agents)
                     trace.append({"tool": call["name"], "args": call.get("args"), "result": result[:300]})
                     messages.append({"role": "tool", "tool_call_id": call["id"], "name": call["name"], "content": result})
 
@@ -156,14 +164,24 @@ class Assistant:
 # ---------------- Slack bot (Socket Mode: no public URL needed) ----------------
 
 
-def handle_message(assistant: Assistant, text: str, user: str, history: list[dict]) -> str:
+def handle_message(assistant, text: str, user: str, history: list[dict], thread_key: str | None = None) -> str:
     """Slack message -> reply. Commands (status, approvals, approve, reject, stop, resume, run, help) are handled
-    in code without a model; see gtm_core.slack_commands. Everything else goes to the model with tools."""
+    in code without a model; see gtm_core.slack_commands. `route <question>` shows where the chief of staff would
+    send a question without running it. Everything else goes to the chief of staff (or, with GTM_ROUTER=off, to the
+    flat assistant with every tool)."""
+    from .chief_of_staff import ChiefOfStaff
     from .slack_commands import handle
-    reply = handle(text, user, assistant.store, assistant.s, getattr(assistant, "all_manifests", assistant.manifests))
+    cos = assistant if isinstance(assistant, ChiefOfStaff) else None
+    flat = cos.a if cos else assistant
+    reply = handle(text, user, flat.store, flat.s, getattr(flat, "all_manifests", flat.manifests))
     if reply is not None:
         return reply
-    return assistant.ask(text, history).text or "(no answer)"
+    m = re.match(r"^\s*route\s+(.+)$", text or "", re.I | re.S)
+    if m and cos:
+        return cos.explain(m.group(1).strip())
+    if cos:
+        return cos.ask(text, history, thread_key=thread_key).text or "(no answer)"
+    return flat.ask(text, history).text or "(no answer)"
 
 
 def run_slack_bot(settings: Settings) -> None:  # pragma: no cover - needs a live Slack workspace
@@ -181,7 +199,9 @@ def run_slack_bot(settings: Settings) -> None:  # pragma: no cover - needs a liv
     allow_all = os.environ.get("GTM_SLACK_ALLOW_ALL") == "1"
     if not allowed and not allow_all:
         raise SystemExit("set GTM_SLACK_ALLOWED_USERS (Slack user IDs), or GTM_SLACK_ALLOW_ALL=1 for every workspace member")
-    assistant = Assistant(settings)
+    from .chief_of_staff import ChiefOfStaff, router_enabled
+    assistant = ChiefOfStaff(settings) if router_enabled() else Assistant(settings)
+    flat = assistant.a if isinstance(assistant, ChiefOfStaff) else assistant
     web = WebClient(token=bot_token)
     client = SocketModeClient(app_token=app_token, web_client=web)
     auth = web.auth_test()
@@ -204,18 +224,19 @@ def run_slack_bot(settings: Settings) -> None:  # pragma: no cover - needs a liv
         text = re.sub(rf"<@{bot_id}>", "", ev.get("text", "")).strip()
         thread = ev.get("thread_ts") or ev.get("ts")
         key = f"slack_thread:{ev.get('channel')}:{thread}"
-        history = assistant.store.get_state(key, [])[-10:]
+        history = flat.store.get_state(key, [])[-10:]
         try:
-            reply = handle_message(assistant, text, user, history)
+            reply = handle_message(assistant, text, user, history, thread_key=key)
         except Exception as e:
             reply = f"Something failed: {type(e).__name__}. Check `gtm selftest`."
         if reply.strip():
-            assistant.store.set_state(key, (history + [{"role": "user", "content": text},
+            flat.store.set_state(key, (history + [{"role": "user", "content": text},
                                                        {"role": "assistant", "content": reply}])[-20:])
         web.chat_postMessage(channel=ev["channel"], thread_ts=thread, text=reply)
 
     client.socket_mode_request_listeners.append(on_event)
     client.connect()
-    print(f"slack bot connected with {len(assistant.tools)} tools from {len(assistant.manifests)} agents")
+    mode = "chief of staff routing" if flat is not assistant else "flat (every tool on every message)"
+    print(f"slack bot connected: {len(flat.manifests)} agents, {len(flat.tools)} tools, {mode}")
     import threading
     threading.Event().wait()

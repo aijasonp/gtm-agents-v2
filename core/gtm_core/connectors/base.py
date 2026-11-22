@@ -27,6 +27,11 @@ class CRM(ABC):
         close_date, created_at, last_activity_at, next_step, forecast_category."""
         return []
 
+    def list_deal_history(self, modified_since: str | None = None) -> list[dict]:
+        """CRM stage history, oldest first: id, deal_id, stage, amount, close_date, forecast_category, changed_at.
+        CRMs without it return []; the store's own sync snapshots still give stage moves."""
+        return []
+
     def list_contacts(self, limit: int = 2000) -> list[dict]:
         """Contacts: id, crm_id, account_id, name, email, title."""
         return []

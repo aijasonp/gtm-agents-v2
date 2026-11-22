@@ -1,0 +1,35 @@
+id: opportunity-analyst
+name: Opportunity Analyst
+version: 0.1.0
+tier: A
+description: >
+  Answers any question about opportunities from the CRM: open, won and lost deals across all history, win rate by
+  owner, segment, source or competitor, loss reasons and the stage deals were lost at, stage conversion and days in
+  stage, monthly and quarterly trends, and any single deal with its stage history. Read only; every number is
+  computed in code from the synced Salesforce data.
+editions: [dropin, persistent]
+skill: skill/SKILL.md
+references:
+  - skill/references/stages.yaml
+  - ../../config/company.yaml
+library:
+  - library/sales-skills/skills/sales-forecast
+  - library/coreyhaines-marketingskills/skills/revops
+tools:
+  - find_opportunities
+  - win_loss
+  - loss_analysis
+  - open_pipeline
+  - stage_conversion
+  - pipeline_trend
+  - opportunity_detail
+  - sync_crm
+connectors_required: [crm]
+connectors_optional: [slack]
+jobs:
+  - {name: sync_opportunities, cron: "*/30 * * * *", model_class: none}
+  - {name: weekly_full_sync, cron: "0 4 * * 0", model_class: none}
+budgets: {daily_tokens: 200000, monthly_usd: 15}
+evals: evals/golden.yaml
+config:
+  stages: skill/references/stages.yaml
